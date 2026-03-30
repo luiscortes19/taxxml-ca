@@ -22,9 +22,18 @@ All processing happens **entirely in your browser**. Your data is never uploaded
 ## How It Works
 
 1. **Upload** your `.xlsx` or `.csv` spreadsheet.
-2. **Map** your columns to the required CRA fields (auto-detected).
-3. **Fill in** your Transmitter and Payer details.
+2. **Map** your columns to the required CRA fields (auto-detected with smart column matching).
+3. **Fill in** your Transmitter and Payer details — saved automatically for future corrections.
 4. **Download** your CRA-compliant XML file and submit it via the [CRA Internet File Transfer (IFT)](https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html) portal.
+
+## Features
+
+- **Auto column mapping** — detects your header names and maps them to CRA fields automatically
+- **Phone & postal code formatting** — auto-formats as you type (`###-###-####` and `A1A 1A1`)
+- **Same as Transmitter** — one checkbox syncs all payer fields from transmitter
+- **Correction-friendly** — Step 3 filing details are saved to localStorage; the Submission Reference ID auto-increments on reload so re-submissions are ready in seconds
+- **Sample templates** — downloadable CSV templates for T4, T1204, and T5018
+- **Privacy first** — 100% client-side, no server, works offline
 
 ## Technical
 
