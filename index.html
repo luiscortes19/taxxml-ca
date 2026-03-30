@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO -->
+  <title>TaxXML.ca — Free CRA XML Generator | T4, T1204 & T5018 Excel to XML Converter</title>
+  <meta name="description" content="Free online tool to convert Excel spreadsheets to CRA-compliant XML for T4 Statement of Remuneration, T1204 Government Service Contract Payments, and T5018 Statement of Contract Payments. No signup, no upload — all processing happens in your browser.">
+  <meta name="keywords" content="CRA XML, T4, T1204, T5018, T619, tax filing Canada, Excel to XML, information return, payroll, statement of remuneration, government service contract, contract payments, sub-contractor, electronic filing, IFT">
+  <link rel="canonical" href="https://taxxml.ca/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://taxxml.ca/">
+  <meta property="og:title" content="TaxXML.ca — Free CRA XML Generator">
+  <meta property="og:description" content="Convert Excel spreadsheets to CRA-compliant XML in seconds. Supports T4, T1204, and T5018 return types. 100% free, no signup.">
+  <meta property="og:image" content="https://taxxml.ca/img/og-image.png">
+  <meta property="og:locale" content="en_CA">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="TaxXML.ca — Free CRA XML Generator">
+  <meta name="twitter:description" content="Convert Excel to CRA XML in seconds. T4, T1204, and T5018 support.">
+  <meta name="twitter:image" content="https://taxxml.ca/img/og-image.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="img/logo.png">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "TaxXML.ca",
+    "url": "https://taxxml.ca",
+    "description": "Free online tool to convert Excel spreadsheets to CRA-compliant XML for T4, T1204, and T5018 information returns.",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CAD" },
+    "author": { "@type": "Organization", "name": "AVANZA Business Automation", "url": "https://avanza-automation.com" }
+  }
+  </script>
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E2F5Q3RZVH"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-E2F5Q3RZVH');
+  </script>
+</head>
+<body>
+  <!-- HEADER -->
+  <header id="site-header">
+    <div class="header-inner">
+      <a href="/" class="logo">
+        <img src="img/logo.png" alt="TaxXML.ca" class="logo-img">
+      </a>
+      <nav>
+        <a href="#faq">FAQ</a>
+        <a href="#converter" class="nav-cta">Start Converting</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="hero-content">
+      <h1>Convert Excel to CRA XML<br><span class="accent-text">in seconds.</span></h1>
+      <p class="hero-sub">Upload your spreadsheet, fill in your details, and download a CRA-compliant XML file ready for electronic filing via IFT. Now supporting <strong>T4</strong> Statement of Remuneration, <strong>T1204</strong> Government Service Contract Payments, and <strong>T5018</strong> Statement of Contract Payments.</p>
+      <a href="#converter" class="btn btn-primary btn-lg">Start Converting — Free</a>
+      <div class="hero-trust">
+        <div class="trust-item"><i data-lucide="lock" class="icon-sm"></i> Your data never leaves your browser</div>
+        <div class="trust-item"><i data-lucide="map-pin" class="icon-sm"></i> Built for Canadian tax filing</div>
+        <div class="trust-item"><i data-lucide="shield-check" class="icon-sm"></i> CRA 2026V4 schema compliant</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONVERTER APP -->
+  <section id="converter">
+    <h2>XML Converter</h2>
+
+    <!-- Progress Bar -->
+    <div class="progress-bar">
+      <div class="progress-step active" data-step="1"><span>1</span> Upload</div>
+      <div class="progress-line"></div>
+      <div class="progress-step" data-step="2"><span>2</span> Preview</div>
+      <div class="progress-line"></div>
+      <div class="progress-step" data-step="3"><span>3</span> Details</div>
+      <div class="progress-line"></div>
+      <div class="progress-step" data-step="4"><span>4</span> Download</div>
+    </div>
+
+    <!-- Step 1: Upload -->
+    <div class="wizard-step" id="step-1">
+      <div class="card">
+        <h3>Upload Your Excel File</h3>
+        <p>Drag & drop or click to select your .xlsx or .csv file containing payroll or payment data.</p>
+        <div class="dropzone" id="dropzone">
+          <div class="dropzone-icon"><i data-lucide="upload-cloud"></i></div>
+          <div class="dropzone-text">Drop .xlsx file here</div>
+          <div class="dropzone-sub">or click to browse</div>
+          <input type="file" id="file-input" accept=".xlsx,.xls,.csv" hidden>
+        </div>
+        <div id="file-info" class="file-info hidden"></div>
+        <div class="form-group" style="margin-top:1.5rem">
+          <label for="return-type">Return Type</label>
+          <select id="return-type" class="form-control">
+            <option value="T4" selected>T4 — Statement of Remuneration Paid</option>
+            <option value="T1204">T1204 — Government Service Contract Payments</option>
+            <option value="T5018">T5018 — Statement of Contract Payments</option>
+            <option value="NR4" disabled>NR4 — Non-Resident Amounts (coming soon)</option>
+          </select>
+        </div>
+        <div class="btn-row hidden" id="step1-actions">
+          <button class="btn btn-primary" style="margin-left: auto;" onclick="goToStep(2)">Continue to Mapping →</button>
+        </div>
+        <div class="template-downloads" style="margin-top: 2rem; font-size: 0.85rem; color: var(--text-secondary); text-align: center; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+          <p style="margin-bottom: 0.5rem;"><i data-lucide="info" class="icon-sm"></i> Not sure how to format your Excel file?</p>
+          Download a sample template: 
+          <a href="templates/T4_Sample.csv" download class="accent-text" style="font-weight: 600;">T4</a> &middot; 
+          <a href="templates/T1204_Sample.csv" download class="accent-text" style="font-weight: 600;">T1204</a> &middot; 
+          <a href="templates/T5018_Sample.csv" download class="accent-text" style="font-weight: 600;">T5018</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Preview & Map -->
+    <div class="wizard-step hidden" id="step-2">
+      <div class="card">
+        <h3>Column Mapping</h3>
+        <p>We auto-detected your columns. Adjust if needed.</p>
+        <div id="mapping-summary" class="mapping-summary">
+          <span><span class="count-matched" id="count-matched">0</span> <span class="count-label">matched</span></span>
+          <span><span class="count-unmatched" id="count-unmatched">0</span> <span class="count-label">unmatched</span></span>
+        </div>
+        <table class="mapping-table" id="mapping-table">
+          <thead>
+            <tr>
+              <th><i data-lucide="landmark" class="icon-sm"></i> CRA Required Field</th>
+              <th></th>
+              <th><i data-lucide="table" class="icon-sm"></i> Your Excel Column</th>
+            </tr>
+          </thead>
+          <tbody id="mapping-tbody">
+            <!-- Rows generated by JS -->
+          </tbody>
+        </table>
+        <div class="data-preview">
+          <h4>Data Preview <span id="row-count-badge" class="badge"></span></h4>
+          <div class="table-wrap">
+            <table id="preview-table">
+              <thead id="preview-thead"></thead>
+              <tbody id="preview-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="goToStep(1)">← Back</button>
+          <button class="btn btn-primary" onclick="goToStep(3)">Continue →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Transmitter & Payer Details -->
+    <div class="wizard-step hidden" id="step-3">
+      <div class="card">
+        <h3>Filing Details</h3>
+
+        <div class="form-section">
+          <h4>T619 — Transmitter Information</h4>
+          <p class="form-hint">The entity submitting this file to CRA.</p>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tx-bn">Transmitter BN (15 chars) *</label>
+              <input type="text" id="tx-bn" class="form-control" placeholder="123456789MM0001" maxlength="15" required>
+              <span class="field-hint">Must be 15 chars ending in a program code (e.g. MM0001, RZ0001).</span>
+            </div>
+            <div class="form-group">
+              <label for="tx-name">Transmitter Name *</label>
+              <input type="text" id="tx-name" class="form-control" placeholder="Your Organization Name" maxlength="35" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tx-ref">Submission Reference ID *</label>
+              <input type="text" id="tx-ref" class="form-control" placeholder="T1204A" maxlength="8" required>
+              <span class="field-hint">Unique per submission. If you re-submit, you must increment this (e.g. A, B, C).</span>
+            </div>
+            <div class="form-group">
+              <label for="tx-lang">Language</label>
+              <select id="tx-lang" class="form-control">
+                <option value="E">English</option>
+                <option value="F">French / Français</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tx-contact">Contact Name *</label>
+              <input type="text" id="tx-contact" class="form-control" placeholder="Jane Smith" maxlength="35" required>
+            </div>
+            <div class="form-group">
+              <label for="tx-phone">Phone *</label>
+              <input type="text" id="tx-phone" class="form-control" placeholder="604-638-8328" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="tx-email">Email *</label>
+            <input type="email" id="tx-email" class="form-control" placeholder="contact@example.com" maxlength="60" required>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4 id="summary-section-title">T4 Summary — Employer Information</h4>
+          <p class="form-hint" id="summary-section-hint">The employer who paid the remuneration.</p>
+          <label class="checkbox-label" id="same-as-label">
+            <input type="checkbox" id="same-as-tx" onchange="copyTransmitterToPayer()">
+            Same as transmitter
+          </label>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="py-bn">Account Number (15 chars) *</label>
+              <input type="text" id="py-bn" class="form-control" placeholder="123456789RP0001" maxlength="15" required>
+              <span class="field-hint">The 15-character Business Number. T4 uses RP; T1204 uses RT; T5018 uses RZ.</span>
+            </div>
+            <div class="form-group">
+              <label for="py-name">Organization Name *</label>
+              <input type="text" id="py-name" class="form-control" placeholder="Employer or Department Name" maxlength="30" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="py-addr">Address</label>
+              <input type="text" id="py-addr" class="form-control" placeholder="123 Main Street" maxlength="30">
+            </div>
+            <div class="form-group">
+              <label for="py-city">City</label>
+              <input type="text" id="py-city" class="form-control" placeholder="Ottawa" maxlength="28">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="py-prov">Province</label>
+              <select id="py-prov" class="form-control">
+                <option value="">Select...</option>
+                <option value="AB">Alberta</option>
+                <option value="BC">British Columbia</option>
+                <option value="MB">Manitoba</option>
+                <option value="NB">New Brunswick</option>
+                <option value="NL">Newfoundland and Labrador</option>
+                <option value="NS">Nova Scotia</option>
+                <option value="NT">Northwest Territories</option>
+                <option value="NU">Nunavut</option>
+                <option value="ON">Ontario</option>
+                <option value="PE">Prince Edward Island</option>
+                <option value="QC">Quebec</option>
+                <option value="SK">Saskatchewan</option>
+                <option value="YT">Yukon</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="py-postal">Postal Code</label>
+              <input type="text" id="py-postal" class="form-control" placeholder="K1A 0B1" maxlength="10">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="py-contact">Contact Name *</label>
+              <input type="text" id="py-contact" class="form-control" placeholder="Jane Smith" maxlength="22" required>
+            </div>
+            <div class="form-group">
+              <label for="py-phone">Phone *</label>
+              <input type="text" id="py-phone" class="form-control" placeholder="604-638-8328" required>
+            </div>
+          </div>
+
+          <!-- T4-specific fields -->
+          <div id="t4-specific-fields">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="t4-dental-code">Dental Benefit Code (Box 45) *</label>
+                <select id="t4-dental-code" class="form-control">
+                  <option value="1">1 — Not eligible for dental care</option>
+                  <option value="2">2 — Employee only</option>
+                  <option value="3">3 — Employee, spouse & dependents</option>
+                  <option value="4">4 — Employee & spouse</option>
+                  <option value="5">5 — Employee & dependents</option>
+                </select>
+                <span class="field-hint">Applied to all slips in this submission</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- T1204-specific fields (hidden when T4 is selected) -->
+          <div id="t1204-specific-fields" class="hidden">
+          </div>
+
+          <!-- T5018-specific fields -->
+          <div id="t5018-specific-fields" class="hidden">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="t5018-fiscal-day">Fiscal Period End — Day *</label>
+                <input type="number" id="t5018-fiscal-day" class="form-control" placeholder="31" min="1" max="31" required>
+              </div>
+              <div class="form-group">
+                <label for="t5018-fiscal-month">Fiscal Period End — Month *</label>
+                <input type="number" id="t5018-fiscal-month" class="form-control" placeholder="12" min="1" max="12" required>
+              </div>
+              <div class="form-group">
+                <label for="t5018-fiscal-year">Fiscal Period End — Year *</label>
+                <input type="number" id="t5018-fiscal-year" class="form-control" placeholder="2025" min="2000" max="2099" value="2025" required>
+              </div>
+            </div>
+            <span class="field-hint">T5018 uses fiscal period end date instead of taxation year. Enter the last day of your fiscal year.</span>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>Filing Options</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tax-year">Taxation Year *</label>
+              <input type="number" id="tax-year" class="form-control" value="2025" min="2000" max="2099" required>
+            </div>
+            <div class="form-group">
+              <label for="report-type">Report Type *</label>
+              <select id="report-type" class="form-control">
+                <option value="O">Original</option>
+                <option value="A">Amendment</option>
+                <option value="C">Cancel</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="goToStep(2)">← Back</button>
+          <button class="btn btn-primary" id="btn-generate" onclick="generateXML()">Generate XML →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Download -->
+    <div class="wizard-step hidden" id="step-4">
+      <div class="card card-success">
+        <div class="success-icon">✅</div>
+        <h3>XML Generated Successfully!</h3>
+        <div class="stats-grid" id="stats-grid"></div>
+        <div id="warnings-box" class="warnings-box hidden"></div>
+        <button class="btn btn-primary btn-lg" id="btn-download" onclick="downloadXML()">
+          📥 Download XML File
+        </button>
+        <p class="download-hint">Upload this file to CRA's <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener">Internet File Transfer (IFT)</a> portal.</p>
+        <div class="btn-row" style="margin-top:2rem">
+          <button class="btn btn-ghost" onclick="goToStep(3)">← Edit Details</button>
+          <button class="btn btn-ghost" onclick="resetAll()">Start Over</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <h2>Frequently Asked Questions</h2>
+    <div class="faq-grid">
+      <details class="faq-item">
+        <summary>Is my data safe?</summary>
+        <p>Yes. All processing happens <strong>entirely in your browser</strong>. Your spreadsheet data is never uploaded to any server. You can verify this by disconnecting from the internet — the tool works offline.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What return types are supported?</summary>
+        <p>We support <strong>T4</strong> (Statement of Remuneration Paid), <strong>T1204</strong> (Government Service Contract Payments), and <strong>T5018</strong> (Statement of Contract Payments). NR4 and other returns are coming soon.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What format should my Excel file be in?</summary>
+        <p><strong>For T4:</strong> Your spreadsheet needs columns for: Last Name, First Name, SIN, Employment Income, CPP Contributions, EI Premiums, Income Tax Deducted, EI Insurable Earnings, CPP/QPP Pensionable Earnings, and Province of Employment. Optional: Union Dues, RPP Contributions, CPP2, QPP, Address.<br><strong>For T1204:</strong> Vendor Name, Vendor BN or SIN, Amount Paid, Business Type, Service Payments Only (Yes/No), and Address. The tool auto-detects common header names.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What CRA spec version does this support?</summary>
+        <p>The generated XML conforms to the <strong>T619 2026 / T4 2026V4 / T1204 2026V3 / T5018 2026V3</strong> specification, including the Oct 2025 validation change requiring empty optional tags to be removed.</p>
+      </details>
+      <details class="faq-item">
+        <summary>How do I submit the XML to CRA?</summary>
+        <p>Upload the downloaded XML file through CRA's <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener">Internet File Transfer (IFT)</a> application. You'll need a CRA My Business Account or Represent a Client account.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Why did you build this?</summary>
+        <p>As an automation consultant at <strong>AVANZA Business Automation</strong>, I constantly saw small businesses and accountants struggling with CRA's strict XML filing requirements. If you file more than 5 information slips, CRA forces you to submit them electronically in an XML format. Because XML is notoriously difficult for non-programmers to generate from Excel, businesses are often forced to buy bloated, expensive payroll software just for this one feature. I built TaxXML.ca as a fast, free, and secure alternative to democratize tax filing for Canadian businesses.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is this tool free?</summary>
+        <p>Yes. TaxXML.ca is completely free to use. If you found it helpful and it saved your business time and money, feel free to <a href="#" target="_blank" rel="noopener" class="accent-text">buy me a coffee</a> (coming soon)!</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 2rem;">
+      <div class="footer-brand" style="max-width: 400px;">
+        <span class="logo-text">TaxXML<span class="logo-accent">.ca</span></span>
+        <p style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">Free CRA XML generation for simple Canadian tax filing.</p>
+        <p class="footer-avanza" style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">A project by <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a></p>
+      </div>
+      
+      <div class="footer-links" style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem; font-size: 0.9rem;">Resources</h4>
+        <a href="#converter" style="font-size: 0.85rem; color: var(--text-secondary);">T4 Converter</a>
+        <a href="#converter" style="font-size: 0.85rem; color: var(--text-secondary);">T1204 Converter</a>
+        <a href="#converter" style="font-size: 0.85rem; color: var(--text-secondary);">T5018 Converter</a>
+        <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" style="font-size: 0.85rem; color: var(--accent);">Submit to CRA (IFT) &nearr;</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 TaxXML.ca. Built in Canada by <a href="https://avanzabusiness.ca" target="_blank" rel="noopener" style="color: var(--accent); font-weight: 600; text-decoration: none;">AVANZA Business Automation</a>. Not affiliated with the Canada Revenue Agency.</p>
+    </div>
+  </footer>
+
+  <!-- SheetJS for Excel parsing -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>lucide.createIcons();</script>
+  <script src="js/app.js"></script>
+</body>
+</html>
