@@ -1070,3 +1070,117 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ============================================================
+// FILING DETAILS PERSISTENCE (localStorage)
+// Saves all Step 3 fields automatically so corrections don't
+// require re-entering transmitter/payer info from scratch.
+// ============================================================
+const SAVED_FIELDS = [
+  'tx-bn','tx-name','tx-ref','tx-lang','tx-contact','tx-phone','tx-email',
+  'py-bn','py-name','py-addr','py-city','py-prov','py-postal','py-contact','py-phone',
+  't4-dental-code'
+];
+const STORAGE_KEY = 'taxxml_filing_details';
+
+function saveFilingDetails() {
+  const data = {};
+  SAVED_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) data[id] = el.value;
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function restoreFilingDetails() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+  let data;
+  try { data = JSON.parse(raw); } catch(e) { return; }
+
+  let anyRestored = false;
+  SAVED_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && data[id]) {
+      el.value = data[id];
+      anyRestored = true;
+    }
+  });
+
+  if (anyRestored) {
+    // Auto-increment the submission ref ID to prevent duplicate rejections
+    const refEl = document.getElementById('tx-ref');
+    if (refEl && refEl.value) {
+      const val = refEl.value.trim();
+      // Increment last character: A→B, B→C, ... Z→ZA, 1→2, etc.
+      const last = val.slice(-1);
+      if (/[A-Za-z]/.test(last)) {
+        const next = last === 'Z' ? 'ZA' : String.fromCharCode(last.toUpperCase().charCodeAt(0) + 1);
+        refEl.value = val.slice(0, -1) + next;
+      } else if (/[0-9]/.test(last)) {
+        refEl.value = val.slice(0, -1) + (parseInt(last) + 1);
+      }
+    }
+
+    // Show a small unobtrusive restore notice
+    const notice = document.createElement('p');
+    notice.id = 'restore-notice';
+    notice.style.cssText = 'font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;';
+    notice.innerHTML = '✓ Filing details restored from last session. <a href="#" onclick="clearFilingDetails();return false;" style="color:var(--text-secondary);text-decoration:underline;">Clear</a>';
+    const card = document.querySelector('#step-3 .card');
+    if (card && !document.getElementById('restore-notice')) {
+      card.insertBefore(notice, card.firstChild);
+    }
+  }
+}
+
+function clearFilingDetails() {
+  localStorage.removeItem(STORAGE_KEY);
+  const notice = document.getElementById('restore-notice');
+  if (notice) notice.remove();
+  SAVED_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
+// Attach save listeners to all Step 3 fields
+window.addEventListener('DOMContentLoaded', () => {
+  SAVED_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', saveFilingDetails);
+    if (el && el.tagName === 'INPUT') el.addEventListener('blur', saveFilingDetails);
+  });
+  restoreFilingDetails();
+});
+
+// ============================================================
+// DEV TOOL — localhost only, invisible on production
+// ============================================================
+if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+  const devBar = document.createElement('div');
+  devBar.innerHTML = `
+    <div style="
+      position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999;
+      background: rgba(15,15,25,0.92); border: 1px solid #3b3b5c;
+      border-radius: 2rem; padding: 0.4rem 0.75rem;
+      display: flex; align-items: center; gap: 0.5rem;
+      font-family: monospace; font-size: 0.75rem; color: #8888bb;
+      backdrop-filter: blur(8px); box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    ">
+      <span style="margin-right:0.25rem; opacity:0.5;">DEV</span>
+      ${[1,2,3,4].map(n => `
+        <button onclick="goToStep(${n})" style="
+          background: transparent; border: 1px solid #3b3b5c;
+          color: #aaaacc; border-radius: 1rem;
+          padding: 0.2rem 0.6rem; cursor: pointer; font-family: monospace;
+          font-size: 0.75rem; transition: all 0.15s;
+        " onmouseover="this.style.borderColor='#7c6fff';this.style.color='#fff'"
+           onmouseout="this.style.borderColor='#3b3b5c';this.style.color='#aaaacc'"
+        >Step ${n}</button>
+      `).join('')}
+    </div>
+  `;
+  document.body.appendChild(devBar);
+}
+
+
