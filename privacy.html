@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy — TaxXML.ca</title>
+  <meta name="description" content="How TaxXML.ca handles your spreadsheet, SIN, business number, and filing details. Conversion runs in your browser. This page lists what actually leaves the browser.">
+  <link rel="canonical" href="https://taxxml.ca/privacy">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://taxxml.ca/privacy">
+  <meta property="og:title" content="Privacy — TaxXML.ca">
+  <meta property="og:description" content="Spreadsheet to CRA XML conversion runs in your browser. Slip data is not uploaded to a TaxXML server.">
+  <meta property="og:locale" content="en_CA">
+  <link rel="icon" type="image/png" href="/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E2F5Q3RZVH"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-E2F5Q3RZVH');
+  </script>
+</head>
+<body>
+  <header id="site-header">
+    <div class="header-inner">
+      <a href="/" class="logo">
+        <img src="/img/logo.png" alt="TaxXML.ca" class="logo-img">
+      </a>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/terms">Terms</a>
+        <a href="/#converter" class="nav-cta">Start Converting</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="legal">
+    <h1>Privacy</h1>
+    <p class="legal-updated">Last updated: 1 October 2026</p>
+
+    <p>TaxXML.ca is a free tool from <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a>. It turns a spreadsheet into XML for certain Canada Revenue Agency (CRA) information returns. This notice describes what the site actually does with information. It is written for people using the site in Canada.</p>
+
+    <h2>Spreadsheet and slip data stay in your browser</h2>
+    <p>Choosing a <strong>T4</strong>, <strong>T1204</strong>, or <strong>T5018</strong> file does not upload that file to a TaxXML server. There is no TaxXML account and no TaxXML database of slips.</p>
+    <ul>
+      <li>The file is read in your browser and parsed there. Names, addresses, amounts, social insurance numbers (SIN), and business numbers (BN) stay in that browser tab while you work.</li>
+      <li>The XML file is built in the browser and downloaded to your computer. TaxXML does not send it to the CRA. You submit it yourself if you use Internet File Transfer (IFT).</li>
+      <li>Closing the tab clears the spreadsheet and the generated XML from memory. That does not clear the filing details described below.</li>
+    </ul>
+    <p>After the page and its scripts have loaded, the conversion itself does not need a network connection. The first visit does, because the page, fonts, and libraries are downloaded then.</p>
+
+    <h2>Filing details saved on this device</h2>
+    <p>Step 3 filing details are saved in this browser’s <strong>localStorage</strong> under the key <strong>taxxml_filing_details</strong>, so you do not have to retype them on a later visit. The site writes them when you change a saved field or leave it. They are not sent to AVANZA.</p>
+    <p>What is saved:</p>
+    <ul>
+      <li>Transmitter business number, transmitter name, submission reference ID, language, contact name, phone, and email</li>
+      <li>Payer or employer account number, organization name, address, city, province, postal code, contact name, and phone</li>
+      <li>T4 dental benefit code (Box 45), when that field is on the form</li>
+    </ul>
+    <p>When those details are restored, the last character of the submission reference ID is advanced (for example, A becomes B) so a later download is less likely to reuse the same reference.</p>
+    <p>What is not saved in localStorage: the spreadsheet, the generated XML, the taxation year, the report type (original, amendment, or cancel), and the T5018 fiscal-period end date.</p>
+    <p>You can remove the saved details with the <strong>Clear</strong> link on the filing step, or by clearing site data for taxxml.ca in your browser. Anyone who uses the same browser profile can see the saved fields.</p>
+
+    <h2>What leaves the browser</h2>
+    <p>Your slips, SIN, BN, and Step 3 filing details are not included in the requests below. Other traffic does leave the browser.</p>
+
+    <p><strong>GitHub Pages.</strong> The site is static files hosted on GitHub Pages. Loading a page, stylesheet, image, or sample CSV template means GitHub receives an ordinary request for that file, including your IP address and browser. Those requests do not contain your spreadsheet.</p>
+
+    <p><strong>Google Analytics 4.</strong> Pages load Google’s tag from <code>www.googletagmanager.com</code> with measurement ID <strong>G-E2F5Q3RZVH</strong>. The tag is the standard pageview setup only. The site does not send custom analytics events, and it does not send spreadsheet cells or filing fields to Google. Google can receive the page address, rough location, device and browser details, and a client identifier stored in cookies (such as <code>_ga</code>). Google’s policy is at <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>.</p>
+
+    <p><strong>Google Fonts.</strong> Pages request the Inter font from <code>fonts.googleapis.com</code> and <code>fonts.gstatic.com</code>. Your browser sends that request, including your IP address, to Google.</p>
+
+    <p><strong>SheetJS.</strong> The converter page loads the SheetJS library from <code>cdn.sheetjs.com</code> (<code>xlsx-0.20.3</code>). That is a script download. The spreadsheet is parsed on your device after the library loads. It is not uploaded to that CDN. The Privacy and Terms pages do not load SheetJS.</p>
+
+    <p><strong>Lucide.</strong> The converter page loads icons from <code>unpkg.com/lucide</code>. That is a script download from the unpkg CDN. It does not receive your spreadsheet or filing details. The Privacy and Terms pages do not load Lucide.</p>
+
+    <p><strong>Stripe.</strong> The site does not embed a Stripe script. If you follow “buying me a coffee”, your browser opens Stripe’s donation page at <code>donate.stripe.com</code>. Payment details are entered on Stripe’s site, not on TaxXML. AVANZA does not receive your card number through this site. Stripe’s policy is at <a href="https://stripe.com/privacy" target="_blank" rel="noopener">stripe.com/privacy</a>.</p>
+
+    <p><strong>Links you choose to open.</strong> Links to the CRA IFT sign-in page and to AVANZA’s websites go to those sites only if you click them. TaxXML does not pass your XML file along with the click.</p>
+
+    <h2>Cookies</h2>
+    <p>TaxXML’s own pages do not set cookies. Google Analytics, loaded as described above, uses cookies under Google’s default setup. The filing details in localStorage are stored by the browser, and they are not cookies.</p>
+
+    <h2>How long information is kept</h2>
+    <p>Slip data in memory lasts until you close the tab or start over. Saved filing details stay in localStorage until you clear them or your browser removes them. TaxXML has no copy of either. Google, GitHub, Stripe, and the CDNs named above keep their own logs under their own policies.</p>
+
+    <h2>Children</h2>
+    <p>The tool is for people preparing Canadian information returns. It is not directed at children.</p>
+
+    <h2>Changes</h2>
+    <p>If the site starts handling information differently, this page will be updated. The date at the top is the latest revision.</p>
+
+    <h2>Contact</h2>
+    <p>TaxXML.ca does not publish an email address. Questions about this notice can be sent through <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a> or <a href="https://avanzabusiness.ca" target="_blank" rel="noopener">avanzabusiness.ca</a>. The same names appear in the site footer. See also the <a href="/terms">Terms</a>.</p>
+  </main>
+
+  <footer>
+    <div class="footer-inner" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 2rem;">
+      <div class="footer-brand" style="max-width: 400px;">
+        <span class="logo-text">TaxXML<span class="logo-accent">.ca</span></span>
+        <p style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">Free CRA XML generation for simple Canadian tax filing.</p>
+        <p class="footer-avanza" style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">A project by <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a></p>
+      </div>
+      <div class="footer-links" style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem; font-size: 0.9rem;">Resources</h4>
+        <a href="/#converter" style="font-size: 0.85rem; color: var(--text-secondary);">XML Converter</a>
+        <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" style="font-size: 0.85rem; color: var(--accent);">Submit to CRA (IFT) &nearr;</a>
+      </div>
+      <div class="footer-links" style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem; font-size: 0.9rem;">Legal</h4>
+        <a href="/privacy" style="font-size: 0.85rem; color: var(--text-secondary);">Privacy</a>
+        <a href="/terms" style="font-size: 0.85rem; color: var(--text-secondary);">Terms</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 TaxXML.ca. Built in Canada by <a href="https://avanzabusiness.ca" target="_blank" rel="noopener" style="color: var(--accent); font-weight: 600; text-decoration: none;">AVANZA Business Automation</a>. Not affiliated with the Canada Revenue Agency.</p>
+    </div>
+  </footer>
+</body>
+</html>
