@@ -137,6 +137,7 @@ function resetAll() {
 function onReturnTypeChange() {
   const rt = getSelectedReturnType();
   const config = RETURN_TYPES[rt];
+  if (window.gtag) gtag('event', 'return_selected', { return_type: rt });
 
   // Update step 1 description + sample link
   const step1Data = { T4: 'T4 payroll', T5018: 'T5018 sub-contractor payment', NR4: 'NR4 non-resident payment', T1204: 'T1204 payment' };
@@ -232,6 +233,7 @@ function handleFile(file) {
       autoMapColumns();
       buildPreview();
       goToStep(2);
+      if (window.gtag) gtag('event', 'file_opened', { return_type: getSelectedReturnType() });
     } catch (err) {
       showFileError('Error reading file: ' + err.message);
     }
@@ -1229,6 +1231,7 @@ function downloadXML() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  if (window.gtag) gtag('event', 'xml_downloaded', { return_type: rt });
 }
 
 // ============================================================
