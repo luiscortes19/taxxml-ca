@@ -22,23 +22,23 @@
     color: var(--accent);
   }
   </style>
-  <title>TaxXML.ca — Free CRA XML Generator | T4, T1204 & T5018 Excel to XML Converter</title>
-  <meta name="description" content="Free online tool to convert Excel spreadsheets to CRA-compliant XML for T4 Statement of Remuneration, T1204 Government Service Contract Payments, and T5018 Statement of Contract Payments. No signup, no upload — all processing happens in your browser.">
-  <meta name="keywords" content="CRA XML, T4, T1204, T5018, T619, tax filing Canada, Excel to XML, information return, payroll, statement of remuneration, government service contract, contract payments, sub-contractor, electronic filing, IFT">
+  <title>TaxXML.ca — Free CRA XML Generator | T4, T1204, T5018 & NR4 Excel to XML Converter</title>
+  <meta name="description" content="Free online tool to convert Excel spreadsheets to CRA-compliant XML for T4 Statement of Remuneration, T1204 Government Service Contract Payments, T5018 Statement of Contract Payments, and NR4 Non-Resident Amounts. No signup, no upload — all processing happens in your browser.">
+  <meta name="keywords" content="CRA XML, T4, T1204, T5018, T619, tax filing Canada, Excel to XML, information return, payroll, statement of remuneration, government service contract, contract payments, sub-contractor, NR4, non-resident, non-resident tax withheld, electronic filing, IFT">
   <link rel="canonical" href="https://taxxml.ca/">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://taxxml.ca/">
   <meta property="og:title" content="TaxXML.ca — Free CRA XML Generator">
-  <meta property="og:description" content="Convert Excel spreadsheets to CRA-compliant XML in seconds. Supports T4, T1204, and T5018 return types. 100% free, no signup.">
+  <meta property="og:description" content="Convert Excel spreadsheets to CRA-compliant XML in seconds. Supports T4, T1204, T5018, and NR4 return types. 100% free, no signup.">
   <meta property="og:image" content="https://taxxml.ca/img/og-image.png">
   <meta property="og:locale" content="en_CA">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="TaxXML.ca — Free CRA XML Generator">
-  <meta name="twitter:description" content="Convert Excel to CRA XML in seconds. T4, T1204, and T5018 support.">
+  <meta name="twitter:description" content="Convert Excel to CRA XML in seconds. T4, T1204, T5018, and NR4 support.">
   <meta name="twitter:image" content="https://taxxml.ca/img/og-image.png">
 
   <!-- Favicon -->
@@ -58,7 +58,7 @@
     "@type": "WebApplication",
     "name": "TaxXML.ca",
     "url": "https://taxxml.ca",
-    "description": "Free online tool to convert Excel spreadsheets to CRA-compliant XML for T4, T1204, and T5018 information returns.",
+    "description": "Free online tool to convert Excel spreadsheets to CRA-compliant XML for T4, T1204, T5018, and NR4 information returns.",
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Any",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CAD" },
@@ -94,7 +94,7 @@
   <section id="hero">
     <div class="hero-content">
       <h1>Convert Excel to CRA XML<br><span class="accent-text">in seconds.</span></h1>
-      <p class="hero-sub">Upload your spreadsheet, fill in your details, and download a CRA-compliant XML file ready for electronic filing via IFT. Now supporting <strong>T4</strong> Statement of Remuneration, <strong>T1204</strong> Government Service Contract Payments, and <strong>T5018</strong> Statement of Contract Payments.</p>
+      <p class="hero-sub">Upload your spreadsheet, fill in your details, and download a CRA-compliant XML file ready for electronic filing via IFT. Now supporting <strong>T4</strong> Statement of Remuneration, <strong>T1204</strong> Government Service Contract Payments, <strong>T5018</strong> Statement of Contract Payments, and <strong>NR4</strong> Non-Resident Amounts.</p>
       <a href="#converter" class="btn btn-primary btn-lg">Start Converting — Free</a>
       <div class="hero-trust">
         <div class="trust-item"><i data-lucide="lock" class="icon-sm"></i> Your data never leaves your browser</div>
@@ -131,13 +131,14 @@
           <input type="file" id="file-input" accept=".xlsx,.xls,.csv" hidden>
         </div>
         <div id="file-info" class="file-info hidden"></div>
+        <p id="file-error" class="field-error hidden" role="alert"></p>
         <div class="form-group" style="margin-top:1.5rem">
           <label for="return-type">Return Type</label>
           <select id="return-type" class="form-control">
             <option value="T4" selected>T4 — Statement of Remuneration Paid</option>
             <option value="T1204">T1204 — Government Service Contract Payments</option>
             <option value="T5018">T5018 — Statement of Contract Payments</option>
-            <option value="NR4" disabled>NR4 — Non-Resident Amounts (coming soon)</option>
+            <option value="NR4">NR4 — Non-Resident Amounts</option>
           </select>
         </div>
         <div class="btn-row hidden" id="step1-actions">
@@ -148,7 +149,8 @@
           Download a sample template: 
           <a href="templates/T4_Sample.csv" download class="accent-text" style="font-weight: 600;">T4</a> &middot; 
           <a href="templates/T1204_Sample.csv" download class="accent-text" style="font-weight: 600;">T1204</a> &middot; 
-          <a href="templates/T5018_Sample.csv" download class="accent-text" style="font-weight: 600;">T5018</a>
+          <a href="templates/T5018_Sample.csv" download class="accent-text" style="font-weight: 600;">T5018</a> &middot; 
+          <a href="templates/NR4_Sample.csv" download class="accent-text" style="font-weight: 600;">NR4</a>
         </div>
       </div>
     </div>
@@ -247,7 +249,7 @@
             Same as transmitter
           </label>
           <div class="form-row">
-            <div class="form-group">
+            <div class="form-group" id="py-bn-group">
               <label for="py-bn">Account Number (15 chars) *</label>
               <input type="text" id="py-bn" class="form-control" placeholder="123456789RP0001" maxlength="15" required>
               <span class="field-hint">The 15-character Business Number. T4 uses RP; T1204 uses RT; T5018 uses RZ.</span>
@@ -342,6 +344,17 @@
             </div>
             <span class="field-hint">T5018 uses fiscal period end date instead of taxation year. Enter the last day of your fiscal year.</span>
           </div>
+
+          <!-- NR4-specific fields -->
+          <div id="nr4-specific-fields" class="hidden">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="nr4-acct">Non-Resident Account Number *</label>
+                <input type="text" id="nr4-acct" class="form-control" placeholder="NRA123456" maxlength="9">
+                <span class="field-hint">Your CRA non-resident (NR) account: 3 letters + 6 digits. Used on the summary and every slip.</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="form-section">
@@ -362,6 +375,8 @@
           </div>
         </div>
 
+        <div id="generate-errors" class="errors-box hidden" role="alert"></div>
+
         <div class="btn-row">
           <button class="btn btn-ghost" onclick="goToStep(2)">← Back</button>
           <button class="btn btn-primary" id="btn-generate" onclick="generateXML()">Generate XML →</button>
@@ -380,6 +395,14 @@
           📥 Download XML File
         </button>
         <p class="download-hint">Upload this file to CRA's <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener">Internet File Transfer (IFT)</a> portal.</p>
+        <div class="ift-checklist">
+          <h4>Before you upload to IFT</h4>
+          <ul>
+            <li><strong>Original or amendment?</strong> Choose <em>Original</em> (<code>rpt_tcd</code> O) the first time you file this return. To fix slips CRA has already accepted, file an <em>Amendment</em> (A) with only the slips that changed, each one complete, not just the corrected boxes. Don't send a second Original, because CRA can flag it as a duplicate.</li>
+            <li><strong>Use a new Submission Reference ID every time.</strong> Each file you send needs its own ID. When you come back to fix and resubmit, Step 3 restores your details and bumps the ID for you (e.g. A → B). Check it before you generate.</li>
+            <li><strong>Leave optional fields blank.</strong> CRA rejects empty tags like <code>&lt;pstl_cd/&gt;</code>. This tool leaves out any optional field that's blank, so don't type placeholders like "N/A" into optional columns.</li>
+          </ul>
+        </div>
         <p style="margin-top: 1.25rem; font-size: 0.82rem; color: var(--text-muted);">If this saved you time, consider <a href="https://donate.stripe.com/fZu5kD95z0mL6OR26peIw00" target="_blank" rel="noopener" style="color: var(--text-secondary); text-decoration: underline; text-underline-offset: 3px;">buying me a coffee ☕</a></p>
         <div class="btn-row" style="margin-top:2rem">
           <button class="btn btn-ghost" onclick="goToStep(3)">← Edit Details</button>
@@ -399,19 +422,25 @@
       </details>
       <details class="faq-item">
         <summary>What return types are supported?</summary>
-        <p>We support <strong>T4</strong> (Statement of Remuneration Paid), <strong>T1204</strong> (Government Service Contract Payments), and <strong>T5018</strong> (Statement of Contract Payments). NR4 and other returns are coming soon.</p>
+        <p>We support <strong>T4</strong> (Statement of Remuneration Paid), <strong>T1204</strong> (Government Service Contract Payments), <strong>T5018</strong> (Statement of Contract Payments), and <strong>NR4</strong> (Statement of Amounts Paid or Credited to Non-Residents of Canada). T4A and T5 are planned.</p>
       </details>
       <details class="faq-item">
         <summary>What format should my Excel file be in?</summary>
-        <p><strong>For T4:</strong> Your spreadsheet needs columns for: Last Name, First Name, SIN, Employment Income, CPP Contributions, EI Premiums, Income Tax Deducted, EI Insurable Earnings, CPP/QPP Pensionable Earnings, and Province of Employment. Optional: Union Dues, RPP Contributions, CPP2, QPP, Address.<br><strong>For T1204:</strong> Vendor Name, Vendor BN or SIN, Amount Paid, Business Type, Service Payments Only (Yes/No), and Address. The tool auto-detects common header names.</p>
+        <p><strong>For T4:</strong> Your spreadsheet needs columns for: Last Name, First Name, SIN, Employment Income, CPP Contributions, EI Premiums, Income Tax Deducted, EI Insurable Earnings, CPP/QPP Pensionable Earnings, and Province of Employment. Optional: Union Dues, RPP Contributions, CPP2, QPP, Address.<br><strong>For T1204:</strong> Vendor Name, Vendor BN or SIN, Amount Paid, Business Type, Service Payments Only (Yes/No), and Address.<br><strong>For NR4:</strong> Recipient Name, Recipient Type (Individual, Joint account, Corporation, Other, Government), Foreign Tax ID, Country of Residence (3-letter code, e.g. USA), Income Code, Currency, Gross Income, and Tax Withheld. Optional: Exemption Code, Address, City, State/Province, Postal Code. The tool auto-detects common header names, and you can download a sample template for each return in Step 1.</p>
       </details>
       <details class="faq-item">
         <summary>What CRA spec version does this support?</summary>
-        <p>The generated XML conforms to the <strong>T619 2026 / T4 2026V4 / T1204 2026V3 / T5018 2026V3</strong> specification, including the Oct 2025 validation change requiring empty optional tags to be removed.</p>
+        <p>The generated XML conforms to the <strong>T619 2026 / T4 2026V4 / T1204 2026V3 / T5018 2026V3 / NR4 2026</strong> specification (CRA XML schema 1-26-3), including the Oct 2025 validation change requiring empty optional tags to be removed.</p>
       </details>
       <details class="faq-item">
         <summary>How do I submit the XML to CRA?</summary>
         <p>Upload the downloaded XML file through CRA's <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener">Internet File Transfer (IFT)</a> application. You'll need a CRA My Business Account or Represent a Client account.</p>
+      </details>
+      <details class="faq-item">
+        <summary>How do I file a correction, and why did CRA reject my resubmission?</summary>
+        <p><strong>Original vs amendment:</strong> set Report Type to <em>Original</em> (<code>rpt_tcd</code> O) the first time you file a return. To correct slips CRA has already accepted, set it to <em>Amendment</em> (A) and include only the slips that changed, each one complete, not just the corrected boxes. Sending a second Original for the same year can be flagged as a duplicate.<br>
+        <strong>Submission Reference ID:</strong> every file you send needs a new one. If you reuse an ID, CRA can reject the file. TaxXML.ca saves your Step 3 details in this browser and bumps the ID automatically when you come back (e.g. A → B). Check it before you generate.<br>
+        <strong>Blank optional fields:</strong> CRA rejects empty tags such as <code>&lt;pstl_cd/&gt;</code>. Leave optional cells blank rather than typing "N/A" or a space. The tool leaves blank optional fields out of the XML entirely.</p>
       </details>
       <details class="faq-item">
         <summary>Why did you build this?</summary>
@@ -438,6 +467,7 @@
         <a href="#converter" style="font-size: 0.85rem; color: var(--text-secondary);">T4 Converter</a>
         <a href="#converter" style="font-size: 0.85rem; color: var(--text-secondary);">T1204 Converter</a>
         <a href="#converter" style="font-size: 0.85rem; color: var(--text-secondary);">T5018 Converter</a>
+        <a href="#converter" style="font-size: 0.85rem; color: var(--text-secondary);">NR4 Converter</a>
         <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" style="font-size: 0.85rem; color: var(--accent);">Submit to CRA (IFT) &nearr;</a>
       </div>
 
@@ -457,6 +487,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>lucide.createIcons();</script>
+  <script src="js/validate.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
