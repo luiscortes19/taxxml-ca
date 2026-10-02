@@ -35,6 +35,8 @@ All processing happens **entirely in your browser**. Your data is never uploaded
 - **Sample templates** — downloadable CSV templates for T4, T1204, and T5018
 - **Privacy first** — 100% client-side, no server, works offline
 
+See [ROADMAP.md](ROADMAP.md) for what's planned next.
+
 ## Technical
 
 - Pure HTML/CSS/JS — no build step, no server required
