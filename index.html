@@ -95,7 +95,7 @@
       </a>
       <nav>
         <a href="#faq">FAQ</a>
-        <a href="#converter" class="nav-cta">Start Converting</a>
+        <a href="#converter" class="nav-cta">Open converter</a>
       </nav>
     </div>
   </header>
@@ -103,14 +103,19 @@
   <!-- HERO -->
   <section id="hero">
     <div class="hero-content">
-      <h1>Convert Excel to CRA XML<br><span class="accent-text">in seconds.</span></h1>
-      <p class="hero-sub">Upload your spreadsheet, fill in your details, and download a CRA-compliant XML file ready for electronic filing via IFT. Now supporting <strong>T4</strong> Statement of Remuneration, <strong>T1204</strong> Government Service Contract Payments, <strong>T5018</strong> Statement of Contract Payments, and <strong>NR4</strong> Non-Resident Amounts.</p>
-      <a href="#converter" class="btn btn-primary btn-lg">Start Converting — Free</a>
-      <div class="hero-trust">
-        <div class="trust-item"><i data-lucide="lock" class="icon-sm"></i> Your data never leaves your browser</div>
-        <div class="trust-item"><i data-lucide="map-pin" class="icon-sm"></i> Built for Canadian tax filing</div>
-        <div class="trust-item"><i data-lucide="shield-check" class="icon-sm"></i> CRA 2026V4 schema compliant</div>
+      <h1>Convert Excel to CRA XML, right in your browser.</h1>
+      <p class="hero-sub">Pick your return, open your spreadsheet, and download a file ready for CRA Internet File Transfer. Free, no signup.</p>
+      <div class="return-picker" role="group" aria-label="Choose your return">
+        <button type="button" class="return-pick" data-return="T4"><b>T4</b><span>Remuneration paid</span></button>
+        <button type="button" class="return-pick" data-return="T5018"><b>T5018</b><span>Contract payments</span></button>
+        <button type="button" class="return-pick" data-return="NR4"><b>NR4</b><span>Non-resident amounts</span></button>
+        <button type="button" class="return-pick" data-return="T1204"><b>T1204</b><span>Government service contracts</span></button>
       </div>
+      <ul class="hero-trust">
+        <li>Your spreadsheet is read on this device and never sent anywhere. Turn off Wi-Fi after the page loads and it still works.</li>
+        <li>Built to CRA's 2026 XML specification (schema 1-26-3).</li>
+        <li>Independent tool by AVANZA Business Automation, Canada. Not affiliated with the CRA.</li>
+      </ul>
     </div>
   </section>
 
@@ -120,7 +125,7 @@
 
     <!-- Progress Bar -->
     <div class="progress-bar">
-      <div class="progress-step active" data-step="1"><span>1</span> Upload</div>
+      <div class="progress-step active" data-step="1"><span>1</span> Open file</div>
       <div class="progress-line"></div>
       <div class="progress-step" data-step="2"><span>2</span> Preview</div>
       <div class="progress-line"></div>
@@ -129,20 +134,12 @@
       <div class="progress-step" data-step="4"><span>4</span> Download</div>
     </div>
 
-    <!-- Step 1: Upload -->
+    <!-- Step 1: Open file -->
     <div class="wizard-step" id="step-1">
       <div class="card">
-        <h3>Upload Your Excel File</h3>
-        <p>Drag & drop or click to select your .xlsx or .csv file containing payroll or payment data.</p>
-        <div class="dropzone" id="dropzone">
-          <div class="dropzone-icon"><i data-lucide="upload-cloud"></i></div>
-          <div class="dropzone-text">Drop .xlsx file here</div>
-          <div class="dropzone-sub">or click to browse</div>
-          <input type="file" id="file-input" accept=".xlsx,.xls,.csv" hidden>
-        </div>
-        <div id="file-info" class="file-info hidden"></div>
-        <p id="file-error" class="field-error hidden" role="alert"></p>
-        <div class="form-group" style="margin-top:1.5rem">
+        <h3>Open your spreadsheet</h3>
+        <p>Choose the return, then open the .xlsx or .csv file with your T4 payroll data.</p>
+        <div class="form-group step1-return">
           <label for="return-type">Return Type</label>
           <select id="return-type" class="form-control">
             <option value="T4" selected>T4 — Statement of Remuneration Paid</option>
@@ -151,16 +148,17 @@
             <option value="NR4">NR4 — Non-Resident Amounts</option>
           </select>
         </div>
-        <div class="btn-row hidden" id="step1-actions">
-          <button class="btn btn-primary" style="margin-left: auto;" onclick="goToStep(2)">Continue to Mapping →</button>
+        <div class="dropzone" id="dropzone">
+          <div class="dropzone-icon"><i data-lucide="file-spreadsheet"></i></div>
+          <div class="dropzone-text">Drop your .xlsx or .csv file here</div>
+          <div class="dropzone-sub">or click to choose a file. It stays on this computer.</div>
+          <input type="file" id="file-input" accept=".xlsx,.xls,.csv" hidden>
         </div>
-        <div class="template-downloads" style="margin-top: 2rem; font-size: 0.85rem; color: var(--text-secondary); text-align: center; border-top: 1px solid var(--border); padding-top: 1.5rem;">
-          <p style="margin-bottom: 0.5rem;"><i data-lucide="info" class="icon-sm"></i> Not sure how to format your Excel file?</p>
-          Download a sample template: 
-          <a href="templates/T4_Sample.csv" download class="accent-text" style="font-weight: 600;">T4</a> &middot; 
-          <a href="templates/T1204_Sample.csv" download class="accent-text" style="font-weight: 600;">T1204</a> &middot; 
-          <a href="templates/T5018_Sample.csv" download class="accent-text" style="font-weight: 600;">T5018</a> &middot; 
-          <a href="templates/NR4_Sample.csv" download class="accent-text" style="font-weight: 600;">NR4</a>
+        <p class="sample-line">Not sure how to lay out your columns? <a href="templates/T4_Sample.csv" download id="sample-link">Download the T4 sample spreadsheet</a></p>
+        <div id="file-info" class="file-info hidden"></div>
+        <p id="file-error" class="field-error hidden" role="alert"></p>
+        <div class="btn-row btn-row-end hidden" id="step1-actions">
+          <button class="btn btn-primary" onclick="goToStep(2)">Continue to Mapping →</button>
         </div>
       </div>
     </div>
@@ -242,12 +240,12 @@
             </div>
             <div class="form-group">
               <label for="tx-phone">Phone *</label>
-              <input type="text" id="tx-phone" class="form-control" placeholder="604-638-8328" required>
+              <input type="text" id="tx-phone" class="form-control" inputmode="tel" autocomplete="tel" placeholder="604-638-8328" required>
             </div>
           </div>
           <div class="form-group">
             <label for="tx-email">Email *</label>
-            <input type="email" id="tx-email" class="form-control" placeholder="contact@example.com" maxlength="60" required>
+            <input type="email" id="tx-email" class="form-control" autocomplete="email" placeholder="contact@example.com" maxlength="60" required>
           </div>
         </div>
 
@@ -311,7 +309,7 @@
             </div>
             <div class="form-group">
               <label for="py-phone">Phone *</label>
-              <input type="text" id="py-phone" class="form-control" placeholder="604-638-8328" required>
+              <input type="text" id="py-phone" class="form-control" inputmode="tel" autocomplete="tel" placeholder="604-638-8328" required>
             </div>
           </div>
 
@@ -338,7 +336,7 @@
 
           <!-- T5018-specific fields -->
           <div id="t5018-specific-fields" class="hidden">
-            <div class="form-row">
+            <div class="form-row form-row-3">
               <div class="form-group">
                 <label for="t5018-fiscal-day">Fiscal Period End — Day *</label>
                 <input type="number" id="t5018-fiscal-day" class="form-control" placeholder="31" min="1" max="31" required>
@@ -397,13 +395,10 @@
     <!-- Step 4: Download -->
     <div class="wizard-step hidden" id="step-4">
       <div class="card card-success">
-        <div class="success-icon">✅</div>
-        <h3>XML Generated Successfully!</h3>
-        <div class="stats-grid" id="stats-grid"></div>
+        <h3 id="result-heading">Your file is ready</h3>
+        <dl class="receipt" id="receipt"></dl>
         <div id="warnings-box" class="warnings-box hidden"></div>
-        <button class="btn btn-primary btn-lg" id="btn-download" onclick="downloadXML()">
-          📥 Download XML File
-        </button>
+        <button class="btn btn-primary btn-lg" id="btn-download" onclick="downloadXML()">Download XML file</button>
         <p class="download-hint">Upload this file to CRA's <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener">Internet File Transfer (IFT)</a> portal.</p>
         <div class="ift-checklist">
           <h4>Before you upload to IFT</h4>

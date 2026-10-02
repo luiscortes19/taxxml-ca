@@ -138,17 +138,13 @@ function onReturnTypeChange() {
   const rt = getSelectedReturnType();
   const config = RETURN_TYPES[rt];
 
-  // Update step 1 description
-  const step1Desc = document.querySelector('#step-1 .card > p');
-  if (rt === 'T4') {
-    step1Desc.textContent = 'Drag & drop or click to select your .xlsx or .csv file containing T4 payroll data.';
-  } else if (rt === 'T5018') {
-    step1Desc.textContent = 'Drag & drop or click to select your .xlsx or .csv file containing T5018 sub-contractor payment data.';
-  } else if (rt === 'NR4') {
-    step1Desc.textContent = 'Drag & drop or click to select your .xlsx or .csv file containing NR4 non-resident payment data.';
-  } else {
-    step1Desc.textContent = 'Drag & drop or click to select your .xlsx or .csv file containing T1204 payment data.';
-  }
+  // Update step 1 description + sample link
+  const step1Data = { T4: 'T4 payroll', T5018: 'T5018 sub-contractor payment', NR4: 'NR4 non-resident payment', T1204: 'T1204 payment' };
+  document.querySelector('#step-1 .card > p').textContent =
+    `Choose the return, then open the .xlsx or .csv file with your ${step1Data[rt]} data.`;
+  const sampleLink = document.getElementById('sample-link');
+  sampleLink.href = `templates/${rt}_Sample.csv`;
+  sampleLink.textContent = `Download the ${rt} sample spreadsheet`;
 
   // Update Step 3 summary section header
   document.getElementById('summary-section-title').textContent = config.summaryLabel;
@@ -192,6 +188,14 @@ fileInput.addEventListener('change', e => { if (e.target.files.length) handleFil
 
 // Listen for return type changes
 document.getElementById('return-type').addEventListener('change', onReturnTypeChange);
+
+// Hero return picker: preselect the return and jump to Step 1
+document.querySelectorAll('.return-pick').forEach(btn => btn.addEventListener('click', () => {
+  const sel = document.getElementById('return-type');
+  sel.value = btn.dataset.return;
+  sel.dispatchEvent(new Event('change'));
+  document.getElementById('converter').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}));
 
 function showFileError(msg) {
   const el = document.getElementById('file-error');
@@ -1169,14 +1173,35 @@ function buildT619Wrapper(returnType, slipsXml, summaryXml) {
 // ============================================================
 // RESULTS & DOWNLOAD
 // ============================================================
+const REPORT_TYPE_NAMES = { O: 'Original', A: 'Amendment', C: 'Cancel' };
+
 function showResults(slips, stats, warnings) {
-  document.getElementById('stats-grid').innerHTML = stats.map(s =>
-    `<div class="stat-card"><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div></div>`
+  const rt = getSelectedReturnType();
+  const taxYear = document.getElementById('tax-year').value;
+  const fileName = `${rt}_submission_${taxYear}.xml`;
+  const rptCd = document.getElementById('report-type').value;
+  const period = rt === 'T5018'
+    ? `fiscal period ending ${['year', 'month', 'day'].map(p => document.getElementById(`t5018-fiscal-${p}`).value.padStart(2, '0')).join('-')}`
+    : `taxation year ${taxYear}`;
+
+  const rows = [
+    ['File', fileName, true],
+    ['Return', `${rt}, ${period}`],
+    ['Report type', `${REPORT_TYPE_NAMES[rptCd]} (${rptCd})`],
+    ['Submission ref. ID', document.getElementById('tx-ref').value.trim(), true],
+    ['Slips', slips],
+    ...stats.filter(s => s.label !== 'Slips Generated').map(s => [s.label, s.value]),
+  ];
+  document.getElementById('result-heading').textContent = `Your ${rt} file is ready`;
+  document.getElementById('receipt').innerHTML = rows.map(([dt, dd, mono]) =>
+    `<dt>${dt}</dt><dd${mono ? ' class="mono"' : ''}>${escapeXml(String(dd))}</dd>`
   ).join('');
+  document.getElementById('btn-download').textContent = `Download ${fileName}`;
 
   const wBox = document.getElementById('warnings-box');
   if (warnings.length > 0) {
-    wBox.innerHTML = `<h4>⚠️ ${warnings.length} Warning(s)</h4><ul>${warnings.map(w => `<li>${escapeXml(w)}</li>`).join('')}</ul>`;
+    const n = warnings.length;
+    wBox.innerHTML = `<h4>${slips} slips · ${n} warning${n === 1 ? '' : 's'} to review</h4><ul>${warnings.map(w => `<li>${escapeXml(w)}</li>`).join('')}</ul>`;
     wBox.classList.remove('hidden');
   } else {
     wBox.classList.add('hidden');
