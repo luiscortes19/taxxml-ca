@@ -414,3 +414,24 @@ footer {
   nav a { font-size: 0.8rem; }
   .nav-cta { padding: 0.4rem 0.45rem; }
 }
+
+/* ---- INLINE VALIDATION ---- */
+.form-control.has-error { border-color: var(--danger); }
+.field-error { font-size: 0.75rem; color: var(--danger); }
+.errors-box {
+  text-align: left; margin: 1.5rem 0 0; padding: 1rem 1.5rem;
+  background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3);
+  border-radius: var(--radius-sm); font-size: 0.85rem;
+}
+.errors-box h4 { color: var(--danger); margin-bottom: 0.5rem; }
+.errors-box ul { margin: 0; padding-left: 1.2rem; color: var(--text-secondary); }
+
+/* ---- IFT CHECKLIST (Step 4) ---- */
+.ift-checklist {
+  text-align: left; margin: 1.5rem 0 0; padding: 1rem 1.5rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.85rem;
+}
+.ift-checklist h4 { color: var(--text-primary); margin-bottom: 0.5rem; }
+.ift-checklist ul { margin: 0; padding-left: 1.2rem; color: var(--text-secondary); line-height: 1.6; }
+.ift-checklist li + li { margin-top: 0.4rem; }
+.ift-checklist strong { color: var(--text-primary); }

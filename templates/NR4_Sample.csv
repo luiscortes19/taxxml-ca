@@ -1,0 +1,3 @@
+Recipient Name,Recipient Type,Foreign Tax ID,Country of Residence,Income Code,Currency,Gross Income,Tax Withheld,Exemption Code,Address,City,State/Province,Postal Code
+John Smith,Individual,987-65-4320,USA,06,CAD,5000.00,750.00,,123 Main St,Seattle,WA,98101
+Hafen Holdings GmbH,Corporation,DE123456789,DEU,02,CAD,10000.00,2500.00,,Hauptstrasse 5,Berlin,,10115

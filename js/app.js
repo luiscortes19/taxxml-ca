@@ -1,7 +1,7 @@
 /* ============================================================
    TaxXML.ca — App Logic (Multi-Return Excel → CRA XML)
    All processing is client-side. No data leaves the browser.
-   Supports: T1204, T4
+   Supports: T1204, T4, T5018, NR4
    ============================================================ */
 
 // ---- State ----
@@ -65,6 +65,27 @@ const RETURN_TYPES = {
     summaryHint: 'The business that made the contract payments.',
     generateXML: generateT5018XML,
   },
+  NR4: {
+    label: 'NR4 — Statement of Amounts Paid or Credited to Non-Residents of Canada',
+    fields: [
+      { key: 'rcpnt_name',   label: 'Recipient Name',                autoMatch: ['recipient name', 'payee name', 'name'] },
+      { key: 'rcpnt_type',   label: 'Recipient Type',                autoMatch: ['recipient type', 'payee type', 'entity type', 'type'] },
+      { key: 'fssn_nbr',     label: 'Foreign Tax ID',                autoMatch: ['foreign tax id', 'foreign tax', 'tax identification', 'fssn', 'tax id'] },
+      { key: 'tx_cntry_cd',  label: 'Country of Residence (3 letters)', autoMatch: ['country of residence', 'residence country', 'tax country', 'country'] },
+      { key: 'inc_1_tcd',    label: 'Income Code (Box 14)',          autoMatch: ['income code', 'income type', 'type of income', 'box 14'] },
+      { key: 'crcy_1_cd',    label: 'Currency Code (Box 15)',        autoMatch: ['currency', 'crcy', 'box 15'] },
+      { key: 'gro_1_incamt', label: 'Gross Income (Box 16)',         autoMatch: ['gross income', 'gross amount', 'gross', 'box 16'] },
+      { key: 'nr_tx_1_amt',  label: 'Non-Resident Tax Withheld (Box 17)', autoMatch: ['tax withheld', 'non-resident tax', 'withholding', 'box 17'] },
+      { key: 'tx_xmpt_1_cd', label: 'Exemption Code (Box 18)',       autoMatch: ['exemption code', 'exemption', 'exempt', 'box 18'] },
+      { key: 'addr_l1',      label: 'Address Line 1',                autoMatch: ['street address', 'address line', 'address', 'addr'] },
+      { key: 'city',         label: 'City',                          autoMatch: ['city'] },
+      { key: 'ste_cd',       label: 'State / Province (2 letters)',  autoMatch: ['state/province', 'state', 'province'] },
+      { key: 'fgn_pstl_cd',  label: 'Postal / ZIP Code',             autoMatch: ['postal code', 'zip code', 'postal', 'zip'] },
+    ],
+    summaryLabel: 'NR4 Summary — Payer Information',
+    summaryHint: 'The payer or agent who paid or credited amounts to non-residents.',
+    generateXML: generateNR4XML,
+  },
 };
 
 function getSelectedReturnType() {
@@ -80,6 +101,7 @@ const VALID_PROVINCES = new Set(['AB','BC','MB','NB','NL','NS','NT','NU','ON','P
 const ALL_PROV_CODES = new Set(['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT','US','ZZ']);
 const COUNTRY_MAP = { 'CA': 'CAN', 'US': 'USA', 'CAN': 'CAN', 'USA': 'USA' };
 const BIZ_TYPE_MAP = { 'Corporation': '3', 'Sole Proprietorship': '1', 'Partnership': '4' };
+const NR4_RCPNT_TYPE_MAP = { 'individual': '1', 'joint account': '2', 'joint': '2', 'corporation': '3', 'other': '4', 'government': '5' };
 
 // ============================================================
 // STEP NAVIGATION
@@ -122,6 +144,8 @@ function onReturnTypeChange() {
     step1Desc.textContent = 'Drag & drop or click to select your .xlsx or .csv file containing T4 payroll data.';
   } else if (rt === 'T5018') {
     step1Desc.textContent = 'Drag & drop or click to select your .xlsx or .csv file containing T5018 sub-contractor payment data.';
+  } else if (rt === 'NR4') {
+    step1Desc.textContent = 'Drag & drop or click to select your .xlsx or .csv file containing NR4 non-resident payment data.';
   } else {
     step1Desc.textContent = 'Drag & drop or click to select your .xlsx or .csv file containing T1204 payment data.';
   }
@@ -137,6 +161,10 @@ function onReturnTypeChange() {
   if (t1204Fields) t1204Fields.classList.toggle('hidden', rt !== 'T1204');
   if (t4Fields) t4Fields.classList.toggle('hidden', rt !== 'T4');
   if (t5018Fields) t5018Fields.classList.toggle('hidden', rt !== 'T5018');
+  document.getElementById('nr4-specific-fields').classList.toggle('hidden', rt !== 'NR4');
+  // NR4 identifies the payer by NR account number, not a 15-char BN
+  document.getElementById('py-bn-group').classList.toggle('hidden', rt === 'NR4');
+  clearFieldErrors();
 
   // If data is already loaded, re-map
   if (parsedData.length > 0) {
@@ -165,10 +193,17 @@ fileInput.addEventListener('change', e => { if (e.target.files.length) handleFil
 // Listen for return type changes
 document.getElementById('return-type').addEventListener('change', onReturnTypeChange);
 
+function showFileError(msg) {
+  const el = document.getElementById('file-error');
+  el.textContent = msg;
+  el.classList.toggle('hidden', !msg);
+}
+
 function handleFile(file) {
+  showFileError('');
   const ext = file.name.split('.').pop().toLowerCase();
   if (!['xlsx', 'xls', 'csv'].includes(ext)) {
-    alert('Please upload a valid Excel or CSV file.');
+    showFileError('Please upload a valid Excel (.xlsx, .xls) or CSV file.');
     return;
   }
 
@@ -179,7 +214,7 @@ function handleFile(file) {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-      if (raw.length < 2) { alert('File has no data rows.'); return; }
+      if (raw.length < 2) { showFileError('File has no data rows.'); return; }
 
       headers = raw[0].map(h => String(h || '').trim());
       parsedData = raw.slice(1).filter(row => row.some(cell => cell !== ''));
@@ -194,7 +229,7 @@ function handleFile(file) {
       buildPreview();
       goToStep(2);
     } catch (err) {
-      alert('Error reading file: ' + err.message);
+      showFileError('Error reading file: ' + err.message);
     }
   };
   reader.readAsArrayBuffer(file);
@@ -412,19 +447,88 @@ function parsePhone(phone) {
   return { area: '000', num: '000-0000' };
 }
 
-function sanitizeBN(raw) {
-  let bn = raw.toUpperCase().trim().replace(/[-\s]/g, '');
-  if (bn.length === 9 && /^\d{9}$/.test(bn)) {
-    bn += 'RT0001';
-  }
-  return bn;
+// ============================================================
+// INLINE VALIDATION (sanitizeBN / isValidSIN live in js/validate.js)
+// ============================================================
+function clearFieldErrors() {
+  document.querySelectorAll('#step-3 .field-error').forEach(el => el.remove());
+  document.querySelectorAll('#step-3 .has-error').forEach(el => el.classList.remove('has-error'));
+  showGenerateErrors([]);
 }
 
-function sanitizeBN_RP(raw) {
-  let bn = raw.toUpperCase().trim().replace(/[-\s]/g, '');
-  if (bn.length === 9 && /^\d{9}$/.test(bn)) {
-    bn += 'RP0001';
+function fieldError(id, msg) {
+  const el = document.getElementById(id);
+  el.classList.add('has-error');
+  const span = document.createElement('span');
+  span.className = 'field-error';
+  span.textContent = msg;
+  el.closest('.form-group').appendChild(span);
+}
+
+// Row-level / data errors shown above the Generate button. Empty list hides the box.
+function showGenerateErrors(errors) {
+  const box = document.getElementById('generate-errors');
+  box.innerHTML = errors.length
+    ? `<h4>Fix ${errors.length} problem(s) before generating</h4><ul>${errors.map(e => `<li>${escapeXml(e)}</li>`).join('')}</ul>`
+    : '';
+  box.classList.toggle('hidden', !errors.length);
+}
+
+// Validates Step 3. extraChecks: [{ id, test: value => bool, msg }] for return-specific rules.
+// Returns false (and marks every bad field) if anything fails.
+function validateFilingDetails(requiredIds, extraChecks = []) {
+  clearFieldErrors();
+  const bad = new Set();
+  requiredIds.forEach(id => {
+    if (!document.getElementById(id).value.trim()) { fieldError(id, 'Required.'); bad.add(id); }
+  });
+  const checks = [
+    { id: 'tx-bn', test: v => BN_PATTERN.test(cleanBN(v)), msg: 'Must be exactly 15 characters: 9 digits + 2 letters + 4 digits (e.g. 123456789MM0001).' },
+    { id: 'tx-email', test: v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim()), msg: 'Enter a valid email address.' },
+    ...extraChecks,
+  ];
+  checks.forEach(c => {
+    const v = document.getElementById(c.id).value;
+    if (!bad.has(c.id) && v.trim() && !c.test(v)) { fieldError(c.id, c.msg); bad.add(c.id); }
+  });
+  const first = document.querySelector('#step-3 .has-error');
+  if (first) first.focus();
+  return bad.size === 0;
+}
+
+const PAYER_BN_CHECK = { id: 'py-bn', test: v => BN_PATTERN.test(cleanBN(v)), msg: 'Must be exactly 15 characters: 9 digits + 2 letters + 4 digits (e.g. 123456789RP0001).' };
+
+// Returns the 9-digit SIN to put on the slip, or null after recording a hard-stop error.
+// Blank → CRA's 000000000 placeholder with a warning (recipient didn't provide one).
+function checkSIN(raw, who, rowNum, warnings, errors) {
+  who = who || '(no name)';
+  const sin = String(raw).replace(/\D/g, '');
+  if (!sin) {
+    warnings.push(`Row ${rowNum}: "${who}" has no SIN — using 000000000`);
+    return '000000000';
   }
+  if (!isValidSIN(sin)) {
+    errors.push(`Row ${rowNum}: "${who}" SIN "${raw}" is invalid — ${sin.length !== 9 ? `has ${sin.length} digits, needs 9` : 'fails the SIN checksum (check for a typo)'}`);
+    return null;
+  }
+  return sin;
+}
+
+// Returns a valid 15-char recipient BN, or null after recording a hard-stop error.
+// Blank → the given CRA placeholder with a warning; a bare 9-digit root is expanded with a warning.
+function checkRecipientBN(raw, program, placeholder, who, rowNum, warnings, errors) {
+  who = who || '(no name)';
+  const cleaned = cleanBN(raw);
+  if (!cleaned || cleaned === '(BLANK)') {
+    warnings.push(`Row ${rowNum}: "${who}" has no BN — using ${placeholder}`);
+    return placeholder;
+  }
+  const bn = sanitizeBN(cleaned, program);
+  if (!BN_PATTERN.test(bn)) {
+    errors.push(`Row ${rowNum}: "${who}" BN "${raw}" is invalid — must be 15 characters (9 digits + 2 letters + 4 digits), got ${cleaned.length}`);
+    return null;
+  }
+  if (bn !== cleaned) warnings.push(`Row ${rowNum}: "${who}" BN root ${cleaned} expanded to ${bn} — confirm the program account`);
   return bn;
 }
 
@@ -440,25 +544,16 @@ function generateXML() {
 // T1204 XML GENERATION (existing logic)
 // ============================================================
 function generateT1204XML() {
-  const requiredIds = ['tx-bn','tx-name','tx-ref','tx-contact','tx-phone','tx-email',
-                       'py-bn','py-name','py-addr','py-city','py-prov','py-postal','py-contact','py-phone'];
-  for (const id of requiredIds) {
-    const el = document.getElementById(id);
-    if (!el.value.trim()) {
-      el.focus();
-      el.style.borderColor = 'var(--danger)';
-      setTimeout(() => el.style.borderColor = '', 2000);
-      alert(`Please fill in: ${el.previousElementSibling?.textContent || id}`);
-      return;
-    }
-  }
+  if (!validateFilingDetails(['tx-bn','tx-name','tx-ref','tx-contact','tx-phone','tx-email',
+                              'py-bn','py-name','py-addr','py-city','py-prov','py-postal','py-contact','py-phone'],
+                             [PAYER_BN_CHECK])) return;
 
-  const txPhone = parsePhone(document.getElementById('tx-phone').value);
   const pyPhone = parsePhone(document.getElementById('py-phone').value);
   const taxYear = document.getElementById('tax-year').value;
   const reportType = document.getElementById('report-type').value;
-  const payerBn = document.getElementById('py-bn').value.trim();
+  const payerBn = cleanBN(document.getElementById('py-bn').value);
   const warnings = [];
+  const errors = [];
 
   let totalSrvc = 0, totalMxd = 0, slipCount = 0;
   let slipsXml = '';
@@ -490,21 +585,14 @@ function generateT1204XML() {
 
       rcpntNmXml = `<RCPNT_NM>${xmlTag('snm', snm)}${gvnNm ? xmlTag('gvn_nm', gvnNm) : ''}${init ? xmlTag('init', init) : ''}</RCPNT_NM>`;
 
-      let sinVal = vendorBn.replace(/\D/g, '');
-      if (!sinVal) { sinVal = '000000000'; warnings.push(`Row ${i+2}: "${vendorName}" has no SIN`); }
-      else if (sinVal.length !== 9) { warnings.push(`Row ${i+2}: "${vendorName}" SIN has ${sinVal.length} digits`); }
-      sinXml = xmlTag('sin', sinVal.substring(0, 9).padEnd(9, '0'));
+      const sinVal = checkSIN(vendorBn, vendorName, i + 2, warnings, errors);
+      if (!sinVal) continue;
+      sinXml = xmlTag('sin', sinVal);
       bnXml = xmlTag('rcpnt_bn', '000000000RT0000');
     } else {
       sinXml = xmlTag('sin', '000000000');
-      let bnVal = sanitizeBN(vendorBn);
-      if (!bnVal || bnVal === '(BLANK)') {
-        bnVal = '000000000RC0000';
-        warnings.push(`Row ${i+2}: "${vendorName}" has no BN`);
-      }
-      if (bnVal.length !== 15 && bnVal !== '000000000RC0000') {
-        warnings.push(`Row ${i+2}: "${vendorName}" BN is ${bnVal.length} chars: ${bnVal}`);
-      }
+      const bnVal = checkRecipientBN(vendorBn, 'RT', '000000000RC0000', vendorName, i + 2, warnings, errors);
+      if (!bnVal) continue;
       bnXml = xmlTag('rcpnt_bn', bnVal);
     }
 
@@ -542,6 +630,9 @@ function generateT1204XML() {
 
     slipCount++;
   }
+
+  if (!errors.length && slipCount === 0) errors.push('No valid vendor rows found. Please check your column mapping.');
+  if (errors.length) { showGenerateErrors(errors); return; }
 
   const postalClean = document.getElementById('py-postal').value.trim().replace(/\s/g, '');
   const summaryXml = `
@@ -585,27 +676,16 @@ function generateT1204XML() {
 // ============================================================
 function generateT4XML() {
   // Validate required form fields — T4 uses py-* for employer
-  const requiredIds = ['tx-bn','tx-name','tx-ref','tx-contact','tx-phone','tx-email',
-                       'py-bn','py-name','py-contact','py-phone'];
-  for (const id of requiredIds) {
-    const el = document.getElementById(id);
-    if (!el || !el.value.trim()) {
-      if (el) {
-        el.focus();
-        el.style.borderColor = 'var(--danger)';
-        setTimeout(() => el.style.borderColor = '', 2000);
-      }
-      alert(`Please fill in: ${el?.previousElementSibling?.textContent || id}`);
-      return;
-    }
-  }
+  if (!validateFilingDetails(['tx-bn','tx-name','tx-ref','tx-contact','tx-phone','tx-email',
+                              'py-bn','py-name','py-contact','py-phone'],
+                             [PAYER_BN_CHECK])) return;
 
-  const txPhone = parsePhone(document.getElementById('tx-phone').value);
   const pyPhone = parsePhone(document.getElementById('py-phone').value);
   const taxYear = document.getElementById('tax-year').value;
   const reportType = document.getElementById('report-type').value;
-  const employerBn = sanitizeBN_RP(document.getElementById('py-bn').value.trim());
+  const employerBn = cleanBN(document.getElementById('py-bn').value);
   const warnings = [];
+  const errors = [];
 
   // Dental benefit code from form
   const dentalCode = document.getElementById('t4-dental-code')?.value || '1';
@@ -640,13 +720,9 @@ function generateT4XML() {
     // Skip empty rows
     if (!lastName && !sinRaw) continue;
 
-    // SIN validation
-    let sinVal = sinRaw.replace(/\D/g, '');
-    if (!sinVal) { sinVal = '000000000'; warnings.push(`Row ${i+2}: "${firstName} ${lastName}" has no SIN`); }
-    else if (sinVal.length !== 9) {
-      warnings.push(`Row ${i+2}: "${firstName} ${lastName}" SIN has ${sinVal.length} digits`);
-      sinVal = sinVal.substring(0, 9).padEnd(9, '0');
-    }
+    // SIN validation — invalid SIN is a hard stop
+    const sinVal = checkSIN(sinRaw, `${firstName} ${lastName}`.trim(), i + 2, warnings, errors);
+    if (!sinVal) continue;
 
     // Province of employment
     let empProvCd = provCdRaw;
@@ -712,10 +788,8 @@ function generateT4XML() {
     slipCount++;
   }
 
-  if (slipCount === 0) {
-    alert('No valid employee rows found. Please check your column mapping.');
-    return;
-  }
+  if (!errors.length && slipCount === 0) errors.push('No valid employee rows found. Please check your column mapping.');
+  if (errors.length) { showGenerateErrors(errors); return; }
 
   // Build T4 Summary
   const pyAddr = document.getElementById('py-addr')?.value?.trim() || '';
@@ -776,44 +850,21 @@ function generateT4XML() {
 // ============================================================
 // T5018 XML GENERATION
 // ============================================================
-function sanitizeBN_RZ(raw) {
-  let bn = raw.toUpperCase().trim().replace(/[-\s]/g, '');
-  if (bn.length === 9 && /^\d{9}$/.test(bn)) {
-    bn += 'RZ0001';
-  }
-  return bn;
-}
-
 function generateT5018XML() {
-  // Validate required form fields
-  const requiredIds = ['tx-bn','tx-name','tx-ref','tx-contact','tx-phone','tx-email',
-                       'py-bn','py-name','py-contact','py-phone'];
-  for (const id of requiredIds) {
-    const el = document.getElementById(id);
-    if (!el || !el.value.trim()) {
-      if (el) {
-        el.focus();
-        el.style.borderColor = 'var(--danger)';
-        setTimeout(() => el.style.borderColor = '', 2000);
-      }
-      alert(`Please fill in: ${el?.previousElementSibling?.textContent || id}`);
-      return;
-    }
-  }
+  // Validate required form fields, including fiscal period end date
+  if (!validateFilingDetails(['tx-bn','tx-name','tx-ref','tx-contact','tx-phone','tx-email',
+                              'py-bn','py-name','py-contact','py-phone',
+                              't5018-fiscal-day','t5018-fiscal-month','t5018-fiscal-year'],
+                             [PAYER_BN_CHECK])) return;
 
-  // Validate fiscal period end date
-  const fiscalDay = document.getElementById('t5018-fiscal-day')?.value || '';
-  const fiscalMonth = document.getElementById('t5018-fiscal-month')?.value || '';
-  const fiscalYear = document.getElementById('t5018-fiscal-year')?.value || '';
-  if (!fiscalDay || !fiscalMonth || !fiscalYear) {
-    alert('Please fill in the Fiscal Period End Date (day, month, year).');
-    return;
-  }
-
+  const fiscalDay = document.getElementById('t5018-fiscal-day').value;
+  const fiscalMonth = document.getElementById('t5018-fiscal-month').value;
+  const fiscalYear = document.getElementById('t5018-fiscal-year').value;
   const pyPhone = parsePhone(document.getElementById('py-phone').value);
   const reportType = document.getElementById('report-type').value;
-  const payerBn = sanitizeBN_RZ(document.getElementById('py-bn').value.trim());
+  const payerBn = cleanBN(document.getElementById('py-bn').value);
   const warnings = [];
+  const errors = [];
 
   let totalSubcontractor = 0, slipCount = 0;
   let slipsXml = '';
@@ -857,22 +908,15 @@ function generateT5018XML() {
 
       rcpntNmXml = `<RCPNT_NM>${xmlTag('snm', snm)}${gvnNm ? xmlTag('gvn_nm', gvnNm) : ''}${init ? xmlTag('init', init) : ''}</RCPNT_NM>`;
 
-      let sinVal = recipientBnRaw.replace(/\D/g, '');
-      if (!sinVal) { sinVal = '000000000'; warnings.push(`Row ${i+2}: "${recipientName}" has no SIN`); }
-      else if (sinVal.length !== 9) { warnings.push(`Row ${i+2}: "${recipientName}" SIN has ${sinVal.length} digits`); sinVal = sinVal.substring(0, 9).padEnd(9, '0'); }
+      const sinVal = checkSIN(recipientBnRaw, recipientName, i + 2, warnings, errors);
+      if (!sinVal) continue;
       sinXml = xmlTag('sin', sinVal);
       bnXml = xmlTag('rcpnt_bn', '000000000RC0000');
     } else {
       // Corporation or Partnership
       sinXml = xmlTag('sin', '000000000');
-      let bnVal = sanitizeBN_RZ(recipientBnRaw);
-      if (!bnVal || bnVal === '(BLANK)') {
-        bnVal = '000000000RZ0000';
-        warnings.push(`Row ${i+2}: "${recipientName}" has no BN`);
-      }
-      if (bnVal.length !== 15 && bnVal !== '000000000RZ0000') {
-        warnings.push(`Row ${i+2}: "${recipientName}" BN is ${bnVal.length} chars: ${bnVal}`);
-      }
+      const bnVal = checkRecipientBN(recipientBnRaw, 'RZ', '000000000RZ0000', recipientName, i + 2, warnings, errors);
+      if (!bnVal) continue;
       bnXml = xmlTag('rcpnt_bn', bnVal);
     }
 
@@ -905,10 +949,8 @@ function generateT5018XML() {
     slipCount++;
   }
 
-  if (slipCount === 0) {
-    alert('No valid contractor rows found. Please check your column mapping.');
-    return;
-  }
+  if (!errors.length && slipCount === 0) errors.push('No valid contractor rows found. Please check your column mapping.');
+  if (errors.length) { showGenerateErrors(errors); return; }
 
   // Build T5018 Summary
   const pyAddr = document.getElementById('py-addr')?.value?.trim() || '';
@@ -955,6 +997,146 @@ function generateT5018XML() {
 }
 
 // ============================================================
+// NR4 XML GENERATION (nr4.xsd / T619_NR4.xsd)
+// ============================================================
+function generateNR4XML() {
+  if (!validateFilingDetails(['tx-bn','tx-name','tx-ref','tx-contact','tx-phone','tx-email',
+                              'nr4-acct','py-name','py-contact','py-phone'],
+                             [{ id: 'nr4-acct', test: v => NR_ACCT_PATTERN.test(cleanBN(v)), msg: 'Must be 3 letters + 6 digits (e.g. NRA123456).' }])) return;
+
+  const nrAcct = cleanBN(document.getElementById('nr4-acct').value);
+  const pyPhone = parsePhone(document.getElementById('py-phone').value);
+  const taxYear = document.getElementById('tax-year').value;
+  const reportType = document.getElementById('report-type').value;
+  const warnings = [];
+  const errors = [];
+
+  let totGross = 0, totTax = 0, slipCount = 0;
+  let slipsXml = '';
+  const currencies = new Set();
+
+  for (let i = 0; i < parsedData.length; i++) {
+    const row = parsedData[i];
+    const name = String(getVal(row, 'rcpnt_name')).trim();
+    const fssn = String(getVal(row, 'fssn_nbr')).trim();
+    if (!name && !fssn) continue;
+
+    const rowErr = msg => errors.push(`Row ${i+2}: "${name}" ${msg}`);
+    const typeRaw = String(getVal(row, 'rcpnt_type')).trim().toLowerCase();
+    const rcpntTcd = /^[1-5]$/.test(typeRaw) ? typeRaw : NR4_RCPNT_TYPE_MAP[typeRaw];
+    const cntryRaw = String(getVal(row, 'tx_cntry_cd')).trim().toUpperCase();
+    const cntry = COUNTRY_MAP[cntryRaw] || cntryRaw;
+    const incRaw = String(getVal(row, 'inc_1_tcd')).trim();
+    const incCd = incRaw ? incRaw.padStart(2, '0') : '';
+    const crcy = String(getVal(row, 'crcy_1_cd')).trim().toUpperCase();
+    const xmptCd = String(getVal(row, 'tx_xmpt_1_cd')).trim().toUpperCase();
+    const gross = parseFloat(getVal(row, 'gro_1_incamt')) || 0;
+    const tax = parseFloat(getVal(row, 'nr_tx_1_amt')) || 0;
+    const steCd = String(getVal(row, 'ste_cd')).trim().toUpperCase();
+
+    const before = errors.length;
+    if (!name) rowErr('is missing a recipient name');
+    if (!rcpntTcd) rowErr(`has an unrecognized recipient type "${typeRaw}" — use Individual, Joint account, Corporation, Other, Government, or 1–5`);
+    if (!fssn) rowErr('is missing a foreign tax ID (required by CRA)');
+    else if (fssn.length > 20) rowErr('foreign tax ID is longer than 20 characters');
+    if (!/^[A-Z]{3}$/.test(cntry)) rowErr(`country of residence "${cntryRaw}" must be a 3-letter code (e.g. USA, GBR)`);
+    if (incCd && !/^\d{2}$/.test(incCd)) rowErr(`income code "${incRaw}" must be 2 digits`);
+    if (crcy && !/^[A-Z]{3}$/.test(crcy)) rowErr(`currency "${crcy}" must be a 3-letter code (e.g. CAD, USD)`);
+    if (xmptCd.length > 1) rowErr(`exemption code "${xmptCd}" must be 1 character`);
+    if (errors.length > before) continue;
+
+    // Individuals and joint accounts use RCPNT_NM; corporations, other and government use ENTPRS_NM
+    let nameXml;
+    if (rcpntTcd === '1' || rcpntTcd === '2') {
+      const nameParts = name.split(/\s+/);
+      const snm = nameParts[nameParts.length - 1].substring(0, 20);
+      const gvnNm = nameParts.length > 1 ? nameParts[0].substring(0, 12) : '';
+      nameXml = `<RCPNT_NM>${xmlTag('snm', snm)}${xmlTag('gvn_nm', gvnNm)}</RCPNT_NM>`;
+    } else {
+      const nameStr = name.substring(0, 60);
+      nameXml = `<ENTPRS_NM>${xmlTag('l1_nm', nameStr.substring(0, 30))}${xmlTag('l2_nm', nameStr.substring(30, 60))}</ENTPRS_NM>`;
+    }
+
+    // ponytail: address country = tax-residence country; add an address-country column if they ever differ
+    const addrInner = [
+      xmlTag('addr_l1_txt', String(getVal(row, 'addr_l1')).trim().substring(0, 30)),
+      xmlTag('cty_nm', String(getVal(row, 'city')).trim().substring(0, 28)),
+      /^[A-Z]{2}$/.test(steCd) ? xmlTag('ste_cd', steCd) : '',
+      xmlTag('fgn_pstl_cd', String(getVal(row, 'fgn_pstl_cd')).trim().replace(/\s/g, '').toUpperCase()),
+    ].join('');
+    const addrXml = addrInner ? `<RCPNT_ADDR>${addrInner}${xmlTag('cntry_cd', cntry)}</RCPNT_ADDR>` : '';
+
+    const amtInner = (gross > 0 ? xmlTag('gro_1_incamt', gross.toFixed(2)) : '') +
+                     (tax > 0 ? xmlTag('nr_tx_1_amt', tax.toFixed(2)) : '');
+
+    totGross += gross;
+    totTax += tax;
+    currencies.add(crcy || 'CAD');
+
+    slipsXml += `
+      <NR4Slip>
+        ${nameXml}
+        ${addrXml}
+        ${xmlTag('tx_cntry_cd', cntry)}
+        ${xmlTag('fssn_nbr', fssn)}
+        ${xmlTag('nr_acct_nbr', nrAcct)}
+        ${xmlTag('rcpnt_tcd', rcpntTcd)}
+        ${xmlTag('inc_1_tcd', incCd)}
+        ${xmlTag('crcy_1_cd', crcy)}
+        ${amtInner ? `<NR4_AMT>${amtInner}</NR4_AMT>` : ''}
+        ${xmlTag('tx_xmpt_1_cd', xmptCd)}
+        ${xmlTag('rpt_tcd', reportType)}
+      </NR4Slip>`;
+
+    slipCount++;
+  }
+
+  if (!errors.length && slipCount === 0) errors.push('No valid recipient rows found. Please check your column mapping.');
+  if (errors.length) { showGenerateErrors(errors); return; }
+  if (currencies.size > 1) warnings.push(`Slips use more than one currency (${[...currencies].join(', ')}) — the summary totals add them together as-is. Check them before filing.`);
+
+  const pyAddr = document.getElementById('py-addr').value.trim();
+  const pyCity = document.getElementById('py-city').value.trim();
+  const pyProv = document.getElementById('py-prov').value;
+  const pyPostal = document.getElementById('py-postal').value.trim().replace(/\s/g, '');
+  const totInner = (totGross > 0 ? xmlTag('tot_gro_1_incamt', totGross.toFixed(2)) : '') +
+                   (totTax > 0 ? xmlTag('tot_nr_tx_1_amt', totTax.toFixed(2)) : '');
+
+  // NR4 summary rpt_tcd has no "C": cancelled slips are filed under an amended (A) summary
+  const summaryXml = `
+      <NR4Summary>
+        ${xmlTag('nr_acct_nbr', nrAcct)}
+        <PAYR_NM>${xmlTag('l1_nm', document.getElementById('py-name').value.trim())}</PAYR_NM>
+        ${(pyAddr || pyCity) ? `<PAYR_ADDR>
+          ${xmlTag('addr_l1_txt', pyAddr)}
+          ${xmlTag('cty_nm', pyCity)}
+          ${xmlTag('prov_cd', pyProv)}
+          ${xmlTag('cntry_cd', 'CAN')}
+          ${xmlTag('pstl_cd', pyPostal)}
+        </PAYR_ADDR>` : ''}
+        <CNTC>
+          ${xmlTag('cntc_nm', document.getElementById('py-contact').value.trim())}
+          ${xmlTag('cntc_area_cd', pyPhone.area)}
+          ${xmlTag('cntc_phn_nbr', pyPhone.num)}
+        </CNTC>
+        ${xmlTag('tx_yr', taxYear)}
+        ${xmlTag('slp_cnt', String(slipCount))}
+        ${xmlTag('rpt_tcd', reportType === 'C' ? 'A' : reportType)}
+        ${totInner ? `<NR4_TAMT>${totInner}</NR4_TAMT>` : ''}
+      </NR4Summary>`;
+
+  xmlOutput = buildT619Wrapper('NR4', slipsXml, summaryXml);
+  xmlOutput = xmlOutput.replace(/^\s*\n/gm, '');
+
+  showResults(slipCount, [
+    { label: 'Slips Generated', value: slipCount },
+    { label: 'Total Gross Income', value: `$${totGross.toLocaleString('en-CA', {minimumFractionDigits:2})}` },
+    { label: 'Total Tax Withheld', value: `$${totTax.toLocaleString('en-CA', {minimumFractionDigits:2})}` },
+  ], warnings);
+  goToStep(4);
+}
+
+// ============================================================
 // T619 WRAPPER (shared by all return types)
 // ============================================================
 function buildT619Wrapper(returnType, slipsXml, summaryXml) {
@@ -962,7 +1144,7 @@ function buildT619Wrapper(returnType, slipsXml, summaryXml) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Submission xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <T619>
-    <TransmitterAccountNumber>${xmlTag('bn15', document.getElementById('tx-bn').value.trim())}</TransmitterAccountNumber>
+    <TransmitterAccountNumber>${xmlTag('bn15', cleanBN(document.getElementById('tx-bn').value))}</TransmitterAccountNumber>
     ${xmlTag('sbmt_ref_id', document.getElementById('tx-ref').value.trim())}
     ${xmlTag('summ_cnt', '1')}
     ${xmlTag('lang_cd', document.getElementById('tx-lang').value)}
@@ -1056,6 +1238,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Clear a field's inline error as soon as the user edits it
+  document.getElementById('step-3').addEventListener('input', e => {
+    if (!e.target.classList.contains('has-error')) return;
+    e.target.classList.remove('has-error');
+    e.target.closest('.form-group').querySelector('.field-error')?.remove();
+  });
+
   // Auto-format postal code (A1A 1A1)
   const postalInput = document.getElementById('py-postal');
   if (postalInput) {
@@ -1078,7 +1267,7 @@ document.addEventListener('DOMContentLoaded', () => {
 const SAVED_FIELDS = [
   'tx-bn','tx-name','tx-ref','tx-lang','tx-contact','tx-phone','tx-email',
   'py-bn','py-name','py-addr','py-city','py-prov','py-postal','py-contact','py-phone',
-  't4-dental-code'
+  't4-dental-code','nr4-acct'
 ];
 const STORAGE_KEY = 'taxxml_filing_details';
 
