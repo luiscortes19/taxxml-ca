@@ -289,8 +289,18 @@ function buildPreview() {
     const isMapped = mappedIdx !== undefined && mappedIdx >= 0;
 
     // Column 1: CRA field name
+    // Display only: "Employment Income (Box 14)" renders as [14] Employment Income
     const tdField = document.createElement('td');
-    tdField.textContent = field.label;
+    const box = field.label.match(/^(.*?)\s*\(Box (\w+)\)$/);
+    if (box) {
+      const tag = document.createElement('span');
+      tag.className = 'box-tag';
+      tag.title = `Box ${box[2]}`;
+      tag.textContent = box[2];
+      tdField.append(tag, box[1]);
+    } else {
+      tdField.textContent = field.label;
+    }
     tr.appendChild(tdField);
 
     // Column 2: Status icon

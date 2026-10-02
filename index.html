@@ -5,23 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- SEO -->
-  <style>
-  .support-btn {
-    display: inline-block;
-    margin-top: 0.5rem;
-    padding: 0.5rem 1.25rem;
-    border: 1px solid var(--border);
-    border-radius: 2rem;
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-    text-decoration: none;
-    transition: border-color 0.2s ease, color 0.2s ease;
-  }
-  .support-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  </style>
   <title>Free Excel to CRA XML: NR4, T4, T1204, T5018 | TaxXML.ca</title>
   <meta name="description" content="Free Excel to CRA XML converter for NR4, T4, T1204 and T5018 returns. Runs entirely in your browser: no signup, no upload. Get your XML file in seconds.">
   <meta name="keywords" content="CRA XML, T4, T1204, T5018, T619, tax filing Canada, Excel to XML, information return, payroll, statement of remuneration, government service contract, contract payments, sub-contractor, NR4, non-resident, non-resident tax withheld, electronic filing, IFT">
@@ -47,7 +30,7 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="css/styles.css">
 
@@ -91,7 +74,7 @@
   <header id="site-header">
     <div class="header-inner">
       <a href="/" class="logo">
-        <img src="img/logo.png" alt="TaxXML.ca" class="logo-img">
+        <span class="logo-text">TaxXML<span class="logo-accent">.ca</span></span>
       </a>
       <nav>
         <a href="#faq">FAQ</a>
@@ -211,7 +194,7 @@
           <div class="form-row">
             <div class="form-group">
               <label for="tx-bn">Transmitter BN (15 chars) *</label>
-              <input type="text" id="tx-bn" class="form-control" placeholder="123456789MM0001" maxlength="15" required>
+              <input type="text" id="tx-bn" class="form-control mono" placeholder="123456789MM0001" maxlength="15" required>
               <span class="field-hint">Must be 15 chars ending in a program code (e.g. MM0001, RZ0001).</span>
             </div>
             <div class="form-group">
@@ -222,7 +205,7 @@
           <div class="form-row">
             <div class="form-group">
               <label for="tx-ref">Submission Reference ID *</label>
-              <input type="text" id="tx-ref" class="form-control" placeholder="T1204A" maxlength="8" required>
+              <input type="text" id="tx-ref" class="form-control mono" placeholder="T1204A" maxlength="8" required>
               <span class="field-hint">Unique per submission. If you re-submit, you must increment this (e.g. A, B, C).</span>
             </div>
             <div class="form-group">
@@ -259,7 +242,7 @@
           <div class="form-row">
             <div class="form-group" id="py-bn-group">
               <label for="py-bn">Account Number (15 chars) *</label>
-              <input type="text" id="py-bn" class="form-control" placeholder="123456789RP0001" maxlength="15" required>
+              <input type="text" id="py-bn" class="form-control mono" placeholder="123456789RP0001" maxlength="15" required>
               <span class="field-hint">The 15-character Business Number. T4 uses RP; T1204 uses RT; T5018 uses RZ.</span>
             </div>
             <div class="form-group">
@@ -299,7 +282,7 @@
             </div>
             <div class="form-group">
               <label for="py-postal">Postal Code</label>
-              <input type="text" id="py-postal" class="form-control" placeholder="K1A 0B1" maxlength="10">
+              <input type="text" id="py-postal" class="form-control mono" placeholder="K1A 0B1" maxlength="10">
             </div>
           </div>
           <div class="form-row">
@@ -358,7 +341,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="nr4-acct">Non-Resident Account Number *</label>
-                <input type="text" id="nr4-acct" class="form-control" placeholder="NRA123456" maxlength="9">
+                <input type="text" id="nr4-acct" class="form-control mono" placeholder="NRA123456" maxlength="9">
                 <span class="field-hint">Your CRA non-resident (NR) account: 3 letters + 6 digits. Used on the summary and every slip.</span>
               </div>
             </div>
@@ -408,8 +391,8 @@
             <li><strong>Leave optional fields blank.</strong> CRA rejects empty tags like <code>&lt;pstl_cd/&gt;</code>. This tool leaves out any optional field that's blank, so don't type placeholders like "N/A" into optional columns.</li>
           </ul>
         </div>
-        <p style="margin-top: 1.25rem; font-size: 0.82rem; color: var(--text-muted);">If this saved you time, consider <a href="https://donate.stripe.com/fZu5kD95z0mL6OR26peIw00" target="_blank" rel="noopener" style="color: var(--text-secondary); text-decoration: underline; text-underline-offset: 3px;">buying me a coffee ☕</a></p>
-        <div class="btn-row" style="margin-top:2rem">
+        <p class="tip-line">If this saved you time, consider <a href="https://donate.stripe.com/fZu5kD95z0mL6OR26peIw00" target="_blank" rel="noopener">buying me a coffee ☕</a></p>
+        <div class="btn-row">
           <button class="btn btn-ghost" onclick="goToStep(3)">← Edit Details</button>
           <button class="btn btn-ghost" onclick="resetAll()">Start Over</button>
         </div>
@@ -449,7 +432,7 @@
       </details>
       <details class="faq-item">
         <summary>Why did you build this?</summary>
-        <p>As an automation consultant at <strong>AVANZA Business Automation</strong>, I constantly saw small businesses and accountants struggling with CRA's strict XML filing requirements. If you file more than 5 information slips, CRA forces you to submit them electronically in an XML format. Because XML is notoriously difficult for non-programmers to generate from Excel, businesses are often forced to buy bloated, expensive payroll software just for this one feature. I built TaxXML.ca as a fast, free, and secure alternative to democratize tax filing for Canadian businesses.</p>
+        <p>As an automation consultant at <strong>AVANZA Business Automation</strong>, I constantly saw small businesses and accountants struggling with CRA's strict XML filing requirements. If you file more than 5 information slips, CRA forces you to submit them electronically in an XML format. Because XML is notoriously difficult for non-programmers to generate from Excel, businesses are often forced to buy bloated, expensive payroll software just for this one feature. I built TaxXML.ca as a fast, free, and secure alternative to democratize tax filing for Canadian businesses.<span class="faq-signoff">Luis Cortes, AVANZA Business Automation</span></p>
       </details>
       <details class="faq-item">
         <summary>Is this tool free?</summary>
@@ -460,30 +443,30 @@
 
   <!-- FOOTER -->
   <footer>
-    <div class="footer-inner" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 2rem;">
-      <div class="footer-brand" style="max-width: 400px;">
+    <div class="footer-inner">
+      <div class="footer-brand">
         <span class="logo-text">TaxXML<span class="logo-accent">.ca</span></span>
-        <p style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">Free CRA XML generation for simple Canadian tax filing.</p>
-        <p class="footer-avanza" style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">A project by <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a></p>
+        <p>Free CRA XML generation for simple Canadian tax filing.</p>
+        <p class="footer-avanza">A project by <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a></p>
       </div>
       
-      <div class="footer-links" style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem; font-size: 0.9rem;">Resources</h4>
-        <a href="#converter" style="font-size: 0.85rem; color: var(--text-secondary);">T4 Converter</a>
-        <a href="#converter" style="font-size: 0.85rem; color: var(--text-secondary);">T1204 Converter</a>
-        <a href="#converter" style="font-size: 0.85rem; color: var(--text-secondary);">T5018 Converter</a>
-        <a href="#converter" style="font-size: 0.85rem; color: var(--text-secondary);">NR4 Converter</a>
-        <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" style="font-size: 0.85rem; color: var(--accent);">Submit to CRA (IFT) &nearr;</a>
+      <div class="footer-links">
+        <h4>Resources</h4>
+        <a href="#converter">T4 Converter</a>
+        <a href="#converter">T1204 Converter</a>
+        <a href="#converter">T5018 Converter</a>
+        <a href="#converter">NR4 Converter</a>
+        <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" class="footer-ift">Submit to CRA (IFT) &nearr;</a>
       </div>
 
-      <div class="footer-links" style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem; font-size: 0.9rem;">Legal</h4>
-        <a href="/privacy" style="font-size: 0.85rem; color: var(--text-secondary);">Privacy</a>
-        <a href="/terms" style="font-size: 0.85rem; color: var(--text-secondary);">Terms</a>
+      <div class="footer-links">
+        <h4>Legal</h4>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
       </div>
     </div>
     <div class="footer-bottom">
-      <p>&copy; 2026 TaxXML.ca. Built in Canada by <a href="https://avanza-automation.com" target="_blank" rel="noopener" style="color: var(--accent); font-weight: 600; text-decoration: none;">AVANZA Business Automation</a>. Not affiliated with the Canada Revenue Agency.</p>
+      <p>&copy; 2026 TaxXML.ca. Built in Canada by <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a>. Not affiliated with the Canada Revenue Agency.</p>
     </div>
   </footer>
 

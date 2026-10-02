@@ -14,7 +14,7 @@
   <link rel="icon" type="image/png" href="/img/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
 
   <!-- Google tag (gtag.js) -->
@@ -31,7 +31,7 @@
   <header id="site-header">
     <div class="header-inner">
       <a href="/" class="logo">
-        <img src="/img/logo.png" alt="TaxXML.ca" class="logo-img">
+        <span class="logo-text">TaxXML<span class="logo-accent">.ca</span></span>
       </a>
       <nav>
         <a href="/terms">Terms</a>
@@ -74,7 +74,7 @@
 
     <p><strong>Google Analytics 4.</strong> Pages load Google’s tag from <code>www.googletagmanager.com</code> with measurement ID <strong>G-E2F5Q3RZVH</strong>. The tag is the standard pageview setup only. The site does not send custom analytics events, and it does not send spreadsheet cells or filing fields to Google. Google can receive the page address, rough location, device and browser details, and a client identifier stored in cookies (such as <code>_ga</code>). Google’s policy is at <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>.</p>
 
-    <p><strong>Google Fonts.</strong> Pages request the Inter font from <code>fonts.googleapis.com</code> and <code>fonts.gstatic.com</code>. Your browser sends that request, including your IP address, to Google.</p>
+    <p><strong>Google Fonts.</strong> Pages request the IBM Plex Sans and IBM Plex Mono fonts from <code>fonts.googleapis.com</code> and <code>fonts.gstatic.com</code>. Your browser sends that request, including your IP address, to Google.</p>
 
     <p><strong>SheetJS.</strong> The converter page loads the SheetJS library from <code>cdn.sheetjs.com</code> (<code>xlsx-0.20.3</code>). That is a script download. The spreadsheet is parsed on your device after the library loads. It is not uploaded to that CDN. The Privacy and Terms pages do not load SheetJS.</p>
 
@@ -101,25 +101,25 @@
   </main>
 
   <footer>
-    <div class="footer-inner" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 2rem;">
-      <div class="footer-brand" style="max-width: 400px;">
+    <div class="footer-inner">
+      <div class="footer-brand">
         <span class="logo-text">TaxXML<span class="logo-accent">.ca</span></span>
-        <p style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">Free CRA XML generation for simple Canadian tax filing.</p>
-        <p class="footer-avanza" style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">A project by <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a></p>
+        <p>Free CRA XML generation for simple Canadian tax filing.</p>
+        <p class="footer-avanza">A project by <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a></p>
       </div>
-      <div class="footer-links" style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem; font-size: 0.9rem;">Resources</h4>
-        <a href="/#converter" style="font-size: 0.85rem; color: var(--text-secondary);">XML Converter</a>
-        <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" style="font-size: 0.85rem; color: var(--accent);">Submit to CRA (IFT) &nearr;</a>
+      <div class="footer-links">
+        <h4>Resources</h4>
+        <a href="/#converter">XML Converter</a>
+        <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" class="footer-ift">Submit to CRA (IFT) &nearr;</a>
       </div>
-      <div class="footer-links" style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem; font-size: 0.9rem;">Legal</h4>
-        <a href="/privacy" style="font-size: 0.85rem; color: var(--text-secondary);">Privacy</a>
-        <a href="/terms" style="font-size: 0.85rem; color: var(--text-secondary);">Terms</a>
+      <div class="footer-links">
+        <h4>Legal</h4>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
       </div>
     </div>
     <div class="footer-bottom">
-      <p>&copy; 2026 TaxXML.ca. Built in Canada by <a href="https://avanza-automation.com" target="_blank" rel="noopener" style="color: var(--accent); font-weight: 600; text-decoration: none;">AVANZA Business Automation</a>. Not affiliated with the Canada Revenue Agency.</p>
+      <p>&copy; 2026 TaxXML.ca. Built in Canada by <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a>. Not affiliated with the Canada Revenue Agency.</p>
     </div>
   </footer>
 </body>
