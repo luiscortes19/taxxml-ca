@@ -66,7 +66,7 @@ nav a { color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; }
 nav a:hover { color: var(--text-primary); }
 .nav-cta {
   background: var(--accent); color: white !important; padding: 0.5rem 1.2rem;
-  border-radius: var(--radius-sm); font-weight: 600;
+  border-radius: var(--radius-sm); font-weight: 600; white-space: nowrap;
 }
 .nav-cta:hover { background: var(--accent-hover); }
 
@@ -89,28 +89,48 @@ nav a:hover { color: var(--text-primary); }
 .btn-ghost:hover { color: var(--text-primary); border-color: var(--text-muted); }
 .btn-lg { padding: 1rem 2rem; font-size: 1.05rem; border-radius: var(--radius); }
 .btn-row { display: flex; justify-content: space-between; margin-top: 2rem; }
+.btn-row-end { justify-content: flex-end; }
 
 /* ---- HERO ---- */
 #hero {
-  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 8rem 2rem 4rem; position: relative; overflow: hidden;
+  min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 7rem 2rem 3rem; position: relative; overflow: hidden;
   background: radial-gradient(ellipse at 30% 50%, rgba(59,130,246,0.1) 0%, transparent 60%),
               radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.08) 0%, transparent 50%);
 }
-.hero-content { max-width: 650px; text-align: center; }
+.hero-content { max-width: 760px; text-align: center; }
 #hero h1 { font-size: 3.2rem; font-weight: 800; line-height: 1.15; margin-bottom: 1.2rem; }
 .accent-text { color: var(--accent); }
 .hero-sub { color: var(--text-secondary); font-size: 1.15rem; line-height: 1.7; margin-bottom: 2rem; }
 .hero-sub strong { color: var(--text-primary); }
-.hero-trust {
-  display: flex; gap: 1.5rem; justify-content: center; margin-top: 2.5rem; flex-wrap: wrap;
+
+/* Hero return picker: the form codes people search for, set like slip headers */
+.return-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+.return-pick {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.2rem;
+  padding: 1rem 1.1rem 1.1rem; text-align: left; cursor: pointer;
+  background: var(--bg-card); color: var(--text-secondary);
+  border: 1px solid var(--border); border-top: 3px solid var(--accent);
+  border-radius: var(--radius-sm); font-family: var(--font);
+  transition: background 0.2s, border-color 0.2s;
 }
-.trust-item { color: var(--text-muted); font-size: 0.85rem; font-weight: 500; }
+.return-pick b { font-size: 1.75rem; font-weight: 800; line-height: 1.1; color: var(--text-primary); letter-spacing: -0.01em; }
+.return-pick span { font-size: 0.8rem; line-height: 1.35; }
+.return-pick:hover { background: var(--bg-card-hover); border-color: var(--accent); }
+.return-pick:focus-visible, .nav-cta:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* Trust strip: three checkable claims, not slogans */
+.hero-trust {
+  list-style: none; max-width: 36rem; margin: 2rem auto 0; text-align: left;
+  display: flex; flex-direction: column; gap: 0.5rem;
+  color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;
+}
+.hero-trust li { padding-left: 0.8rem; border-left: 2px solid var(--border); }
 
 /* ---- SECTIONS ---- */
-#converter { max-width: 1000px; margin: 0 auto; padding: 5rem 2rem; }
+#converter { max-width: 1000px; margin: 0 auto; padding: 3.5rem 2rem 5rem; }
 #converter h2 {
-  text-align: center; font-size: 2rem; font-weight: 700; margin-bottom: 3rem;
+  text-align: center; font-size: 2rem; font-weight: 700; margin-bottom: 2rem;
 }
 
 
@@ -164,7 +184,10 @@ nav a:hover { color: var(--text-primary); }
   color: var(--success); font-weight: 500;
 }
 .icon-sm { width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 0.3rem; }
-.dropzone-icon i { width: 48px; height: 48px; color: var(--accent); }
+.dropzone-icon svg { width: 48px; height: 48px; color: var(--accent); }
+.step1-return { margin-bottom: 1.25rem; }
+.sample-line { margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--text-secondary); }
+.sample-line a { font-weight: 600; }
 
 /* ---- FORMS ---- */
 .form-section { margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
@@ -172,6 +195,7 @@ nav a:hover { color: var(--text-primary); }
 .form-section h4 { font-size: 1.1rem; margin-bottom: 0.3rem; }
 .form-hint { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.2rem; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.form-row-3 { grid-template-columns: repeat(3, 1fr); }
 .form-group { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.5rem; }
 .form-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
 .form-control {
@@ -264,17 +288,17 @@ select.form-control { cursor: pointer; }
 
 /* ---- SUCCESS / STEP 4 ---- */
 .card-success { text-align: center; }
-.success-icon { font-size: 4rem; margin-bottom: 1rem; }
-.stats-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
-  margin: 2rem 0; text-align: center;
+/* Filing receipt: the values to check before IFT, as a definition list */
+.receipt {
+  display: grid; grid-template-columns: max-content 1fr; column-gap: 2rem;
+  max-width: 560px; margin: 1.75rem auto; text-align: left;
+  border-top: 1px solid var(--border);
 }
-.stat-card {
-  padding: 1.2rem; background: var(--bg-secondary); border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-}
-.stat-value { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
-.stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem; }
+.receipt dt, .receipt dd { padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+.receipt dt { color: var(--text-muted); font-size: 0.85rem; }
+.receipt dd { color: var(--text-primary); font-weight: 600; overflow-wrap: anywhere; }
+.receipt .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9rem; font-weight: 500; }
+#btn-download { overflow-wrap: anywhere; justify-content: center; }
 .download-hint { color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem; }
 .download-hint a { color: var(--accent); }
 
@@ -404,7 +428,7 @@ footer {
   .steps-grid { grid-template-columns: 1fr 1fr; }
   .form-row { grid-template-columns: 1fr; }
   .mapping-grid { grid-template-columns: 1fr; }
-  .stats-grid { grid-template-columns: 1fr; }
+  .return-picker { grid-template-columns: 1fr 1fr; }
   .footer-inner { grid-template-columns: 1fr; gap: 1.5rem; }
   .progress-step { font-size: 0.75rem; padding: 0.3rem 0.5rem; }
 }
@@ -412,7 +436,22 @@ footer {
   .header-inner { padding: 0.65rem 0.75rem; }
   nav { gap: 0.35rem; }
   nav a { font-size: 0.8rem; }
-  .nav-cta { padding: 0.4rem 0.45rem; }
+  .nav-cta { padding: 0.4rem 0.6rem; }
+  .logo-img { height: 32px; }
+  #hero { padding: 6rem 1rem 2.5rem; }
+  #converter { padding: 4rem 1rem; }
+  .card { padding: 1.5rem 1.1rem; }
+  /* Progress: numbers only, label on the current step; lines absorb the slack */
+  .progress-step { padding: 0.3rem 0.25rem; font-size: 0; gap: 0; }
+  .progress-step.active { font-size: 0.75rem; gap: 0.35rem; }
+  .progress-line { flex: 1 1 12px; width: auto; }
+  .receipt { grid-template-columns: 1fr; }
+  .receipt dt { padding-bottom: 0; border-bottom: none; }
+  .receipt dd { padding-top: 0.15rem; }
+  .btn-row { flex-direction: column; gap: 0.6rem; }
+  .btn-row .btn { width: 100%; justify-content: center; }
+  .btn-row .btn-primary { order: -1; }
+  #btn-download { width: 100%; font-size: 0.92rem; padding: 0.9rem 1rem; }
 }
 
 /* ---- INLINE VALIDATION ---- */
