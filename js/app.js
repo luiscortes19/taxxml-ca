@@ -10,6 +10,7 @@ let headers = [];
 let xmlOutput = '';
 let currentStep = 1;
 let columnMap = {};
+let badCells = new Set(); // "rowNum:fieldKey" cells that blocked the last Generate, marked in the Step 2 preview
 
 // ============================================================
 // RETURN TYPE REGISTRY
@@ -215,14 +216,20 @@ function handleFile(file) {
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
-      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const bytes = new Uint8Array(e.target.result);
+      // SheetJS reads UTF-8 and UTF-16LE CSVs itself but not UTF-16BE, so decode that one here
+      const wb = bytes[0] === 0xFE && bytes[1] === 0xFF
+        ? XLSX.read(new TextDecoder('utf-16be').decode(bytes), { type: 'string' })
+        : XLSX.read(e.target.result, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
+      Object.keys(ws).forEach(k => { if (k[0] !== '!') keepDigitText(ws[k], ext === 'csv'); }); // keep SIN/BN/ZIP leading zeros
       const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
       if (raw.length < 2) { showFileError('File has no data rows.'); return; }
 
       headers = raw[0].map(h => String(h || '').trim());
       parsedData = raw.slice(1).filter(row => row.some(cell => cell !== ''));
+      badCells.clear();
 
       const info = document.getElementById('file-info');
       info.innerHTML = `<i data-lucide="check-circle" class="icon-sm"></i> ${file.name} &mdash; ${parsedData.length} rows, ${headers.length} columns`;
@@ -362,8 +369,10 @@ function renderPreviewTable() {
   thead.innerHTML = '<tr>' + mappedFields.map(f => `<th>${f.label}</th>`).join('') + '</tr>';
 
   const preview = parsedData.slice(0, 10);
-  tbody.innerHTML = preview.map(row =>
-    '<tr>' + mappedFields.map(f => `<td>${row[columnMap[f.key]] ?? ''}</td>`).join('') + '</tr>'
+  tbody.innerHTML = preview.map((row, r) =>
+    '<tr>' + mappedFields.map(f =>
+      `<td${badCells.has(`${r + 2}:${f.key}`) ? ' class="cell-error"' : ''}>${escapeXml(String(row[columnMap[f.key]] ?? ''))}</td>`
+    ).join('') + '</tr>'
   ).join('');
 }
 
@@ -469,6 +478,7 @@ function parsePhone(phone) {
 function clearFieldErrors() {
   document.querySelectorAll('#step-3 .field-error').forEach(el => el.remove());
   document.querySelectorAll('#step-3 .has-error').forEach(el => el.classList.remove('has-error'));
+  badCells.clear();
   showGenerateErrors([]);
 }
 
@@ -485,9 +495,11 @@ function fieldError(id, msg) {
 function showGenerateErrors(errors) {
   const box = document.getElementById('generate-errors');
   box.innerHTML = errors.length
-    ? `<h4>Fix ${errors.length} problem(s) before generating</h4><ul>${errors.map(e => `<li>${escapeXml(e)}</li>`).join('')}</ul>`
+    ? `<h4>Fix ${errors.length} problem(s) before generating</h4><ul>${errors.map(e => `<li>${escapeXml(e)}</li>`).join('')}</ul>` +
+      (badCells.size ? '<p>Go back to Step 2 to see these cells marked in the data preview (first 10 rows).</p>' : '')
     : '';
   box.classList.toggle('hidden', !errors.length);
+  if (parsedData.length) renderPreviewTable(); // add / clear the cell marks
 }
 
 // Validates Step 3. extraChecks: [{ id, test: value => bool, msg }] for return-specific rules.
@@ -514,34 +526,47 @@ function validateFilingDetails(requiredIds, extraChecks = []) {
 
 const PAYER_BN_CHECK = { id: 'py-bn', test: v => BN_PATTERN.test(cleanBN(v)), msg: 'Must be exactly 15 characters: 9 digits + 2 letters + 4 digits (e.g. 123456789RP0001).' };
 
+// Records `Row 2, column "SIN" (John Doe): <problem and fix>` and remembers the cell for the Step 2 preview.
+function rowError(errors, rowNum, key, who, msg) {
+  const col = headers[columnMap[key]];
+  badCells.add(`${rowNum}:${key}`);
+  errors.push(`Row ${rowNum}${col ? `, column "${col}"` : ''} (${who || 'no name'}): ${msg}`);
+}
+
+const LEADING_ZERO_FIX = 'If your spreadsheet dropped a leading zero, format the column as Text and re-open the file.';
+
 // Returns the 9-digit SIN to put on the slip, or null after recording a hard-stop error.
-// Blank → CRA's 000000000 placeholder with a warning (recipient didn't provide one).
-function checkSIN(raw, who, rowNum, warnings, errors) {
+// raw is the cell as parsed (a number if Excel stored it as one). Blank → CRA's 000000000 placeholder with a warning.
+function checkSIN(raw, who, rowNum, warnings, errors, key) {
   who = who || '(no name)';
-  const sin = String(raw).replace(/\D/g, '');
+  const sin = sinDigits(raw);
   if (!sin) {
     warnings.push(`Row ${rowNum}: "${who}" has no SIN — using 000000000`);
     return '000000000';
   }
   if (!isValidSIN(sin)) {
-    errors.push(`Row ${rowNum}: "${who}" SIN "${raw}" is invalid — ${sin.length !== 9 ? `has ${sin.length} digits, needs 9` : 'fails the SIN checksum (check for a typo)'}`);
+    rowError(errors, rowNum, key, who,
+      !/^\d+$/.test(sin) ? `SIN "${raw}" is not a whole number. Format the column as Text, type the 9 digits, and re-open the file.`
+      : sin.length !== 9 ? `SIN "${raw}" has ${sin.length} digits; a SIN must be 9 digits. ${LEADING_ZERO_FIX}`
+      : `SIN "${raw}" fails the SIN checksum. Check it for a typo.`);
     return null;
   }
+  if (padIdNumber(raw) !== raw) warnings.push(`Row ${rowNum}: "${who}" SIN ${raw} was stored as a number, so the leading zero was restored: ${sin}. Check it.`);
   return sin;
 }
 
 // Returns a valid 15-char recipient BN, or null after recording a hard-stop error.
 // Blank → the given CRA placeholder with a warning; a bare 9-digit root is expanded with a warning.
-function checkRecipientBN(raw, program, placeholder, who, rowNum, warnings, errors) {
+function checkRecipientBN(raw, program, placeholder, who, rowNum, warnings, errors, key) {
   who = who || '(no name)';
-  const cleaned = cleanBN(raw);
+  const cleaned = cleanBN(padIdNumber(raw));
   if (!cleaned || cleaned === '(BLANK)') {
     warnings.push(`Row ${rowNum}: "${who}" has no BN — using ${placeholder}`);
     return placeholder;
   }
   const bn = sanitizeBN(cleaned, program);
   if (!BN_PATTERN.test(bn)) {
-    errors.push(`Row ${rowNum}: "${who}" BN "${raw}" is invalid — must be 15 characters (9 digits + 2 letters + 4 digits), got ${cleaned.length}`);
+    rowError(errors, rowNum, key, who, `BN "${raw}" is invalid: use the 15-character BN (9 digits + 2 letters + 4 digits, e.g. 123456789${program}0001) or its 9-digit root. Got ${cleaned.length} characters.${/^\d+$/.test(cleaned) ? ' ' + LEADING_ZERO_FIX : ''}`);
     return null;
   }
   if (bn !== cleaned) warnings.push(`Row ${rowNum}: "${who}" BN root ${cleaned} expanded to ${bn} — confirm the program account`);
@@ -601,13 +626,13 @@ function generateT1204XML() {
 
       rcpntNmXml = `<RCPNT_NM>${xmlTag('snm', snm)}${gvnNm ? xmlTag('gvn_nm', gvnNm) : ''}${init ? xmlTag('init', init) : ''}</RCPNT_NM>`;
 
-      const sinVal = checkSIN(vendorBn, vendorName, i + 2, warnings, errors);
+      const sinVal = checkSIN(getVal(row, 'vendor_bn'), vendorName, i + 2, warnings, errors, 'vendor_bn');
       if (!sinVal) continue;
       sinXml = xmlTag('sin', sinVal);
       bnXml = xmlTag('rcpnt_bn', '000000000RT0000');
     } else {
       sinXml = xmlTag('sin', '000000000');
-      const bnVal = checkRecipientBN(vendorBn, 'RT', '000000000RC0000', vendorName, i + 2, warnings, errors);
+      const bnVal = checkRecipientBN(getVal(row, 'vendor_bn'), 'RT', '000000000RC0000', vendorName, i + 2, warnings, errors, 'vendor_bn');
       if (!bnVal) continue;
       bnXml = xmlTag('rcpnt_bn', bnVal);
     }
@@ -737,7 +762,7 @@ function generateT4XML() {
     if (!lastName && !sinRaw) continue;
 
     // SIN validation — invalid SIN is a hard stop
-    const sinVal = checkSIN(sinRaw, `${firstName} ${lastName}`.trim(), i + 2, warnings, errors);
+    const sinVal = checkSIN(getVal(row, 'sin'), `${firstName} ${lastName}`.trim(), i + 2, warnings, errors, 'sin');
     if (!sinVal) continue;
 
     // Province of employment
@@ -924,14 +949,14 @@ function generateT5018XML() {
 
       rcpntNmXml = `<RCPNT_NM>${xmlTag('snm', snm)}${gvnNm ? xmlTag('gvn_nm', gvnNm) : ''}${init ? xmlTag('init', init) : ''}</RCPNT_NM>`;
 
-      const sinVal = checkSIN(recipientBnRaw, recipientName, i + 2, warnings, errors);
+      const sinVal = checkSIN(getVal(row, 'rcpnt_bn'), recipientName, i + 2, warnings, errors, 'rcpnt_bn');
       if (!sinVal) continue;
       sinXml = xmlTag('sin', sinVal);
       bnXml = xmlTag('rcpnt_bn', '000000000RC0000');
     } else {
       // Corporation or Partnership
       sinXml = xmlTag('sin', '000000000');
-      const bnVal = checkRecipientBN(recipientBnRaw, 'RZ', '000000000RZ0000', recipientName, i + 2, warnings, errors);
+      const bnVal = checkRecipientBN(getVal(row, 'rcpnt_bn'), 'RZ', '000000000RZ0000', recipientName, i + 2, warnings, errors, 'rcpnt_bn');
       if (!bnVal) continue;
       bnXml = xmlTag('rcpnt_bn', bnVal);
     }
@@ -1037,7 +1062,7 @@ function generateNR4XML() {
     const fssn = String(getVal(row, 'fssn_nbr')).trim();
     if (!name && !fssn) continue;
 
-    const rowErr = msg => errors.push(`Row ${i+2}: "${name}" ${msg}`);
+    const rowErr = (key, msg) => rowError(errors, i + 2, key, name, msg);
     const typeRaw = String(getVal(row, 'rcpnt_type')).trim().toLowerCase();
     const rcpntTcd = /^[1-5]$/.test(typeRaw) ? typeRaw : NR4_RCPNT_TYPE_MAP[typeRaw];
     const cntryRaw = String(getVal(row, 'tx_cntry_cd')).trim().toUpperCase();
@@ -1051,14 +1076,16 @@ function generateNR4XML() {
     const steCd = String(getVal(row, 'ste_cd')).trim().toUpperCase();
 
     const before = errors.length;
-    if (!name) rowErr('is missing a recipient name');
-    if (!rcpntTcd) rowErr(`has an unrecognized recipient type "${typeRaw}" — use Individual, Joint account, Corporation, Other, Government, or 1–5`);
-    if (!fssn) rowErr('is missing a foreign tax ID (required by CRA)');
-    else if (fssn.length > 20) rowErr('foreign tax ID is longer than 20 characters');
-    if (!/^[A-Z]{3}$/.test(cntry)) rowErr(`country of residence "${cntryRaw}" must be a 3-letter code (e.g. USA, GBR)`);
-    if (incCd && !/^\d{2}$/.test(incCd)) rowErr(`income code "${incRaw}" must be 2 digits`);
-    if (crcy && !/^[A-Z]{3}$/.test(crcy)) rowErr(`currency "${crcy}" must be a 3-letter code (e.g. CAD, USD)`);
-    if (xmptCd.length > 1) rowErr(`exemption code "${xmptCd}" must be 1 character`);
+    const fssnCell = getVal(row, 'fssn_nbr');
+    if (!name) rowErr('rcpnt_name', 'the recipient name is missing.');
+    if (!rcpntTcd) rowErr('rcpnt_type', `recipient type "${typeRaw}" isn't recognized. Use Individual, Joint account, Corporation, Other, Government, or 1–5.`);
+    if (!fssn) rowErr('fssn_nbr', 'the foreign tax ID is missing (CRA requires it).');
+    else if (typeof fssnCell === 'number' && !Number.isSafeInteger(fssnCell)) rowErr('fssn_nbr', `foreign tax ID "${fssn}" was stored as a number and may have been rounded. Format the column as Text, retype it, and re-open the file.`);
+    else if (fssn.length > 20) rowErr('fssn_nbr', 'the foreign tax ID is longer than 20 characters.');
+    if (!/^[A-Z]{3}$/.test(cntry)) rowErr('tx_cntry_cd', `country of residence "${cntryRaw}" must be a 3-letter code (e.g. USA, GBR).`);
+    if (incCd && !/^\d{2}$/.test(incCd)) rowErr('inc_1_tcd', `income code "${incRaw}" must be 2 digits.`);
+    if (crcy && !/^[A-Z]{3}$/.test(crcy)) rowErr('crcy_1_cd', `currency "${crcy}" must be a 3-letter code (e.g. CAD, USD).`);
+    if (xmptCd.length > 1) rowErr('tx_xmpt_1_cd', `exemption code "${xmptCd}" must be 1 character.`);
     if (errors.length > before) continue;
 
     // Individuals and joint accounts use RCPNT_NM; corporations, other and government use ENTPRS_NM

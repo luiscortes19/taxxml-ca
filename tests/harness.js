@@ -64,7 +64,7 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage } = {}) 
   }
   const store = withStorage || {};
   const ctx = {
-    document, FileReader, XLSX, console, setTimeout, clearTimeout,
+    document, FileReader, XLSX, console, setTimeout, clearTimeout, TextDecoder,
     location: { hostname: 'taxxml.ca' },
     localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } },
     Blob: class Blob { constructor(parts, opts) { this.parts = parts; this.type = opts && opts.type; } },
@@ -81,7 +81,7 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage } = {}) 
   }
   const run = code => vm.runInContext(code, ctx);
   return {
-    ctx, els, created, run, store,
+    ctx, els, created, run, store, el: getEl,
     loadFile(name, bytes) { run('handleFile')({ name, bytes: new Uint8Array(bytes) }); },
     setDetails(overrides = {}) {
       for (const [id, v] of Object.entries({ ...FILING_DETAILS, ...overrides })) getEl(id).value = v;

@@ -445,3 +445,6 @@ footer { background: var(--sheet); border-top: 1px solid var(--rule); padding: 3
 .ift-checklist ul { margin: 0; padding-left: 1.2rem; color: var(--ink-2); line-height: 1.6; }
 .ift-checklist li + li { margin-top: 0.4rem; }
 .ift-checklist strong { color: var(--ink); }
+
+/* Step 2 preview: cells that blocked the last Generate */
+#preview-table td.cell-error { background: var(--correction-tint); color: var(--correction); font-weight: 500; }
