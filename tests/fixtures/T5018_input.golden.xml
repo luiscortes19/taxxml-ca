@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Submission xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <T619>
+    <TransmitterAccountNumber><bn15>123456789MM0001</bn15></TransmitterAccountNumber>
+    <sbmt_ref_id>TEST01</sbmt_ref_id>
+    <summ_cnt>1</summ_cnt>
+    <lang_cd>E</lang_cd>
+    <TransmitterName><l1_nm>Test Transmitter Inc</l1_nm></TransmitterName>
+    <TransmitterCountryCode>CAN</TransmitterCountryCode>
+    <CNTC>
+      <cntc_nm>Jane Smith</cntc_nm>
+      <cntc_area_cd>604</cntc_area_cd>
+      <cntc_phn_nbr>638-8328</cntc_phn_nbr>
+      <cntc_email_area>jane@example.com</cntc_email_area>
+    </CNTC>
+  </T619>
+  <Return>
+    <T5018>
+      <T5018Slip>
+        <sin>000000000</sin>
+        <rcpnt_bn>123456789RT0001</rcpnt_bn>
+        <CORP_PTNRP_NM><l1_nm>BuildIt Inc</l1_nm></CORP_PTNRP_NM>
+        <rcpnt_tcd>3</rcpnt_tcd>
+        <RCPNT_ADDR>
+          <cty_nm>123 Builder Lane Vancouver</cty_nm>
+          <prov_cd>BC</prov_cd>
+          <cntry_cd>CAN</cntry_cd>
+          <pstl_cd>V6B1A1</pstl_cd>
+        </RCPNT_ADDR>
+        <bn>987654321RP0001</bn>
+        <sbctrcr_amt>125000.00</sbctrcr_amt>
+        <rpt_tcd>O</rpt_tcd>
+      </T5018Slip>
+      <T5018Slip>
+        <sin>000000000</sin>
+        <rcpnt_bn>987654321RZ0001</rcpnt_bn>
+        <CORP_PTNRP_NM><l1_nm>Jane Plumber</l1_nm></CORP_PTNRP_NM>
+        <rcpnt_tcd>3</rcpnt_tcd>
+        <RCPNT_ADDR>
+          <cty_nm>789 Pipe St Calgary</cty_nm>
+          <prov_cd>AB</prov_cd>
+          <cntry_cd>CAN</cntry_cd>
+          <pstl_cd>T2P2M5</pstl_cd>
+        </RCPNT_ADDR>
+        <bn>987654321RP0001</bn>
+        <sbctrcr_amt>4500.00</sbctrcr_amt>
+        <rpt_tcd>O</rpt_tcd>
+      </T5018Slip>
+      <T5018Summary>
+        <bn>987654321RP0001</bn>
+        <PAYR_NM>
+          <l1_nm>Test Payer Ltd</l1_nm>
+        </PAYR_NM>
+        <PAYR_ADDR>
+          <addr_l1_txt>100 Main Street</addr_l1_txt>
+          <cty_nm>Ottawa</cty_nm>
+          <prov_cd>ON</prov_cd>
+          <cntry_cd>CAN</cntry_cd>
+          <pstl_cd>K1A0B1</pstl_cd>
+        </PAYR_ADDR>
+        <CNTC>
+          <cntc_nm>Jane Smith</cntc_nm>
+          <cntc_area_cd>613</cntc_area_cd>
+          <cntc_phn_nbr>555-0100</cntc_phn_nbr>
+        </CNTC>
+        <PRD_END_DT>
+          <dy>31</dy>
+          <mo>12</mo>
+          <yr>2025</yr>
+        </PRD_END_DT>
+        <slp_cnt>2</slp_cnt>
+        <tot_sbctrcr_amt>129500.00</tot_sbctrcr_amt>
+        <rpt_tcd>O</rpt_tcd>
+      </T5018Summary>
+    </T5018>
+  </Return>
+</Submission>
