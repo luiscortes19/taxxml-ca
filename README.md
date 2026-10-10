@@ -45,7 +45,12 @@ See [ROADMAP.md](ROADMAP.md) for what's planned next.
 - [SheetJS](https://sheetjs.com/) for Excel/CSV parsing
 - [Lucide Icons](https://lucide.dev/) for SVG icons
 - CRA 2026 schema compliant (XML schema 1-26-3: T619, T4, T1204, T5018, NR4)
-- `node tests/validate.test.js` — checks the SIN/BN validation helpers
+- Tests: `npm install` (once, fetches the xlsx 0.20.3 build index.html loads) then `npm test`. Runs every `tests/*.test.js`:
+  - `golden.test.js` — real `js/app.js` pipeline (parse file → auto map → generate) must reproduce `tests/fixtures/*.golden.xml` byte for byte. Regenerate only for an intended XML change: `UPDATE_GOLDENS=1 node tests/golden.test.js`
+  - `samples.test.js` — every `templates/*_Sample.csv` generates XML with zero validation errors
+  - `identifiers.test.js` — SIN / BN / foreign tax ID / ZIP keep leading zeros (CSV in UTF-8, UTF-16LE/BE; XLSX)
+  - `analytics.test.js`, `ux.test.js`, `validate.test.js` — GA4 download event, Step 2/3 UX, SIN/BN helpers
+  - `tests/harness.js` loads the browser code into a Node `vm` with a minimal DOM stub; no browser needed
 - Hosted on GitHub Pages
 
 ## CRA Resources

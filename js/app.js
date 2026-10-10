@@ -742,8 +742,14 @@ function generateT4XML() {
 
   for (let i = 0; i < parsedData.length; i++) {
     const row = parsedData[i];
-    const lastName = String(getVal(row, 'empe_snm')).trim();
-    const firstName = String(getVal(row, 'empe_gvn_nm')).trim();
+    let lastName = String(getVal(row, 'empe_snm')).trim();
+    let firstName = String(getVal(row, 'empe_gvn_nm')).trim();
+    // One full-name column mapped to both name fields: last word is the surname, the rest the given name(s)
+    if (columnMap.empe_snm >= 0 && columnMap.empe_snm === columnMap.empe_gvn_nm) {
+      const parts = lastName.split(/\s+/);
+      lastName = parts.pop();
+      firstName = parts.join(' ');
+    }
     const sinRaw = String(getVal(row, 'sin')).trim();
     const emptyIncome = parseFloat(getVal(row, 'empt_incamt')) || 0;
     const cppAmt = parseFloat(getVal(row, 'cpp_cntrb_amt')) || 0;
@@ -1381,11 +1387,12 @@ function restoreFilingDetails() {
       }
     }
 
-    // Show a small unobtrusive restore notice
+    // Restore notice with a visible way out; saved data is only removed when the user clicks Start fresh
     const notice = document.createElement('p');
     notice.id = 'restore-notice';
-    notice.style.cssText = 'font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;';
-    notice.innerHTML = '✓ Filing details restored from last session. <a href="#" onclick="clearFilingDetails();return false;" style="color:var(--text-secondary);text-decoration:underline;">Clear</a>';
+    notice.className = 'form-hint';
+    notice.innerHTML = '✓ Filled in from your last session on this computer. Check every field, especially the Submission Reference ID. ' +
+      '<button type="button" class="btn btn-ghost" onclick="clearFilingDetails()">Start fresh</button>';
     const card = document.querySelector('#step-3 .card');
     if (card && !document.getElementById('restore-notice')) {
       card.insertBefore(notice, card.firstChild);
@@ -1399,7 +1406,7 @@ function clearFilingDetails() {
   if (notice) notice.remove();
   SAVED_FIELDS.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.value = '';
+    if (el) el.value = el.options ? el.options[0].value : ''; // selects go back to their first (default) option
   });
 }
 
