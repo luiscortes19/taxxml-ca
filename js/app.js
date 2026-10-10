@@ -137,7 +137,7 @@ function resetAll() {
 function onReturnTypeChange() {
   const rt = getSelectedReturnType();
   const config = RETURN_TYPES[rt];
-  if (window.gtag) gtag('event', 'return_selected', { return_type: rt });
+  track('return_selected', { return_type: rt });
 
   // Update step 1 description + sample link
   const step1Data = { T4: 'T4 payroll', T5018: 'T5018 sub-contractor payment', NR4: 'NR4 non-resident payment', T1204: 'T1204 payment' };
@@ -233,7 +233,7 @@ function handleFile(file) {
       autoMapColumns();
       buildPreview();
       goToStep(2);
-      if (window.gtag) gtag('event', 'file_opened', { return_type: getSelectedReturnType() });
+      track('file_opened', { return_type: getSelectedReturnType() });
     } catch (err) {
       showFileError('Error reading file: ' + err.message);
     }
@@ -1220,18 +1220,24 @@ function showResults(slips, stats, warnings) {
   }
 }
 
+// GA4 event. gtag() only pushes onto dataLayer, so it queues fine before gtag.js has loaded.
+// Analytics must never break the app.
+function track(name, params) {
+  try { if (window.gtag) gtag('event', name, params); } catch (e) { /* ignore */ }
+}
+
 function downloadXML() {
+  if (!xmlOutput) return;
   const rt = getSelectedReturnType();
-  const blob = new Blob([xmlOutput], { type: 'application/xml;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(new Blob([xmlOutput], { type: 'application/xml;charset=utf-8' }));
+  track('xml_downloaded', { return_type: rt }); // before the click, so nothing in the download path can skip it
   const a = document.createElement('a');
   a.href = url;
   a.download = `${rt}_submission_${document.getElementById('tax-year').value}.xml`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  if (window.gtag) gtag('event', 'xml_downloaded', { return_type: rt });
+  setTimeout(() => URL.revokeObjectURL(url), 10000); // revoking right away can cancel the download in Firefox/Safari
 }
 
 // ============================================================
