@@ -16,6 +16,15 @@ assert(html.includes(`<meta property="og:url" content="${URL}">`), 'og:url');
 assert(/<a href="\/#converter" class="btn btn-primary[^"]*">/.test(html), 'CTA button to the converter');
 assert(html.includes("gtag('config', 'G-E2F5Q3RZVH')"), 'same GA4 tag as the other pages');
 
+// Disclaimer near the CTA points at CRA's XML specs; liability release in the footer links /terms
+const XML_SPECS = 'https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html';
+const disclaimer = html.match(/<div id="disclaimer"[^>]*>([\s\S]*?)<\/div>/);
+assert(disclaimer, 'disclaimer exists');
+assert(disclaimer[1].includes(`href="${XML_SPECS}"`), 'disclaimer links the CRA xml-specs page');
+const liability = html.match(/<section id="liability">([\s\S]*?)<\/section>/);
+assert(liability, 'liability section exists');
+assert(liability[1].includes('href="/terms"'), 'liability section links /terms');
+
 // FAQPage JSON-LD questions match the visible FAQ, in order
 const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
 assert.strictEqual(ld['@type'], 'FAQPage');
