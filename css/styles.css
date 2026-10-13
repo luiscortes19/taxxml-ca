@@ -100,6 +100,7 @@ nav a:hover { color: var(--ink); text-decoration: underline; }
 .btn-ghost { background: var(--sheet); color: var(--ink-2); border-color: var(--rule); }
 .btn-ghost:hover { color: var(--ink); border-color: var(--ink-3); }
 .btn-lg { padding: 0.9rem 1.8rem; font-size: 1rem; }
+a.btn { text-decoration: none; }
 .btn-row { display: flex; justify-content: space-between; margin-top: 2rem; }
 .btn-row-end { justify-content: flex-end; }
 
