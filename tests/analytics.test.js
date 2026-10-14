@@ -74,7 +74,7 @@ const csv = s => Buffer.from(s);
 }
 { // Step 3 field problems -> validation_failed, category filing_details, count of bad fields
   const { app, named } = funnel('T5018');
-  app.loadFile('t.csv', csv('Name,BN\r\nAcme,123456789\r\n'));
+  app.loadFile('t.csv', csv('Recipient Name,Recipient BN,Subcontractor Payments\r\nAcme,123456789,100\r\n'));
   app.setDetails({ 'tx-name': '', 'tx-email': 'nope' });
   assert.strictEqual(app.generate(), '');
   assert.deepStrictEqual(named('validation_failed'), [{ return_type: 'T5018', error_count: 2, error_category: 'filing_details', first_error_field: 'tx-name' }]);

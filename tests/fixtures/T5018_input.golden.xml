@@ -27,7 +27,7 @@
           <cntry_cd>CAN</cntry_cd>
           <pstl_cd>V6B1A1</pstl_cd>
         </RCPNT_ADDR>
-        <bn>987654321RP0001</bn>
+        <bn>987654321RZ0001</bn>
         <sbctrcr_amt>125000.00</sbctrcr_amt>
         <rpt_tcd>O</rpt_tcd>
       </T5018Slip>
@@ -42,12 +42,12 @@
           <cntry_cd>CAN</cntry_cd>
           <pstl_cd>T2P2M5</pstl_cd>
         </RCPNT_ADDR>
-        <bn>987654321RP0001</bn>
+        <bn>987654321RZ0001</bn>
         <sbctrcr_amt>4500.00</sbctrcr_amt>
         <rpt_tcd>O</rpt_tcd>
       </T5018Slip>
       <T5018Summary>
-        <bn>987654321RP0001</bn>
+        <bn>987654321RZ0001</bn>
         <PAYR_NM>
           <l1_nm>Test Payer Ltd</l1_nm>
         </PAYR_NM>
