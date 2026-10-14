@@ -119,6 +119,7 @@ function goToStep(step) {
   });
 
   currentStep = step;
+  track('step_reached', { step });
   document.getElementById('converter').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -199,7 +200,9 @@ document.querySelectorAll('.return-pick').forEach(btn => btn.addEventListener('c
   document.getElementById('converter').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }));
 
-function showFileError(msg) {
+// category goes to GA4; msg (may hold the file name) stays on screen only
+function showFileError(msg, category) {
+  if (category) track('file_parse_error', { return_type: getSelectedReturnType(), error_category: category });
   const el = document.getElementById('file-error');
   el.textContent = msg;
   el.classList.toggle('hidden', !msg);
@@ -209,7 +212,7 @@ function handleFile(file) {
   showFileError('');
   const ext = file.name.split('.').pop().toLowerCase();
   if (!['xlsx', 'xls', 'csv'].includes(ext)) {
-    showFileError('Please upload a valid Excel (.xlsx, .xls) or CSV file.');
+    showFileError('Please upload a valid Excel (.xlsx, .xls) or CSV file.', 'unsupported_type');
     return;
   }
 
@@ -225,7 +228,7 @@ function handleFile(file) {
       Object.keys(ws).forEach(k => { if (k[0] !== '!') keepDigitText(ws[k], ext === 'csv'); }); // keep SIN/BN/ZIP leading zeros
       const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-      if (raw.length < 2) { showFileError('File has no data rows.'); return; }
+      if (raw.length < 2) { showFileError('File has no data rows.', 'no_data_rows'); return; }
 
       headers = raw[0].map(h => String(h || '').trim());
       parsedData = raw.slice(1).filter(row => row.some(cell => cell !== ''));
@@ -242,7 +245,7 @@ function handleFile(file) {
       goToStep(2);
       track('file_opened', { return_type: getSelectedReturnType() });
     } catch (err) {
-      showFileError('Error reading file: ' + err.message);
+      showFileError('Error reading file: ' + err.message, 'read_error');
     }
   };
   reader.readAsArrayBuffer(file);
@@ -499,6 +502,8 @@ function showGenerateErrors(errors) {
       (badCells.size ? '<p>Go back to Step 2 to see these cells marked in the data preview (first 10 rows).</p>' : '')
     : '';
   box.classList.toggle('hidden', !errors.length);
+  if (errors.length) track('validation_failed', { return_type: getSelectedReturnType(), error_count: errors.length, error_category: 'row_data',
+                                                  first_error_field: analyticsField([...badCells][0]?.split(':')[1]) });
   if (parsedData.length) renderPreviewTable(); // add / clear the cell marks
 }
 
@@ -521,6 +526,8 @@ function validateFilingDetails(requiredIds, extraChecks = []) {
   });
   const first = document.querySelector('#step-3 .has-error');
   if (first) first.focus();
+  if (bad.size) track('validation_failed', { return_type: getSelectedReturnType(), error_count: bad.size, error_category: 'filing_details',
+                                             first_error_field: analyticsField([...bad][0]) });
   return bad.size === 0;
 }
 
@@ -1221,6 +1228,7 @@ function buildT619Wrapper(returnType, slipsXml, summaryXml) {
 const REPORT_TYPE_NAMES = { O: 'Original', A: 'Amendment', C: 'Cancel' };
 
 function showResults(slips, stats, warnings) {
+  track('validation_passed', { return_type: getSelectedReturnType() });
   const rt = getSelectedReturnType();
   const taxYear = document.getElementById('tax-year').value;
   const fileName = `${rt}_submission_${taxYear}.xml`;
@@ -1257,6 +1265,19 @@ function showResults(slips, stats, warnings) {
 // Analytics must never break the app.
 function track(name, params) {
   try { if (window.gtag) gtag('event', name, params); } catch (e) { /* ignore */ }
+}
+
+// Field names safe to send to GA4: our own column keys (sin, empt_incamt, ...) and Step 3 input ids.
+// Never a header the user typed or a cell value; anything not on this list is reported as 'other'.
+function analyticsFieldAllowlist() {
+  return new Set([
+    ...Object.values(RETURN_TYPES).flatMap(rt => rt.fields.map(f => f.key)),
+    ...SAVED_FIELDS, 't5018-fiscal-day', 't5018-fiscal-month', 't5018-fiscal-year',
+  ]);
+}
+
+function analyticsField(field) {
+  return analyticsFieldAllowlist().has(field) ? field : 'other';
 }
 
 function downloadXML() {
@@ -1401,6 +1422,7 @@ function restoreFilingDetails() {
 }
 
 function clearFilingDetails() {
+  track('start_fresh', {});
   localStorage.removeItem(STORAGE_KEY);
   const notice = document.getElementById('restore-notice');
   if (notice) notice.remove();

@@ -11,4 +11,12 @@ for (const page of ['terms.html', 'privacy.html']) {
   }
 }
 
+// Privacy page names every GA4 event app.js sends, so its analytics wording can't go stale.
+{
+  const privacy = fs.readFileSync(path.join(ROOT, 'privacy.html'), 'utf8');
+  const events = [...fs.readFileSync(path.join(ROOT, 'js/app.js'), 'utf8').matchAll(/track\('(\w+)'/g)].map(m => m[1]);
+  assert(events.length >= 8, events.join());
+  for (const e of events) assert(privacy.includes(`<code>${e}</code>`), `privacy.html names event ${e}`);
+}
+
 console.log('legal-pages.test.js: all passed');
