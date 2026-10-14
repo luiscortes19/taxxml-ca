@@ -196,9 +196,9 @@
           <p class="form-hint">The entity submitting this file to CRA.</p>
           <div class="form-row">
             <div class="form-group">
-              <label for="tx-bn">Transmitter BN (15 chars) *</label>
+              <label for="tx-bn">Transmitter CRA account number (15 chars) *</label>
               <input type="text" id="tx-bn" class="form-control mono" placeholder="123456789MM0001" maxlength="15" required>
-              <span class="field-hint">Must be 15 chars ending in a program code (e.g. MM0001, RZ0001).</span>
+              <span class="field-hint">The transmitter's CRA account number, usually a 15-character BN ending in a program code (e.g. MM0001, RZ0001).</span>
             </div>
             <div class="form-group">
               <label for="tx-name">Transmitter Name *</label>
@@ -246,7 +246,7 @@
             <div class="form-group" id="py-bn-group">
               <label for="py-bn">Account Number (15 chars) *</label>
               <input type="text" id="py-bn" class="form-control mono" placeholder="123456789RP0001" maxlength="15" required>
-              <span class="field-hint">The 15-character Business Number. T4 uses RP; T1204 uses RT; T5018 uses RZ.</span>
+              <span class="field-hint">The 15-character Business Number. T4 and T1204 use RP; T5018 uses RZ.</span>
             </div>
             <div class="form-group">
               <label for="py-name">Organization Name *</label>
@@ -421,11 +421,11 @@
       </details>
       <details class="faq-item">
         <summary>What CRA spec version does this support?</summary>
-        <p>The generated XML conforms to the <strong>T619 2026 / T4 2026V4 / T1204 2026V3 / T5018 2026V3 / NR4 2026</strong> specification (CRA XML schema 1-26-3), including the Oct 2025 validation change requiring empty optional tags to be removed.</p>
+        <p>The generated XML conforms to the <strong>T619 2026V4 / T4 2026V4 / T1204 2026V3 / T5018 2026V3 / NR4 2026V3</strong> specification (CRA XML schema 1-26-3). CRA rejects empty optional tags, so the tool leaves out any optional field that's blank.</p>
       </details>
       <details class="faq-item">
         <summary>How do I submit the XML to CRA?</summary>
-        <p>Upload the downloaded XML file through CRA's <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener">Internet File Transfer (IFT)</a> application. You'll need a CRA My Business Account or Represent a Client account.</p>
+        <p>Upload the downloaded XML file through CRA's <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener">Internet File Transfer (IFT)</a> application. You can log in with My Business Account, Represent a Client, or a web access code.</p>
       </details>
       <details class="faq-item">
         <summary>How do I file a correction, and why did CRA reject my resubmission?</summary>
@@ -435,7 +435,7 @@
       </details>
       <details class="faq-item">
         <summary>Why did you build this?</summary>
-        <p>As an automation consultant at <strong>AVANZA Business Automation</strong>, I constantly saw small businesses and accountants struggling with CRA's strict XML filing requirements. If you file more than 5 information slips, CRA forces you to submit them electronically in an XML format. Because XML is notoriously difficult for non-programmers to generate from Excel, businesses are often forced to buy bloated, expensive payroll software just for this one feature. I built TaxXML.ca as a fast, free, and secure alternative to democratize tax filing for Canadian businesses.<span class="faq-signoff">Luis Cortes, AVANZA Business Automation</span></p>
+        <p>As an automation consultant at <strong>AVANZA Business Automation</strong>, I constantly saw small businesses and accountants struggling with CRA's strict XML filing requirements. If you file more than 5 T4, T5018 or NR4 slips, CRA requires electronic filing, and T1204 slips must always be filed electronically. Because XML is notoriously difficult for non-programmers to generate from Excel, businesses are often forced to buy bloated, expensive payroll software just for this one feature. I built TaxXML.ca as a fast, free, and secure alternative to democratize tax filing for Canadian businesses.<span class="faq-signoff">Luis Cortes, AVANZA Business Automation</span></p>
       </details>
       <details class="faq-item">
         <summary>Is this tool free?</summary>

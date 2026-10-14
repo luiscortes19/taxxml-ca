@@ -107,13 +107,14 @@ const zeroCases = {
   NR4: [[['987-65-4320', '000123456'], ['98101', '02134'], ['10115', '01067']], ['<fssn_nbr>000123456</fssn_nbr>', '<fgn_pstl_cd>02134</fgn_pstl_cd>', '<fgn_pstl_cd>01067</fgn_pstl_cd>', '<inc_1_tcd>06</inc_1_tcd>', '<inc_1_tcd>02</inc_1_tcd>']],
 };
 for (const [rt, [pairs, expected]] of Object.entries(zeroCases)) {
-  const { xml, app } = fileToXML(rt, `${rt}_Sample.csv`, edit(rt, pairs), ZERO_DETAILS);
+  const payerBn = rt === 'T5018' ? '000000001RZ0001' : ZERO_DETAILS['py-bn'];
+  const { xml, app } = fileToXML(rt, `${rt}_Sample.csv`, edit(rt, pairs), { ...ZERO_DETAILS, 'py-bn': payerBn });
   assert.strictEqual(app.errors(), '', rt);
   assertWellFormed(xml, `${rt} leading zeros`);
   for (const e of expected) assert(xml.includes(e), `${rt}: expected ${e}`);
   assert(xml.includes('<bn15>012345678MM0001</bn15>') && xml.includes('<sbmt_ref_id>000001</sbmt_ref_id>'), `${rt}: T619 ids`);
   if (rt === 'NR4') assert.strictEqual(all(xml, 'nr_acct_nbr').filter(v => v === 'NRA000123').length, 3, 'NR4: account on summary + 2 slips');
-  else assert(all(xml, rt === 'T1204' ? 'payr_bn' : 'bn').includes('000000001RP0001'), `${rt}: payer BN`);
+  else assert(all(xml, rt === 'T1204' ? 'payr_bn' : 'bn').includes(payerBn), `${rt}: payer BN`);
 }
 
 console.log('samples-per-return.test.js: own type, mismatches and leading zeros all passed');

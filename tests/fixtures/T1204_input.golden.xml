@@ -22,28 +22,31 @@
         <RCPNT_BUS_NM><l1_nm>Acme Corp</l1_nm></RCPNT_BUS_NM>
         <rcpnt_tcd>3</rcpnt_tcd>
         <RCPNT_BUS_ADDR>
-          <cty_nm>123 Main St Ottawa</cty_nm>
+          <addr_l1_txt>123 Main St</addr_l1_txt>
+          <cty_nm>Ottawa</cty_nm>
           <prov_cd>ON</prov_cd>
           <cntry_cd>CAN</cntry_cd>
           <pstl_cd>K1A0B1</pstl_cd>
         </RCPNT_BUS_ADDR>
         <payr_bn>987654321RP0001</payr_bn>
-        <T1204_AMT><mxd_gd_pay_amt>0.00</mxd_gd_pay_amt></T1204_AMT>
+        <T1204_AMT><srvc_pay_amt>15000.00</srvc_pay_amt></T1204_AMT>
         <rpt_tcd>O</rpt_tcd>
       </T1204Slip>
       <T1204Slip>
-        <sin>000000000</sin>
-        <rcpnt_bn>987654321RT0001</rcpnt_bn>
+        <RCPNT_NM><snm>Contractor</snm><gvn_nm>Bob</gvn_nm></RCPNT_NM>
+        <sin>046454286</sin>
+        <rcpnt_bn>000000000RT0000</rcpnt_bn>
         <RCPNT_BUS_NM><l1_nm>Bob Contractor</l1_nm></RCPNT_BUS_NM>
-        <rcpnt_tcd>3</rcpnt_tcd>
+        <rcpnt_tcd>1</rcpnt_tcd>
         <RCPNT_BUS_ADDR>
-          <cty_nm>456 Side Ave Toronto</cty_nm>
+          <addr_l1_txt>456 Side Ave</addr_l1_txt>
+          <cty_nm>Toronto</cty_nm>
           <prov_cd>ON</prov_cd>
           <cntry_cd>CAN</cntry_cd>
           <pstl_cd>M5V2H1</pstl_cd>
         </RCPNT_BUS_ADDR>
         <payr_bn>987654321RP0001</payr_bn>
-        <T1204_AMT><mxd_gd_pay_amt>0.00</mxd_gd_pay_amt></T1204_AMT>
+        <T1204_AMT><mxd_gd_pay_amt>5000.00</mxd_gd_pay_amt></T1204_AMT>
         <rpt_tcd>O</rpt_tcd>
       </T1204Slip>
       <T1204Summary>
@@ -65,6 +68,8 @@
         <slp_cnt>2</slp_cnt>
         <rpt_tcd>O</rpt_tcd>
         <T1204_TAMT>
+          <tot_srvc_pay_amt>15000.00</tot_srvc_pay_amt>
+          <tot_mxd_gd_pay_amt>5000.00</tot_mxd_gd_pay_amt>
         </T1204_TAMT>
       </T1204Summary>
     </T1204>

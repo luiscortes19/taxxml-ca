@@ -101,7 +101,11 @@ function getReturnConfig() {
 const VALID_PROVINCES = new Set(['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT']);
 const ALL_PROV_CODES = new Set(['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT','US','ZZ']);
 const COUNTRY_MAP = { 'CA': 'CAN', 'US': 'USA', 'CAN': 'CAN', 'USA': 'USA' };
-const BIZ_TYPE_MAP = { 'Corporation': '3', 'Sole Proprietorship': '1', 'Partnership': '4' };
+// CRA rcpnt_tcd: 1 sole proprietor (an individual in business), 3 corporation, 4 partnership. Keys are lower case.
+const BIZ_TYPE_MAP = {
+  'individual': '1', 'sole proprietor': '1', 'sole proprietorship': '1', 'self-employed': '1', 'self employed': '1', '1': '1',
+  'corporation': '3', '3': '3', 'partnership': '4', '4': '4',
+};
 const NR4_RCPNT_TYPE_MAP = { 'individual': '1', 'joint account': '2', 'joint': '2', 'corporation': '3', 'other': '4', 'government': '5' };
 
 // ============================================================
@@ -518,7 +522,7 @@ function validateFilingDetails(requiredIds, extraChecks = []) {
   ];
   checks.forEach(c => {
     const v = document.getElementById(c.id).value;
-    if (!bad.has(c.id) && v.trim() && !c.test(v)) { fieldError(c.id, c.msg); bad.add(c.id); }
+    if (!bad.has(c.id) && v.trim() && !c.test(v)) { fieldError(c.id, typeof c.msg === 'function' ? c.msg(v) : c.msg); bad.add(c.id); }
   });
   const first = document.querySelector('#step-3 .has-error');
   if (first) first.focus();
@@ -526,6 +530,9 @@ function validateFilingDetails(requiredIds, extraChecks = []) {
 }
 
 const PAYER_BN_CHECK = { id: 'py-bn', test: v => BN_PATTERN.test(cleanBN(v)), msg: 'Must be exactly 15 characters: 9 digits + 2 letters + 4 digits (e.g. 123456789RP0001).' };
+// T5018 is filed under the payer's RZ (information return) program account
+const T5018_PAYER_BN_CHECK = { id: 'py-bn', test: v => /^\d{9}RZ\d{4}$/.test(cleanBN(v)),
+  msg: v => `T5018 payer account must use the RZ program, e.g. 123456789RZ0001; you entered ${cleanBN(v)}.` };
 
 // Records `Row 2, column "SIN" (John Doe): <problem and fix>` and remembers the cell for the Step 2 preview.
 function rowError(errors, rowNum, key, who, msg) {
@@ -618,7 +625,11 @@ function generateT1204XML() {
 
     if (!vendorName && !vendorBn) continue;
 
-    const rcpntTcd = BIZ_TYPE_MAP[bizType] || '3';
+    const rcpntTcd = BIZ_TYPE_MAP[bizType.toLowerCase()];
+    if (!rcpntTcd) {
+      rowError(errors, i + 2, 'biz_type', vendorName, `business type "${bizType}" isn't recognized. Use Individual (or Sole proprietor), Corporation, Partnership, or the CRA code 1, 3 or 4.`);
+      continue;
+    }
     const addr = parseAddress(address);
     const amtStr = amount.toFixed(2);
 
@@ -910,7 +921,7 @@ function generateT5018XML() {
   if (!validateFilingDetails(['tx-bn','tx-name','tx-ref','tx-contact','tx-phone','tx-email',
                               'py-bn','py-name','py-contact','py-phone',
                               't5018-fiscal-day','t5018-fiscal-month','t5018-fiscal-year'],
-                             [PAYER_BN_CHECK])) return;
+                             [T5018_PAYER_BN_CHECK])) return;
 
   const fiscalDay = document.getElementById('t5018-fiscal-day').value;
   const fiscalMonth = document.getElementById('t5018-fiscal-month').value;
@@ -937,8 +948,8 @@ function generateT5018XML() {
     // Determine recipient type code
     let rcpntTcd = '3'; // default corporation
     const typeStr = rcpntTypeRaw.toLowerCase();
-    if (BIZ_TYPE_MAP[rcpntTypeRaw]) {
-      rcpntTcd = BIZ_TYPE_MAP[rcpntTypeRaw];
+    if (BIZ_TYPE_MAP[typeStr]) {
+      rcpntTcd = BIZ_TYPE_MAP[typeStr];
     } else if (typeStr.includes('individual') || typeStr === '1') {
       rcpntTcd = '1';
     } else if (typeStr.includes('partnership') || typeStr === '4') {
