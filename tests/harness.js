@@ -84,7 +84,8 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage } = {}) 
     ctx, els, created, run, store, el: getEl,
     loadFile(name, bytes) { run('handleFile')({ name, bytes: new Uint8Array(bytes) }); },
     setDetails(overrides = {}) {
-      for (const [id, v] of Object.entries({ ...FILING_DETAILS, ...overrides })) getEl(id).value = v;
+      const perReturn = returnType === 'T5018' ? { 'py-bn': '987654321RZ0001' } : {}; // T5018 payer is the RZ program
+      for (const [id, v] of Object.entries({ ...FILING_DETAILS, ...perReturn, ...overrides })) getEl(id).value = v;
     },
     generate() { run('generateXML()'); return run('xmlOutput'); },
     errors() { return getEl('generate-errors').innerHTML; },
