@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free T5018 XML Generator for CRA (2026 Schema) | TaxXML.ca</title>
+  <meta name="description" content="Turn a T5018 subcontractor payments spreadsheet into CRA XML for Internet File Transfer. Free, runs in your browser. Plain-English guide to the T5018 schema.">
+  <link rel="canonical" href="https://taxxml.ca/t5018-xml-generator">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://taxxml.ca/t5018-xml-generator">
+  <meta property="og:title" content="Free T5018 XML Generator for CRA (2026 Schema)">
+  <meta property="og:description" content="Turn a T5018 subcontractor payments spreadsheet into CRA XML for Internet File Transfer. Free, runs in your browser, no signup.">
+  <meta property="og:image" content="https://taxxml.ca/img/og-image.png">
+  <meta property="og:locale" content="en_CA">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "When is the T5018 return due?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Within 6 months after the end of your reporting period. You can report on a calendar-year basis or on your fiscal period, and the deadline counts from the end of the period you chose." }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I have to file T5018 slips electronically?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes, if you file more than 5 T5018 slips for a calendar year. CRA requires electronic filing above that number. Internet File Transfer with an XML file is one of the accepted ways." }
+      },
+      {
+        "@type": "Question",
+        "name": "Which CRA XML schema does TaxXML use for T5018?",
+        "acceptedAnswer": { "@type": "Answer", "text": "CRA XML schema 1-26-3: T619 2026 and T5018 2026V3. It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is my data uploaded anywhere?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. The spreadsheet is read and the XML is built in your browser. TaxXML does not send the file to a server or to CRA. You upload it to Internet File Transfer yourself." }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I fix a T5018 that CRA already accepted?",
+        "acceptedAnswer": { "@type": "Answer", "text": "File an amendment: set Report Type to Amendment (A) and include only the slips that changed, each one complete. Use a new Submission Reference ID. Do not send a second original." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is it really free?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. No signup, no per-slip fee, no email required." }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E2F5Q3RZVH"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-E2F5Q3RZVH');
+  </script>
+</head>
+<body>
+  <header id="site-header">
+    <div class="header-inner">
+      <a href="/" class="logo">
+        <span class="logo-text">TaxXML<span class="logo-accent">.ca</span></span>
+      </a>
+      <nav>
+        <a href="#faq">FAQ</a>
+        <a href="/#converter" class="nav-cta">Open converter</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="legal">
+    <h1>Free T5018 XML generator for CRA</h1>
+    <p class="legal-updated">Built to CRA XML schema 1-26-3 (T619 2026, T5018 2026V3)</p>
+
+    <p>If your business's primary activity is construction, you report the payments you made to subcontractors for construction services on the T5018 Statement of Contract Payments: a T5018 slip for each subcontractor and a T5018 Summary. The return is due within 6 months after the end of your reporting period, which can be the calendar year or your fiscal period. TaxXML turns the T5018 spreadsheet you already have into the XML file CRA accepts through Internet File Transfer (IFT), in your browser, for free.</p>
+    <div id="disclaimer" class="warnings-box" role="note">
+      <h4>Information and a conversion tool, not advice</h4>
+      <p>TaxXML provides information and a conversion tool only. It is not tax, legal, or accounting advice. CRA specifications change, so always verify the requirements, and your files, against the CRA's official <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html" target="_blank" rel="noopener">XML specifications for information returns</a> before you file.</p>
+    </div>
+    <p><a href="/#converter" class="btn btn-primary btn-lg">Open the free T5018 converter</a></p>
+
+    <h2>What a T5018 XML file is</h2>
+    <p>A T5018 XML file is one <code>&lt;Submission&gt;</code> with two parts:</p>
+    <ul>
+      <li><strong>T619 transmitter record.</strong> The wrapper that says who is sending the file: the transmitter's CRA account number (usually the 15-character business number), a Submission Reference ID, a contact name, phone and email, and the language.</li>
+      <li><strong>T5018 return.</strong> One <code>&lt;T5018Slip&gt;</code> per subcontractor, followed by one <code>&lt;T5018Summary&gt;</code> with the payer's details, the end date of the reporting period and the total paid to subcontractors.</li>
+    </ul>
+    <p>You upload the file to IFT, which checks it against CRA's XML schema. Electronic filing is required once you file more than 5 slips of a type in a calendar year. Below that, it is optional but still accepted.</p>
+
+    <h2>CRA XML specifications in plain terms</h2>
+    <p>TaxXML follows <strong>schema 1-26-3</strong>: <strong>T619 2026</strong> for the transmitter record and <strong>T5018 2026V3</strong> for the return. The elements you will see most:</p>
+    <ul>
+      <li><code>bn</code>: the payer's 15-character account number on the RZ program, for example <code>123456789RZ0001</code>, on every slip and the summary.</li>
+      <li><code>RCPNT_NM</code> or <code>CORP_PTNRP_NM</code>: the subcontractor's name. Individuals use <code>RCPNT_NM</code>; corporations and partnerships use <code>CORP_PTNRP_NM</code>.</li>
+      <li><code>sin</code>, <code>rcpnt_bn</code>: the subcontractor's social insurance number or business number (Box 24). Both tags appear on every slip; the one that doesn't apply gets a zero placeholder, such as <code>000000000</code> for the SIN.</li>
+      <li><code>rcpnt_tcd</code>: recipient type, such as individual or corporation.</li>
+      <li><code>sbctrcr_amt</code>: the construction subcontract payments for the period (Box 22).</li>
+      <li><code>PRD_END_DT</code>: on the summary, the day, month and year your reporting period ends.</li>
+      <li><code>slp_cnt</code>, <code>tot_sbctrcr_amt</code>: on the summary, the number of slips and the total paid.</li>
+      <li><code>rpt_tcd</code>: report type. <code>O</code> for original, <code>A</code> for amendment, <code>C</code> for cancel.</li>
+    </ul>
+    <p>The full rules are on CRA's site: <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html" target="_blank" rel="noopener">XML specifications for information returns</a> and the <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/t619-2026.html" target="_blank" rel="noopener">T619 2026 specification</a>.</p>
+
+    <h2>How to make a T5018 XML file in 3 steps</h2>
+    <ol>
+      <li><strong>Pick T5018 and open your spreadsheet.</strong> Choose T5018 in Step 1 of the converter, then open the .xlsx or .csv with one row per subcontractor. Not sure how to lay it out? <a href="/templates/T5018_Sample.csv" download>Download the T5018 sample spreadsheet</a>.</li>
+      <li><strong>Check the columns and fill in the filing details.</strong> TaxXML matches your headers to CRA fields. Fix any it missed, then enter the transmitter and payer details and the end date of your reporting period. Those are saved in this browser for next time.</li>
+      <li><strong>Generate and download.</strong> Problems are listed by row and column before anything downloads. Then upload the XML to IFT signed in with My Business Account, Represent a Client, or a web access code (WAC).</li>
+    </ol>
+    <p><a href="/#converter" class="btn btn-primary">Convert my T5018 spreadsheet</a></p>
+
+    <h2>Common reasons CRA rejects a T5018 XML file</h2>
+    <ul>
+      <li><strong>IDs that lost their leading zero.</strong> Excel treats a SIN like <code>046454286</code> as a number and drops the zero. Format the SIN and BN column as Text. TaxXML reads them as text, and flags any SIN that isn't 9 digits or fails the checksum.</li>
+      <li><strong>Empty optional tags.</strong> CRA rejects files that contain empty optional tags: a tag with nothing in it, like <code>&lt;pstl_cd/&gt;</code>, gets the file rejected. Optional fields with no value must be left out entirely. TaxXML leaves out blank optional fields. Don't type "N/A" or a space to fill a cell.</li>
+      <li><strong>Business number in the wrong format.</strong> A BN here is 15 characters: 9 digits, 2 letters, 4 digits. For the payer, T5018 uses the RZ program account, for example <code>123456789RZ0001</code>, not the RP payroll account. A 9-digit BN on its own is not enough.</li>
+      <li><strong>Reused Submission Reference ID.</strong> Every file needs a new one. TaxXML bumps it for you (A to B) when you come back to resubmit.</li>
+      <li><strong>A second original instead of an amendment.</strong> Corrections to accepted slips go in as an amendment, not another original.</li>
+    </ul>
+
+    <h2>Other free CRA XML returns</h2>
+    <p>The same converter handles these. Pick the return in Step 1:</p>
+    <ul>
+      <li><a href="/t4-xml-generator"><strong>T4</strong></a>: Statement of Remuneration Paid.</li>
+      <li><a href="/nr4-xml-generator"><strong>NR4</strong></a>: Amounts Paid or Credited to Non-Residents of Canada.</li>
+      <li><a href="/t1204-xml-generator"><strong>T1204</strong></a>: Government Service Contract Payments.</li>
+    </ul>
+  </main>
+
+  <section id="faq">
+    <h2>T5018 XML questions</h2>
+    <div class="faq-grid">
+      <details class="faq-item">
+        <summary>When is the T5018 return due?</summary>
+        <p>Within <strong>6 months</strong> after the end of your reporting period. You can report on a calendar-year basis or on your fiscal period, and the deadline counts from the end of the period you chose.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Do I have to file T5018 slips electronically?</summary>
+        <p>Yes, if you file more than 5 T5018 slips for a calendar year. CRA requires electronic filing above that number. Internet File Transfer with an XML file is one of the accepted ways.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Which CRA XML schema does TaxXML use for T5018?</summary>
+        <p>CRA XML schema <strong>1-26-3</strong>: T619 2026 and T5018 2026V3. It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is my data uploaded anywhere?</summary>
+        <p>No. The spreadsheet is read and the XML is built in your browser. TaxXML does not send the file to a server or to CRA. You upload it to Internet File Transfer yourself. See <a href="/privacy">Privacy</a>.</p>
+      </details>
+      <details class="faq-item">
+        <summary>How do I fix a T5018 that CRA already accepted?</summary>
+        <p>File an amendment: set Report Type to <em>Amendment</em> (A) and include only the slips that changed, each one complete. Use a new Submission Reference ID. Do not send a second original.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is it really free?</summary>
+        <p>Yes. No signup, no per-slip fee, no email required.</p>
+      </details>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="logo-text">TaxXML<span class="logo-accent">.ca</span></span>
+        <p>Free CRA XML generation for simple Canadian tax filing.</p>
+        <p class="footer-avanza">A project by <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a></p>
+      </div>
+      <div class="footer-links">
+        <h4>Resources</h4>
+        <a href="/#converter">XML Converter</a>
+        <a href="/t5018-xml-generator">T5018 XML guide</a>
+        <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" class="footer-ift">Submit to CRA (IFT) &nearr;</a>
+      </div>
+      <div class="footer-links">
+        <h4>Legal</h4>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <section id="liability">
+        <p><strong>Use at your own risk.</strong> This page and the TaxXML converter are provided free of charge and &ldquo;as is&rdquo;, without warranty. You are responsible for the accuracy of your data and your filings, and for any penalties, rejections, or losses that follow. To the extent Canadian law allows, AVANZA Business Automation and TaxXML.ca are not liable for any damages arising from use of this page or the tool. Using the page or the tool means you accept these terms. Read the full <a href="/terms">Terms of use</a>.</p>
+      </section>
+      <p>&copy; 2026 TaxXML.ca. Built in Canada by <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a>. Not affiliated with the Canada Revenue Agency.</p>
+    </div>
+  </footer>
+</body>
+</html>

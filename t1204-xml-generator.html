@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Free T1204 XML Generator for CRA (2026 Schema) | TaxXML.ca</title>
+  <meta name="description" content="Turn a T1204 government service contract spreadsheet into CRA XML for Internet File Transfer. Free, runs in your browser. Plain-English guide to the schema.">
+  <link rel="canonical" href="https://taxxml.ca/t1204-xml-generator">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://taxxml.ca/t1204-xml-generator">
+  <meta property="og:title" content="Free T1204 XML Generator for CRA (2026 Schema)">
+  <meta property="og:description" content="Turn a T1204 government service contract spreadsheet into CRA XML for Internet File Transfer. Free, runs in your browser, no signup.">
+  <meta property="og:image" content="https://taxxml.ca/img/og-image.png">
+  <meta property="og:locale" content="en_CA">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "When is the T1204 return due?",
+        "acceptedAnswer": { "@type": "Answer", "text": "On or before the last day of March following the calendar year in which the payments were made." }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I have to file T1204 slips electronically?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. CRA requires T1204 returns to be filed electronically, whatever the number of slips. Internet File Transfer with an XML file is one of the accepted ways; Web Forms is the other." }
+      },
+      {
+        "@type": "Question",
+        "name": "Which CRA XML schema does TaxXML use for T1204?",
+        "acceptedAnswer": { "@type": "Answer", "text": "CRA XML schema 1-26-3: T619 2026 and T1204 2026V3. It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is my data uploaded anywhere?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. The spreadsheet is read and the XML is built in your browser. TaxXML does not send the file to a server or to CRA. You upload it to Internet File Transfer yourself." }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I fix a T1204 that CRA already accepted?",
+        "acceptedAnswer": { "@type": "Answer", "text": "File an amendment: set Report Type to Amendment (A) and include only the slips that changed, each one complete. Use a new Submission Reference ID. Do not send a second original." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is it really free?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. No signup, no per-slip fee, no email required." }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E2F5Q3RZVH"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-E2F5Q3RZVH');
+  </script>
+</head>
+<body>
+  <header id="site-header">
+    <div class="header-inner">
+      <a href="/" class="logo">
+        <span class="logo-text">TaxXML<span class="logo-accent">.ca</span></span>
+      </a>
+      <nav>
+        <a href="#faq">FAQ</a>
+        <a href="/#converter" class="nav-cta">Open converter</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="legal">
+    <h1>Free T1204 XML generator for CRA</h1>
+    <p class="legal-updated">Built to CRA XML schema 1-26-3 (T619 2026, T1204 2026V3)</p>
+
+    <p>Federal government departments, agencies and Crown corporations report the service contract payments they make on the T1204 Government Service Contract Payments return: a T1204 slip for each recipient and a T1204 Summary. The return is due on or before the last day of March following the calendar year. TaxXML turns the T1204 spreadsheet you already have into the XML file CRA accepts through Internet File Transfer (IFT), in your browser, for free.</p>
+    <div id="disclaimer" class="warnings-box" role="note">
+      <h4>Information and a conversion tool, not advice</h4>
+      <p>TaxXML provides information and a conversion tool only. It is not tax, legal, or accounting advice. CRA specifications change, so always verify the requirements, and your files, against the CRA's official <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html" target="_blank" rel="noopener">XML specifications for information returns</a> before you file.</p>
+    </div>
+    <p><a href="/#converter" class="btn btn-primary btn-lg">Open the free T1204 converter</a></p>
+
+    <h2>What a T1204 XML file is</h2>
+    <p>A T1204 XML file is one <code>&lt;Submission&gt;</code> with two parts:</p>
+    <ul>
+      <li><strong>T619 transmitter record.</strong> The wrapper that says who is sending the file: the transmitter's CRA account number (usually the 15-character business number), a Submission Reference ID, a contact name, phone and email, and the language.</li>
+      <li><strong>T1204 return.</strong> One <code>&lt;T1204Slip&gt;</code> per recipient, followed by one <code>&lt;T1204Summary&gt;</code> with the paying department's details and the totals for every slip in the file.</li>
+    </ul>
+    <p>You upload the file to IFT, which checks it against CRA's XML schema. T1204 returns must be filed electronically, whatever the number of slips, through Internet File Transfer or Web Forms. There is no slip threshold below which CRA accepts a paper T1204.</p>
+
+    <h2>CRA XML specifications in plain terms</h2>
+    <p>TaxXML follows <strong>schema 1-26-3</strong>: <strong>T619 2026</strong> for the transmitter record and <strong>T1204 2026V3</strong> for the return. The elements you will see most:</p>
+    <ul>
+      <li><code>payr_bn</code>: on each slip, the paying department's 15-character payroll (RP) account number, for example <code>123456789RP0001</code>. The summary carries it as <code>bn</code>.</li>
+      <li><code>RCPNT_BUS_NM</code>: the recipient's business name.</li>
+      <li><code>sin</code>, <code>rcpnt_bn</code>: the recipient's social insurance number or business number. Both tags appear on every slip; the one that doesn't apply gets a zero placeholder, such as <code>000000000</code> for the SIN.</li>
+      <li><code>rcpnt_tcd</code>: recipient type: <code>1</code> sole proprietor, <code>3</code> corporation, <code>4</code> partnership.</li>
+      <li><code>T1204_AMT</code>: the amount paid, as <code>srvc_pay_amt</code> for service-only payments or <code>mxd_gd_pay_amt</code> for mixed goods and services.</li>
+      <li><code>tx_yr</code>, <code>slp_cnt</code>: on the summary, the tax year and the number of slips, with the totals for each kind of payment.</li>
+      <li><code>rpt_tcd</code>: report type. <code>O</code> for original, <code>A</code> for amendment, <code>C</code> for cancel.</li>
+    </ul>
+    <p>The full rules are on CRA's site: <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html" target="_blank" rel="noopener">XML specifications for information returns</a> and the <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/t619-2026.html" target="_blank" rel="noopener">T619 2026 specification</a>.</p>
+
+    <h2>How to make a T1204 XML file in 3 steps</h2>
+    <ol>
+      <li><strong>Pick T1204 and open your spreadsheet.</strong> Choose T1204 in Step 1 of the converter, then open the .xlsx or .csv with one row per recipient. Not sure how to lay it out? <a href="/templates/T1204_Sample.csv" download>Download the T1204 sample spreadsheet</a>.</li>
+      <li><strong>Check the columns and fill in the filing details.</strong> TaxXML matches your headers to CRA fields. Fix any it missed, then enter the transmitter and paying department details. Those are saved in this browser for next time.</li>
+      <li><strong>Generate and download.</strong> Problems are listed by row and column before anything downloads. Then upload the XML to IFT signed in with My Business Account, Represent a Client, or a web access code (WAC).</li>
+    </ol>
+    <p><a href="/#converter" class="btn btn-primary">Convert my T1204 spreadsheet</a></p>
+
+    <h2>Common reasons CRA rejects a T1204 XML file</h2>
+    <ul>
+      <li><strong>IDs that lost their leading zero.</strong> Excel treats a SIN like <code>046454286</code> as a number and drops the zero. Format the SIN and BN column as Text. TaxXML reads them as text, and flags any SIN that isn't 9 digits or fails the checksum.</li>
+      <li><strong>Empty optional tags.</strong> CRA rejects files that contain empty optional tags: a tag with nothing in it, like <code>&lt;pstl_cd/&gt;</code>, gets the file rejected. Optional fields with no value must be left out entirely. TaxXML leaves out blank optional fields. Don't type "N/A" or a space to fill a cell.</li>
+      <li><strong>Business number in the wrong format.</strong> A BN here is 15 characters: 9 digits, 2 letters, 4 digits. A 9-digit BN on its own is not enough.</li>
+      <li><strong>Reused Submission Reference ID.</strong> Every file needs a new one. TaxXML bumps it for you (A to B) when you come back to resubmit.</li>
+      <li><strong>A second original instead of an amendment.</strong> Corrections to accepted slips go in as an amendment, not another original.</li>
+    </ul>
+
+    <h2>Other free CRA XML returns</h2>
+    <p>The same converter handles these. Pick the return in Step 1:</p>
+    <ul>
+      <li><a href="/t4-xml-generator"><strong>T4</strong></a>: Statement of Remuneration Paid.</li>
+      <li><a href="/t5018-xml-generator"><strong>T5018</strong></a>: Statement of Contract Payments (construction subcontractors).</li>
+      <li><a href="/nr4-xml-generator"><strong>NR4</strong></a>: Amounts Paid or Credited to Non-Residents of Canada.</li>
+    </ul>
+  </main>
+
+  <section id="faq">
+    <h2>T1204 XML questions</h2>
+    <div class="faq-grid">
+      <details class="faq-item">
+        <summary>When is the T1204 return due?</summary>
+        <p>On or before the <strong>last day of March</strong> following the calendar year in which the payments were made.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Do I have to file T1204 slips electronically?</summary>
+        <p>Yes. CRA requires T1204 returns to be filed electronically, whatever the number of slips. Internet File Transfer with an XML file is one of the accepted ways; Web Forms is the other.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Which CRA XML schema does TaxXML use for T1204?</summary>
+        <p>CRA XML schema <strong>1-26-3</strong>: T619 2026 and T1204 2026V3. It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is my data uploaded anywhere?</summary>
+        <p>No. The spreadsheet is read and the XML is built in your browser. TaxXML does not send the file to a server or to CRA. You upload it to Internet File Transfer yourself. See <a href="/privacy">Privacy</a>.</p>
+      </details>
+      <details class="faq-item">
+        <summary>How do I fix a T1204 that CRA already accepted?</summary>
+        <p>File an amendment: set Report Type to <em>Amendment</em> (A) and include only the slips that changed, each one complete. Use a new Submission Reference ID. Do not send a second original.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is it really free?</summary>
+        <p>Yes. No signup, no per-slip fee, no email required.</p>
+      </details>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="logo-text">TaxXML<span class="logo-accent">.ca</span></span>
+        <p>Free CRA XML generation for simple Canadian tax filing.</p>
+        <p class="footer-avanza">A project by <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a></p>
+      </div>
+      <div class="footer-links">
+        <h4>Resources</h4>
+        <a href="/#converter">XML Converter</a>
+        <a href="/t1204-xml-generator">T1204 XML guide</a>
+        <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" class="footer-ift">Submit to CRA (IFT) &nearr;</a>
+      </div>
+      <div class="footer-links">
+        <h4>Legal</h4>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <section id="liability">
+        <p><strong>Use at your own risk.</strong> This page and the TaxXML converter are provided free of charge and &ldquo;as is&rdquo;, without warranty. You are responsible for the accuracy of your data and your filings, and for any penalties, rejections, or losses that follow. To the extent Canadian law allows, AVANZA Business Automation and TaxXML.ca are not liable for any damages arising from use of this page or the tool. Using the page or the tool means you accept these terms. Read the full <a href="/terms">Terms of use</a>.</p>
+      </section>
+      <p>&copy; 2026 TaxXML.ca. Built in Canada by <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a>. Not affiliated with the Canada Revenue Agency.</p>
+    </div>
+  </footer>
+</body>
+</html>
