@@ -39,8 +39,56 @@ for (const code of ['T4', 'NR4', 'T5018', 'T1204']) {
   assert(visible.length > 0, msg('has a visible FAQ'));
   assert.deepStrictEqual(ld.mainEntity.map(q => q.name), visible, msg('JSON-LD matches visible FAQ'));
 
+  // CRA fact-check: no unverified dates, account number wording, WAC sign-in
+  const schemaQ = visible.find(q => q.startsWith('Which CRA XML schema'));
+  const schemaLd = ld.mainEntity.find(q => q.name === schemaQ).acceptedAnswer.text;
+  const schemaVisible = html.match(new RegExp(`<summary>${schemaQ.replace(/\?/, '\\?')}</summary>\\s*<p>([\\s\\S]*?)</p>`))[1].replace(/<[^>]+>/g, '');
+  assert(schemaLd.endsWith(" It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them."), msg('schema FAQ answer: empty-tag rule'));
+  assert.strictEqual(schemaVisible, schemaLd, msg('schema FAQ: JSON-LD matches visible text'));
+  assert(!html.includes('October 2025'), msg('no unverified "October 2025" date'));
+  assert(html.includes('CRA rejects files that contain empty optional tags: a tag with nothing in it, like <code>'), msg('empty-tag pitfall wording'));
+  assert(!html.includes("transmitter's business number"), msg('no "transmitter\'s business number"'));
+  assert(html.includes("the transmitter's CRA account number (usually the 15-character business number)"), msg('T619 account number wording'));
+  assert(!html.includes('My Business Account or Represent a Client login'), msg('no MyBA/RAC-only login wording'));
+  assert(html.includes('signed in with My Business Account, Represent a Client, or a web access code (WAC)'), msg('WAC sign-in wording'));
+
   assert(sitemap.includes(`<loc>${URL}</loc>`), msg('listed in sitemap.xml'));
   assert(index.includes(`href="/${slug}"`), msg('linked from index.html'));
 }
+
+const page = slug => fs.readFileSync(path.join(ROOT, `${slug}.html`), 'utf8');
+const visibleAnswer = (html, q) => html.match(new RegExp(`<summary>${q.replace(/[?.()]/g, "\\$&")}</summary>\\s*<p>([\\s\\S]*?)</p>`))?.[1];
+const ldAnswer = (html, q) => JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1])
+  .mainEntity.find(e => e.name === q).acceptedAnswer.text;
+
+// T4: bn15 wording, WAC in the "does TaxXML file" FAQ, cross-links to the other guides
+const t4 = page('t4-xml-generator');
+assert(t4.includes("<code>bn15</code>: the transmitter's 15-character account number, usually the business number."), 't4: bn15 wording');
+const t4Submit = "No. You download the XML and upload it through CRA's Internet File Transfer, signed in with My Business Account, Represent a Client, or a web access code (WAC).";
+const t4SubmitQ = [...t4.matchAll(/<summary>(.*?)<\/summary>/g)].map(m => m[1]).find(q => visibleAnswer(t4, q) === t4Submit);
+assert(t4SubmitQ, 't4: visible WAC FAQ answer');
+assert.strictEqual(ldAnswer(t4, t4SubmitQ), t4Submit, 't4: JSON-LD WAC FAQ answer');
+for (const code of ['t1204', 't5018', 'nr4']) {
+  assert(t4.includes(`<a href="/${code}-xml-generator"><strong>${code.toUpperCase()}</strong></a>`), `t4: links /${code}-xml-generator`);
+}
+
+// T1204: mandatory e-filing regardless of slip count; recipient type codes
+const t1204 = page('t1204-xml-generator');
+assert(!/more than 5|5 slips|optional but still accepted/.test(t1204), 't1204: no 5-slip threshold');
+assert(t1204.includes('T1204 returns must be filed electronically, whatever the number of slips'), 't1204: mandatory e-filing paragraph');
+const efileQ = 'Do I have to file T1204 slips electronically?';
+const efileA = 'Yes. CRA requires T1204 returns to be filed electronically, whatever the number of slips. Internet File Transfer with an XML file is one of the accepted ways; Web Forms is the other.';
+assert.strictEqual(visibleAnswer(t1204, efileQ), efileA, 't1204: visible e-filing FAQ');
+assert.strictEqual(ldAnswer(t1204, efileQ), efileA, 't1204: JSON-LD e-filing FAQ');
+assert(t1204.includes('<code>rcpnt_tcd</code>: recipient type: <code>1</code> sole proprietor, <code>3</code> corporation, <code>4</code> partnership.'), 't1204: rcpnt_tcd codes');
+
+// NR4: spec version 2026V3; fssn_nbr boxes
+const nr4 = page('nr4-xml-generator');
+assert(!/NR4 2026(?!V3)/.test(nr4), 'nr4: every "NR4 2026" is "NR4 2026V3"');
+assert(nr4.includes('T619 2026, NR4 2026V3'), 'nr4: subtitle version');
+const nr4SchemaQ = 'Which CRA XML schema does TaxXML use for NR4?';
+assert(ldAnswer(nr4, nr4SchemaQ).startsWith('CRA XML schema 1-26-3: T619 2026 and NR4 2026V3.'), 'nr4: JSON-LD schema version');
+assert(visibleAnswer(nr4, nr4SchemaQ).includes('T619 2026 and NR4 2026V3.'), 'nr4: visible schema version');
+assert(nr4.includes("<code>tx_cntry_cd</code>, <code>fssn_nbr</code>: the recipient's 3-letter country of tax residence (Box 12) and their foreign or Canadian tax identification number (Box 13)."), 'nr4: fssn_nbr wording');
 
 console.log('seo-page.test.js: all passed');
