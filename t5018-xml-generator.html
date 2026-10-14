@@ -105,7 +105,7 @@
     <h2>CRA XML specifications in plain terms</h2>
     <p>TaxXML follows <strong>schema 1-26-3</strong>: <strong>T619 2026</strong> for the transmitter record and <strong>T5018 2026V3</strong> for the return. The elements you will see most:</p>
     <ul>
-      <li><code>bn</code>: the payer's 15-character business number, on every slip and the summary.</li>
+      <li><code>bn</code>: the payer's 15-character account number on the RZ program, for example <code>123456789RZ0001</code>, on every slip and the summary.</li>
       <li><code>RCPNT_NM</code> or <code>CORP_PTNRP_NM</code>: the subcontractor's name. Individuals use <code>RCPNT_NM</code>; corporations and partnerships use <code>CORP_PTNRP_NM</code>.</li>
       <li><code>sin</code>, <code>rcpnt_bn</code>: the subcontractor's social insurance number or business number (Box 24). Both tags appear on every slip; the one that doesn't apply gets a zero placeholder, such as <code>000000000</code> for the SIN.</li>
       <li><code>rcpnt_tcd</code>: recipient type, such as individual or corporation.</li>
@@ -128,7 +128,7 @@
     <ul>
       <li><strong>IDs that lost their leading zero.</strong> Excel treats a SIN like <code>046454286</code> as a number and drops the zero. Format the SIN and BN column as Text. TaxXML reads them as text, and flags any SIN that isn't 9 digits or fails the checksum.</li>
       <li><strong>Empty optional tags.</strong> CRA rejects files that contain empty optional tags: a tag with nothing in it, like <code>&lt;pstl_cd/&gt;</code>, gets the file rejected. Optional fields with no value must be left out entirely. TaxXML leaves out blank optional fields. Don't type "N/A" or a space to fill a cell.</li>
-      <li><strong>Business number in the wrong format.</strong> A BN here is 15 characters: 9 digits, 2 letters, 4 digits. A 9-digit BN on its own is not enough.</li>
+      <li><strong>Business number in the wrong format.</strong> A BN here is 15 characters: 9 digits, 2 letters, 4 digits. For the payer, T5018 uses the RZ program account, for example <code>123456789RZ0001</code>, not the RP payroll account. A 9-digit BN on its own is not enough.</li>
       <li><strong>Reused Submission Reference ID.</strong> Every file needs a new one. TaxXML bumps it for you (A to B) when you come back to resubmit.</li>
       <li><strong>A second original instead of an amendment.</strong> Corrections to accepted slips go in as an amendment, not another original.</li>
     </ul>

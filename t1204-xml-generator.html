@@ -105,7 +105,7 @@
     <h2>CRA XML specifications in plain terms</h2>
     <p>TaxXML follows <strong>schema 1-26-3</strong>: <strong>T619 2026</strong> for the transmitter record and <strong>T1204 2026V3</strong> for the return. The elements you will see most:</p>
     <ul>
-      <li><code>payr_bn</code>: on each slip, the paying department's 15-character business number. The summary carries it as <code>bn</code>.</li>
+      <li><code>payr_bn</code>: on each slip, the paying department's 15-character payroll (RP) account number, for example <code>123456789RP0001</code>. The summary carries it as <code>bn</code>.</li>
       <li><code>RCPNT_BUS_NM</code>: the recipient's business name.</li>
       <li><code>sin</code>, <code>rcpnt_bn</code>: the recipient's social insurance number or business number. Both tags appear on every slip; the one that doesn't apply gets a zero placeholder, such as <code>000000000</code> for the SIN.</li>
       <li><code>rcpnt_tcd</code>: recipient type: <code>1</code> sole proprietor, <code>3</code> corporation, <code>4</code> partnership.</li>

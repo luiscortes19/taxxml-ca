@@ -91,4 +91,10 @@ assert(ldAnswer(nr4, nr4SchemaQ).startsWith('CRA XML schema 1-26-3: T619 2026 an
 assert(visibleAnswer(nr4, nr4SchemaQ).includes('T619 2026 and NR4 2026V3.'), 'nr4: visible schema version');
 assert(nr4.includes("<code>tx_cntry_cd</code>, <code>fssn_nbr</code>: the recipient's 3-letter country of tax residence (Box 12) and their foreign or Canadian tax identification number (Box 13)."), 'nr4: fssn_nbr wording');
 
+// Payer account program: T5018 uses RZ, T1204 uses RP (CRA 2026 specs / schema 1-26-3)
+const t5018 = page('t5018-xml-generator');
+assert(t5018.includes('<code>bn</code>: the payer\'s 15-character account number on the RZ program, for example <code>123456789RZ0001</code>, on every slip and the summary.'), 't5018: payer bn is RZ');
+assert(t5018.includes('For the payer, T5018 uses the RZ program account'), 't5018: RZ rejection reason');
+assert(t1204.includes('<code>payr_bn</code>: on each slip, the paying department\'s 15-character payroll (RP) account number, for example <code>123456789RP0001</code>. The summary carries it as <code>bn</code>.'), 't1204: payer bn is RP');
+
 console.log('seo-page.test.js: all passed');
