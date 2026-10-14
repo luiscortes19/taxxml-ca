@@ -33,7 +33,7 @@ const csv = s => Buffer.from(s);
 
 { // NR4 row errors also point at the column
   const app = createApp({ returnType: 'NR4' });
-  app.loadFile('nr4.csv', csv('Recipient Name,Recipient Type,Foreign Tax ID,Country of Residence\r\nJohn,Alien,X1,Narnia\r\n'));
+  app.loadFile('nr4.csv', csv('Recipient Name,Recipient Type,Foreign Tax ID,Country of Residence,Gross Income\r\nJohn,Alien,X1,Narnia,100\r\n'));
   app.setDetails();
   app.generate();
   const html = app.errors();

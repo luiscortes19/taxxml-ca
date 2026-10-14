@@ -19,8 +19,8 @@ const RETURN_TYPES = {
   T1204: {
     label: 'T1204 — Government Service Contract Payments',
     fields: [
-      { key: 'vendor_name',   label: 'Vendor Name',            autoMatch: ['vendor name', 'recipient name', 'payee name'] },
-      { key: 'vendor_bn',     label: 'Vendor BN / SIN',        autoMatch: ['vendor bn', 'vendor business', 'vendor sin', 'recipient bn', 'recipient business', 'payee bn', 'payee sin'] },
+      { key: 'vendor_name',   label: 'Vendor Name',            autoMatch: ['vendor name', 'recipient name', 'payee name'], required: true },
+      { key: 'vendor_bn',     label: 'Vendor BN / SIN',        autoMatch: ['vendor bn', 'vendor business', 'vendor sin', 'recipient bn', 'recipient business', 'payee bn', 'payee sin'], required: true },
       { key: 'amount',        label: 'Amount Paid',            autoMatch: ['amount paid', 'amount', 'payment amount', 'total paid'] },
       { key: 'biz_type',      label: 'Business Type',          autoMatch: ['business type', 'recipient type', 'entity type'] },
       { key: 'svc_only',      label: 'Service Payments Only',  autoMatch: ['service payments', 'service only', 'services only'] },
@@ -33,10 +33,10 @@ const RETURN_TYPES = {
   T4: {
     label: 'T4 — Statement of Remuneration Paid',
     fields: [
-      { key: 'empe_snm',       label: 'Last Name (Box 12)',        autoMatch: ['last name', 'surname', 'family name', 'snm'] },
+      { key: 'empe_snm',       label: 'Last Name (Box 12)',        autoMatch: ['last name', 'surname', 'family name', 'snm'], required: true },
       { key: 'empe_gvn_nm',    label: 'First Name',                autoMatch: ['first name', 'given name', 'gvn'] },
-      { key: 'sin',             label: 'SIN (Box 12)',              autoMatch: ['sin', 'social insurance'] },
-      { key: 'empt_incamt',    label: 'Employment Income (Box 14)', autoMatch: ['employment income', 'box 14', 'salary', 'wages', 'gross pay', 'income'] },
+      { key: 'sin',             label: 'SIN (Box 12)',              autoMatch: ['sin', 'social insurance'], required: true },
+      { key: 'empt_incamt',    label: 'Employment Income (Box 14)', autoMatch: ['employment income', 'box 14', 'salary', 'wages', 'gross pay', 'income'], required: true },
       { key: 'cpp_cntrb_amt',  label: 'CPP Contributions (Box 16)', autoMatch: ['cpp', 'pension plan', 'box 16', 'cpp contrib'] },
       { key: 'cppe_cntrb_amt', label: 'CPP2 Contributions (Box 16A)', autoMatch: ['cpp2', 'second cpp', 'box 16a', 'cppe'] },
       { key: 'qpp_cntrb_amt',  label: 'QPP Contributions (Box 17)', autoMatch: ['qpp', 'quebec pension', 'box 17'] },
@@ -56,9 +56,9 @@ const RETURN_TYPES = {
   T5018: {
     label: 'T5018 — Statement of Contract Payments',
     fields: [
-      { key: 'rcpnt_name',    label: 'Recipient Name',             autoMatch: ['contractor name', 'recipient name', 'subcontractor', 'payee name', 'company name', 'name'] },
-      { key: 'rcpnt_bn',      label: 'Recipient BN / SIN (Box 24)', autoMatch: ['contractor bn', 'recipient bn', 'subcontractor bn', 'contractor sin', 'recipient sin', 'business number'] },
-      { key: 'sbctrcr_amt',   label: 'Sub-contractor Payments (Box 22)', autoMatch: ['sub-contractor', 'subcontractor payment', 'contract payment', 'amount paid', 'amount', 'payment'] },
+      { key: 'rcpnt_name',    label: 'Recipient Name',             autoMatch: ['contractor name', 'recipient name', 'subcontractor', 'payee name', 'company name', 'name'], required: true },
+      { key: 'rcpnt_bn',      label: 'Recipient BN / SIN (Box 24)', autoMatch: ['contractor bn', 'recipient bn', 'subcontractor bn', 'contractor sin', 'recipient sin', 'business number'], required: true },
+      { key: 'sbctrcr_amt',   label: 'Sub-contractor Payments (Box 22)', autoMatch: ['sub-contractor', 'subcontractor payment', 'contract payment', 'amount paid', 'amount', 'payment'], required: true },
       { key: 'rcpnt_type',    label: 'Recipient Type',             autoMatch: ['recipient type', 'contractor type', 'entity type', 'type'] },
       { key: 'address',       label: 'Recipient Address',          autoMatch: ['contractor address', 'recipient address', 'subcontractor address', 'address', 'addr'] },
     ],
@@ -69,13 +69,13 @@ const RETURN_TYPES = {
   NR4: {
     label: 'NR4 — Statement of Amounts Paid or Credited to Non-Residents of Canada',
     fields: [
-      { key: 'rcpnt_name',   label: 'Recipient Name',                autoMatch: ['recipient name', 'payee name', 'name'] },
+      { key: 'rcpnt_name',   label: 'Recipient Name',                autoMatch: ['recipient name', 'payee name', 'name'], required: true },
       { key: 'rcpnt_type',   label: 'Recipient Type',                autoMatch: ['recipient type', 'payee type', 'entity type', 'type'] },
-      { key: 'fssn_nbr',     label: 'Foreign Tax ID',                autoMatch: ['foreign tax id', 'foreign tax', 'tax identification', 'fssn', 'tax id'] },
+      { key: 'fssn_nbr',     label: 'Foreign Tax ID',                autoMatch: ['foreign tax id', 'foreign tax', 'tax identification', 'fssn', 'tax id'], required: true },
       { key: 'tx_cntry_cd',  label: 'Country of Residence (3 letters)', autoMatch: ['country of residence', 'residence country', 'tax country', 'country'] },
       { key: 'inc_1_tcd',    label: 'Income Code (Box 14)',          autoMatch: ['income code', 'income type', 'type of income', 'box 14'] },
       { key: 'crcy_1_cd',    label: 'Currency Code (Box 15)',        autoMatch: ['currency', 'crcy', 'box 15'] },
-      { key: 'gro_1_incamt', label: 'Gross Income (Box 16)',         autoMatch: ['gross income', 'gross amount', 'gross', 'box 16'] },
+      { key: 'gro_1_incamt', label: 'Gross Income (Box 16)',         autoMatch: ['gross income', 'gross amount', 'gross', 'box 16'], required: true },
       { key: 'nr_tx_1_amt',  label: 'Non-Resident Tax Withheld (Box 17)', autoMatch: ['tax withheld', 'non-resident tax', 'withholding', 'box 17'] },
       { key: 'tx_xmpt_1_cd', label: 'Exemption Code (Box 18)',       autoMatch: ['exemption code', 'exemption', 'exempt', 'box 18'] },
       { key: 'addr_l1',      label: 'Address Line 1',                autoMatch: ['street address', 'address line', 'address', 'addr'] },
@@ -263,9 +263,10 @@ function autoMapColumns() {
   const candidates = [];
   config.fields.forEach(field => {
     headers.forEach((h, colIdx) => {
-      const hl = h.toLowerCase();
+      // Keywords match at the start of a word, so "sin" doesn't hit "Business Type"
+      const words = ' ' + h.toLowerCase().replace(/[^a-z0-9]+/g, ' ');
       field.autoMatch.forEach(keyword => {
-        if (hl.includes(keyword)) {
+        if (words.includes(' ' + keyword.replace(/[^a-z0-9]+/g, ' '))) {
           candidates.push({ fieldKey: field.key, colIdx, score: keyword.length });
         }
       });
@@ -585,6 +586,13 @@ function checkRecipientBN(raw, program, placeholder, who, rowNum, warnings, erro
 // ============================================================
 function generateXML() {
   const config = getReturnConfig();
+  // Without these columns every slip would silently get a placeholder or 0.00 (e.g. a file for another return)
+  const unmapped = config.fields.filter(f => f.required && !(columnMap[f.key] >= 0));
+  if (unmapped.length) {
+    clearFieldErrors();
+    showGenerateErrors(unmapped.map(f => `No column is mapped to "${f.label}". Map it in Step 2, or check that ${getSelectedReturnType()} is the right return for this file.`));
+    return;
+  }
   config.generateXML();
 }
 
