@@ -502,7 +502,8 @@ function showGenerateErrors(errors) {
       (badCells.size ? '<p>Go back to Step 2 to see these cells marked in the data preview (first 10 rows).</p>' : '')
     : '';
   box.classList.toggle('hidden', !errors.length);
-  if (errors.length) track('validation_failed', { return_type: getSelectedReturnType(), error_count: errors.length, error_category: 'row_data' });
+  if (errors.length) track('validation_failed', { return_type: getSelectedReturnType(), error_count: errors.length, error_category: 'row_data',
+                                                  first_error_field: analyticsField([...badCells][0]?.split(':')[1]) });
   if (parsedData.length) renderPreviewTable(); // add / clear the cell marks
 }
 
@@ -525,7 +526,8 @@ function validateFilingDetails(requiredIds, extraChecks = []) {
   });
   const first = document.querySelector('#step-3 .has-error');
   if (first) first.focus();
-  if (bad.size) track('validation_failed', { return_type: getSelectedReturnType(), error_count: bad.size, error_category: 'filing_details' });
+  if (bad.size) track('validation_failed', { return_type: getSelectedReturnType(), error_count: bad.size, error_category: 'filing_details',
+                                             first_error_field: analyticsField([...bad][0]) });
   return bad.size === 0;
 }
 
@@ -1263,6 +1265,19 @@ function showResults(slips, stats, warnings) {
 // Analytics must never break the app.
 function track(name, params) {
   try { if (window.gtag) gtag('event', name, params); } catch (e) { /* ignore */ }
+}
+
+// Field names safe to send to GA4: our own column keys (sin, empt_incamt, ...) and Step 3 input ids.
+// Never a header the user typed or a cell value; anything not on this list is reported as 'other'.
+function analyticsFieldAllowlist() {
+  return new Set([
+    ...Object.values(RETURN_TYPES).flatMap(rt => rt.fields.map(f => f.key)),
+    ...SAVED_FIELDS, 't5018-fiscal-day', 't5018-fiscal-month', 't5018-fiscal-year',
+  ]);
+}
+
+function analyticsField(field) {
+  return analyticsFieldAllowlist().has(field) ? field : 'other';
 }
 
 function downloadXML() {
