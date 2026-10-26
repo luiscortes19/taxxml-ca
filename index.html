@@ -6,7 +6,7 @@
 
   <!-- SEO -->
   <title>Excel to CRA XML Schema: T4, NR4, T5018, T1204 | TaxXML.ca</title>
-  <meta name="description" content="Free Excel or CSV to XML converter built to the 2026 CRA XML specifications for T4, NR4, T5018 and T1204 returns. Runs in your browser: no upload, no signup.">
+  <meta name="description" content="Free Excel or CSV to XML converter built to the 2027 CRA XML specifications for T4, NR4, T5018 and T1204 returns. Runs in your browser: no upload, no signup.">
   <meta name="keywords" content="CRA XML, T4, T1204, T5018, T619, tax filing Canada, Excel to XML, information return, payroll, statement of remuneration, government service contract, contract payments, sub-contractor, NR4, non-resident, non-resident tax withheld, electronic filing, IFT">
   <link rel="canonical" href="https://taxxml.ca/">
 
@@ -14,14 +14,14 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://taxxml.ca/">
   <meta property="og:title" content="Excel to CRA XML Schema: T4, NR4, T5018, T1204">
-  <meta property="og:description" content="Convert Excel or CSV to XML built to the 2026 CRA XML specifications for T4, NR4, T5018 and T1204. Free, runs in your browser, no signup.">
+  <meta property="og:description" content="Convert Excel or CSV to XML built to the 2027 CRA XML specifications for T4, NR4, T5018 and T1204. Free, runs in your browser, no signup.">
   <meta property="og:image" content="https://taxxml.ca/img/og-image.png">
   <meta property="og:locale" content="en_CA">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Excel to CRA XML Schema: T4, NR4, T5018, T1204">
-  <meta name="twitter:description" content="Convert Excel or CSV to XML built to the 2026 CRA XML specifications for T4, NR4, T5018 and T1204. Free, runs in your browser, no signup.">
+  <meta name="twitter:description" content="Convert Excel or CSV to XML built to the 2027 CRA XML specifications for T4, NR4, T5018 and T1204. Free, runs in your browser, no signup.">
   <meta name="twitter:image" content="https://taxxml.ca/img/og-image.png">
 
   <!-- Favicon -->
@@ -99,7 +99,7 @@
       </div>
       <ul class="hero-trust">
         <li>Your spreadsheet is read on this device and never sent anywhere. Turn off Wi-Fi after the page loads and it still works.</li>
-        <li>Built to CRA's 2026 XML specification (schema 1-26-3).</li>
+        <li>Tested against CRA's published XML schemas: 1-27-1 for the 2027 filing season (accepted from January 11, 2027) and 1-26-3 until then.</li>
         <li>Independent tool by AVANZA Business Automation, Canada. Not affiliated with the CRA.</li>
       </ul>
     </div>
@@ -196,20 +196,25 @@
           <p class="form-hint">The entity submitting this file to CRA.</p>
           <div class="form-row">
             <div class="form-group">
-              <label for="tx-bn">Transmitter CRA account number (15 chars) *</label>
-              <input type="text" id="tx-bn" class="form-control mono" placeholder="123456789MM0001" maxlength="15" required>
-              <span class="field-hint">The transmitter's CRA account number, usually a 15-character BN ending in a program code (e.g. MM0001, RZ0001).</span>
+              <label for="tx-bn">Transmitter CRA account number *</label>
+              <input type="text" id="tx-bn" class="form-control mono" placeholder="123456789RP0001" maxlength="15">
+              <span class="field-hint">The account you sign in to IFT with: a 15-character BN (e.g. 123456789RP0001), a 9-digit BN (My Business Account only), a trust account (T12345678) or a non-resident account (NRA123456). Signing in with Represent a Client? Enter your RepID below; this is then optional.</span>
             </div>
             <div class="form-group">
               <label for="tx-name">Transmitter Name *</label>
               <input type="text" id="tx-name" class="form-control" placeholder="Your Organization Name" maxlength="35" required>
             </div>
           </div>
+          <div class="form-group">
+            <label for="tx-repid">RepID (Represent a Client only)</label>
+            <input type="text" id="tx-repid" class="form-control mono" placeholder="A1B2C3D" maxlength="7">
+            <span class="field-hint">Up to 7 letters or digits. CRA needs the account number, the RepID, or both, matching how you sign in to IFT.</span>
+          </div>
           <div class="form-row">
             <div class="form-group">
               <label for="tx-ref">Submission Reference ID *</label>
-              <input type="text" id="tx-ref" class="form-control mono" placeholder="T1204A" maxlength="8" required>
-              <span class="field-hint">Unique per submission. If you re-submit, you must increment this (e.g. A, B, C).</span>
+              <input type="text" id="tx-ref" class="form-control mono" maxlength="8" required>
+              <span class="field-hint">Up to 8 letters or digits, no spaces or hyphens, new for every file you send. We suggest one from the return and today's date; change it if you like.</span>
             </div>
             <div class="form-group">
               <label for="tx-lang">Language</label>
@@ -333,7 +338,7 @@
               </div>
               <div class="form-group">
                 <label for="t5018-fiscal-year">Fiscal Period End — Year *</label>
-                <input type="number" id="t5018-fiscal-year" class="form-control" placeholder="2025" min="2000" max="2099" value="2025" required>
+                <input type="number" id="t5018-fiscal-year" class="form-control" min="2000" max="2099" required>
               </div>
             </div>
             <span class="field-hint">T5018 uses fiscal period end date instead of taxation year. Enter the last day of your fiscal year.</span>
@@ -356,7 +361,7 @@
           <div class="form-row">
             <div class="form-group">
               <label for="tax-year">Taxation Year *</label>
-              <input type="number" id="tax-year" class="form-control" value="2025" min="2000" max="2099" required>
+              <input type="number" id="tax-year" class="form-control" min="2000" max="2099" required>
             </div>
             <div class="form-group">
               <label for="report-type">Report Type *</label>
@@ -417,11 +422,11 @@
       </details>
       <details class="faq-item">
         <summary>What format should my Excel file be in?</summary>
-        <p><strong>For T4:</strong> Your spreadsheet needs columns for: Last Name, First Name, SIN, Employment Income, CPP Contributions, EI Premiums, Income Tax Deducted, EI Insurable Earnings, CPP/QPP Pensionable Earnings, and Province of Employment. Optional: Union Dues, RPP Contributions, CPP2, QPP, Address.<br><strong>For T1204:</strong> Vendor Name, Vendor BN or SIN, Amount Paid, Business Type, Service Payments Only (Yes/No), and Address.<br><strong>For NR4:</strong> Recipient Name, Recipient Type (Individual, Joint account, Corporation, Other, Government), Foreign Tax ID, Country of Residence (3-letter code, e.g. USA), Income Code, Currency, Gross Income, and Tax Withheld. Optional: Exemption Code, Address, City, State/Province, Postal Code. The tool auto-detects common header names, and you can download a sample template for each return in Step 1.</p>
+        <p><strong>For T4:</strong> Your spreadsheet needs columns for: Last Name, First Name, SIN, Employment Income, CPP Contributions, EI Premiums, Income Tax Deducted, EI Insurable Earnings, CPP/QPP Pensionable Earnings, and Province of Employment. Optional: Union Dues, RPP Contributions, CPP2, QPP, Address.<br><strong>For T1204:</strong> Vendor Name, Vendor BN or SIN, Amount Paid, Business Type, Service Payments Only (Yes/No), and Address.<br><strong>For NR4:</strong> Recipient Name, Recipient Type (Individual, Joint account, Corporation, Other, Government), Foreign Tax ID, Country of Residence (3-letter code, e.g. USA), Income Code, Currency, Gross Income, and Tax Withheld. Optional: Exemption Code, Address, City, State/Province, Postal Code, and Canadian Tax ID (Box 13: SIN/TTN/ITN, BN or trust account, used from the 2027 schema; blank means 000000000). The tool auto-detects common header names, and you can download a sample template for each return in Step 1.</p>
       </details>
       <details class="faq-item">
         <summary>What CRA spec version does this support?</summary>
-        <p>The generated XML conforms to the <strong>T619 2026V4 / T4 2026V4 / T1204 2026V3 / T5018 2026V3 / NR4 2026V3</strong> specification (CRA XML schema 1-26-3). CRA rejects empty optional tags, so the tool leaves out any optional field that's blank.</p>
+        <p>Files you make from December 22, 2026 follow CRA's 2027 specifications, <strong>T619 2027V1 / T4 2027V1 / T1204 2027V1 / T5018 2027V1 / NR4 2027V1</strong> (CRA XML schema 1-27-1), which CRA accepts from January 11, 2027, normally for the 2026 tax year. Files made before then follow <strong>T619 2026V4 / T4 2026V4 / T1204 2026V3 / T5018 2026V3 / NR4 2026V3</strong> (schema 1-26-3), which CRA accepts until December 22, 2026. Only NR4 differs between the two: 2027 NR4 slips carry the recipient's Canadian tax identification number (Box 13). The tool's output is tested against both of CRA's published schema packages. CRA rejects empty optional tags, so the tool leaves out any optional field that's blank.</p>
       </details>
       <details class="faq-item">
         <summary>How do I submit the XML to CRA?</summary>
