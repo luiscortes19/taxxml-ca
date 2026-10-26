@@ -198,6 +198,48 @@ a.btn { text-decoration: none; }
 .sample-line { margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--ink-2); }
 .sample-line a { font-weight: 600; }
 
+/* Step 1: selected return, what you'll need, demo notice */
+.link-btn {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font: inherit; font-weight: 600; color: var(--pen); text-decoration: underline;
+}
+.link-btn:focus-visible, .chip:focus-visible, .chip-close:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
+.card > p.return-summary { margin: -0.75rem 0 1.25rem; font-size: 0.9rem; }
+.return-summary strong { color: var(--ink); }
+.needs {
+  margin-bottom: 1.25rem; padding: 0.9rem 1.25rem;
+  background: var(--paper); border: 1px solid var(--rule); border-left: 3px solid var(--pen);
+  font-size: 0.85rem; color: var(--ink-2);
+}
+.needs h4 { color: var(--ink); font-size: 0.95rem; margin-bottom: 0.4rem; }
+.needs ul { margin: 0 0 0.6rem; padding-left: 1.2rem; line-height: 1.55; }
+.needs-due { margin: 0; }
+.demo-banner {
+  margin: 0 0 1rem; padding: 0.7rem 1rem; font-size: 0.85rem; color: var(--ink);
+  background: var(--pen-tint); border: 1px solid var(--pen); border-radius: var(--radius-sm);
+}
+.req { color: var(--correction); font-weight: 600; margin-left: 0.2rem; }
+.mapping-legend { margin-top: 0.6rem; font-size: 0.8rem; color: var(--ink-2); }
+.mapping-legend .req { margin: 0 0.2rem 0 0; }
+
+/* Hero: one optional question */
+.intent {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem;
+  margin-top: 1.25rem; font-size: 0.85rem; color: var(--ink-2);
+}
+.chip {
+  background: var(--sheet); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 999px;
+  padding: 0.3rem 0.8rem; font: inherit; cursor: pointer;
+}
+.chip:hover { border-color: var(--pen); color: var(--pen); }
+.chip-close { background: none; border: none; color: var(--ink-3); font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0.2rem 0.4rem; }
+.hero-more { margin-top: 1rem; font-size: 0.85rem; }
+.hero-more a { font-weight: 600; }
+
+/* Sample XML page */
+.xml-sample { margin: 0.5rem 0 1rem; max-height: 28rem; overflow: auto; border: 1px solid var(--rule); background: var(--paper);
+  padding: 0.9rem 1rem; font-family: var(--mono); font-size: 0.78rem; line-height: 1.5; }
+
 /* ---- FORMS ---- */
 .form-section { margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid var(--rule); }
 .form-section:last-of-type { border-bottom: none; }

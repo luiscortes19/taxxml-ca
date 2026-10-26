@@ -203,7 +203,7 @@ const csv = s => Buffer.from(s);
     assert(names.has(n), `expected ${n} in ${[...names]}`);
   const ALLOWED = { return_type: /^(T4|T1204|T5018|NR4)$/, source: /^(default|hero|dropdown|landing)$/, step: /^[1-4]$/, error_count: /^\d+$/,
                     error_category: /^(filing_details|row_data|unsupported_type|no_data_rows|read_error)$/,
-                    first_error_field: /^[a-z0-9_-]+$/, source: /^(default|hero|dropdown)$/, direction: /^(forward|back|reset)$/,
+                    first_error_field: /^[a-z0-9_-]+$/, direction: /^(forward|back|reset)$/,
                     is_sample: /^(true|false)$/, rows_bucket: /^(1|2-5|6-20|21-100|100\+)$/, required_unmapped: /^\d$/ };
   for (const [, params] of events) for (const k of ['is_sample', 'required_unmapped', 'step']) if (k in params) assert.notStrictEqual(typeof params[k], 'string', k);
   for (const [name, params] of events) {

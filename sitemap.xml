@@ -31,6 +31,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://taxxml.ca/cra-xml-samples</loc>
+    <lastmod>2026-10-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://taxxml.ca/privacy</loc>
     <lastmod>2026-10-01</lastmod>
     <changefreq>yearly</changefreq>

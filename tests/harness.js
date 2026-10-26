@@ -22,8 +22,10 @@ const FILING_DETAILS = {
 function makeElement(id) {
   const classes = new Set(id === undefined ? [] : ['hidden']);
   const listeners = {};
+  let value = '';
   const el = {
-    id, value: '', textContent: '', innerHTML: '', tagName: 'DIV', dataset: {}, style: {}, children: [],
+    id, get value() { return value; }, set value(v) { value = String(v); }, // like a real input: always a string
+    textContent: '', innerHTML: '', tagName: 'DIV', dataset: {}, style: {}, children: [],
     classList: {
       add: (...c) => c.forEach(x => classes.add(x)),
       remove: (...c) => c.forEach(x => classes.delete(x)),
@@ -48,7 +50,7 @@ function makeElement(id) {
 
 // Returns a fresh app instance: { ctx, run(code), els, loadFile(name, bytes), setDetails(), generate() }.
 // now: pins the app's clock (e.g. '2027-01-15T10:00'); search: the page's ?query (e.g. '?return=NR4').
-function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, search } = {}) {
+function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, search = '', fetch, session } = {}) {
   const els = {};
   const getEl = id => (els[id] = els[id] || makeElement(id));
   const created = [];
@@ -68,7 +70,8 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
   const store = withStorage || {};
   const ctx = {
     document, FileReader, XLSX, console, setTimeout, clearTimeout, TextDecoder,
-    location: { hostname: 'taxxml.ca' },
+    location: { hostname: 'taxxml.ca', search }, URLSearchParams, fetch,
+    sessionStorage: { getItem: k => (session || {})[k] ?? null, setItem: (k, v) => { if (session) session[k] = String(v); } },
     localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } },
     Blob: class Blob { constructor(parts, opts) { this.parts = parts; this.type = opts && opts.type; } },
     URL: urlImpl || { createObjectURL: () => 'blob:test', revokeObjectURL: () => {} },
@@ -77,7 +80,6 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
   ctx.window = ctx;
   ctx.addEventListener = () => {};
   if (gtag) ctx.gtag = gtag;
-  if (search) ctx.location.search = search;
   vm.createContext(ctx);
   if (now) vm.runInContext(`Date = class extends Date { constructor(...a) { super(...(a.length ? a : [${+new Date(now)}])); } static now() { return ${+new Date(now)}; } };`, ctx);
   getEl('return-type').value = returnType;

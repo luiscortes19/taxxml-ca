@@ -156,7 +156,7 @@ for (const [rt, file] of Object.entries(PAGES)) {
   assert(!html.includes('href="/#converter"'), `${file}: no plain /#converter link left`);
   const links = html.match(new RegExp(`href="/\\?return=${rt}#converter"`, 'g')) || [];
   assert(links.length >= 3, `${file}: nav, hero CTA and body CTA link /?return=${rt}#converter (found ${links.length})`);
-  assert(!/href="\/\?return=(?!\w+#converter")/.test(html), `${file}: well-formed deep links`);
+  assert(!/href="\/\?return=(?!\w+(?:&amp;sample=1)?#converter")/.test(html), `${file}: well-formed deep links`);
 }
 const events = (opts) => {
   const log = [];

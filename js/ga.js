@@ -27,7 +27,7 @@
   document.head.appendChild(s);
 
   // Short page id for cta_click: our own fixed list, never the raw path
-  var m = /^\/(t4|nr4|t5018|t1204|privacy|terms)\b/.exec(location.pathname), page = m ? m[1] : 'home';
+  var m = /^\/(t4|nr4|t5018|t1204|privacy|terms|cra-xml-samples)\b/.exec(location.pathname), page = m ? m[1] : 'home';
   function send(name, params) {
     try { window.gtag('event', name, params); } catch (e) { /* analytics must never break a click */ }
   }
