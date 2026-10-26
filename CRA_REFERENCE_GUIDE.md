@@ -3,8 +3,17 @@
 ## XSD Schema (XML Validation)
 
 ### Download Location
-- **URL:** https://www.canada.ca/content/dam/cra-arc/serv-info/eservices/xmlschm1-26-3.zip
-- **Version:** 1-26-3 (last updated December 23, 2025)
+CRA labels packages by filing year: the 2027 package is for files sent in 2027, normally for the 2026 tax year.
+- **2027:** https://www.canada.ca/content/dam/cra-arc/serv-info/eservices/xmlschm1-27-1.zip — version 1-27-1 (last updated September 23, 2026). Accepted starting January 11, 2027.
+- **2026:** https://www.canada.ca/content/dam/cra-arc/serv-info/eservices/xmlschm1-26-3.zip — version 1-26-3 (last updated December 23, 2025). Accepted until December 22, 2026.
+- IFT is closed December 22, 2026 – January 11, 2027. The app builds 1-26-3 files before December 22, 2026 and 1-27-1 files from then (`targetSchema` in `js/validate.js`).
+- Both zips are vendored, unmodified, in `tests/xsd/`; `tests/xsd.test.js` validates the app's output against them.
+- Sources: [What you should know before](https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/filing-information-returns-electronically-t4-t5-other-types-returns-what-you-should-know-before.html), [XML specifications](https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html), [What's new for 2027](https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/whats-new-2027.html)
+
+### 1-26-3 → 1-27-1, for the returns this tool makes
+- **NR4:** new required `<CIN>` on every slip (box 13, Canadian tax identification number): one of `<sin_ttn_itn>` (9 digits), `<bn>` (BN15) or `<trust>` (1 letter + 8 digits). CRA: when the recipient hasn't provided one, enter `<sin_ttn_itn>000000000</sin_ttn_itn>`. `fssn_nbr` moves to box 30. The 1-26-3 schema doesn't allow `<CIN>`, so no NR4 file is valid under both. ([NR4 2027](https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/t619-2027/nr4-2027.html))
+- **T4:** new optional other-info code 96 (`elg_prsnl_spprt_wrkr_inc_amt`); `prov_insu_ern_amt` widened. Neither is produced here, so T4 output is the same under both.
+- **T5018, T1204, T619:** no changes for these returns.
 
 ### Key Schema Files
 
@@ -48,8 +57,10 @@
 
 ## T619 Transmittal Key Fields
 
-- `bn15` — Transmitter BN (15 chars)
-- `sbmt_ref_id` — Unique per submission (up to 8 alphanumeric chars); increment on re-submission (A, B, C...)
+- `TransmitterAccountNumber` — required element; CRA wants the account number, the RepID, or both, matching how you sign in to IFT. One of:
+  `bn15` (9 digits + 2 upper-case letters + 4 digits), `bn9` (9 digits, My Business Account sign-in only), `trust` (1 letter + 8 digits, e.g. `T00000000`), `nr4` (3 letters + 6 digits, e.g. `AAA000000`). With a RepID only, the app leaves it empty (the XSD allows that; all its children are optional).
+- `TransmitterRepID/RepID` — up to 7 alphanumeric (Represent a Client)
+- `sbmt_ref_id` — unique per submission, up to 8 alphanumeric, no spaces, hyphens or special characters (the XSD only limits length; the spec is stricter). Source: [T619 2027](https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/t619-2027.html)
 - `summ_cnt` — Number of summaries (usually `1`)
 - `lang_cd` — `E` (English) or `F` (French)
 
@@ -82,4 +93,4 @@ https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.h
 
 ---
 
-*Last updated: 2026-10-01*
+*Last updated: 2026-10-26*

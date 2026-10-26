@@ -22,8 +22,10 @@ const FILING_DETAILS = {
 function makeElement(id) {
   const classes = new Set(id === undefined ? [] : ['hidden']);
   const listeners = {};
+  let value = '';
   const el = {
-    id, value: '', textContent: '', innerHTML: '', tagName: 'DIV', dataset: {}, style: {}, children: [],
+    id, get value() { return value; }, set value(v) { value = String(v); }, // like a real input: always a string
+    textContent: '', innerHTML: '', tagName: 'DIV', dataset: {}, style: {}, children: [],
     classList: {
       add: (...c) => c.forEach(x => classes.add(x)),
       remove: (...c) => c.forEach(x => classes.delete(x)),
@@ -47,14 +49,17 @@ function makeElement(id) {
 }
 
 // Returns a fresh app instance: { ctx, run(code), els, loadFile(name, bytes), setDetails(), generate() }.
-function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, search = '', fetch, session } = {}) {
+// now: pins the app's clock (e.g. '2027-01-15T10:00'); search: the page's ?query (e.g. '?return=NR4').
+function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, search = '', fetch, session } = {}) {
   const els = {};
   const getEl = id => (els[id] = els[id] || makeElement(id));
   const created = [];
+  // the hero's .return-pick buttons, so tests can click them
+  const heroPicks = ['T4', 'T5018', 'NR4', 'T1204'].map(r => Object.assign(makeElement(), { dataset: { return: r } }));
   const document = {
     getElementById: getEl,
     querySelector: () => makeElement(),
-    querySelectorAll: () => [],
+    querySelectorAll: sel => (sel === '.return-pick' ? heroPicks : []),
     createElement: tag => { const e = makeElement(); e.tagName = tag.toUpperCase(); created.push(e); return e; },
     addEventListener: () => {},
     body: makeElement('body'),
@@ -76,13 +81,14 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, search 
   ctx.addEventListener = () => {};
   if (gtag) ctx.gtag = gtag;
   vm.createContext(ctx);
+  if (now) vm.runInContext(`Date = class extends Date { constructor(...a) { super(...(a.length ? a : [${+new Date(now)}])); } static now() { return ${+new Date(now)}; } };`, ctx);
   getEl('return-type').value = returnType;
   for (const f of ['js/validate.js', 'js/app.js']) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
   }
   const run = code => vm.runInContext(code, ctx);
   return {
-    ctx, els, created, run, store, el: getEl,
+    ctx, els, created, run, store, el: getEl, heroPicks,
     loadFile(name, bytes) { run('handleFile')({ name, bytes: new Uint8Array(bytes) }); },
     setDetails(overrides = {}) {
       const perReturn = returnType === 'T5018' ? { 'py-bn': '987654321RZ0001' } : {}; // T5018 payer is the RZ program
@@ -94,8 +100,8 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, search 
 }
 
 // file bytes -> XML, the whole pipeline. Throws with the on-screen errors if generation is blocked.
-function fileToXML(returnType, fileName, bytes, detailOverrides) {
-  const app = createApp({ returnType });
+function fileToXML(returnType, fileName, bytes, detailOverrides, appOptions) {
+  const app = createApp({ returnType, ...appOptions });
   app.loadFile(fileName, bytes);
   const fileErr = app.els['file-error'] && app.els['file-error'].textContent;
   if (fileErr) throw new Error(fileErr);

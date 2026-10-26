@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Submission xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <T619>
+    <TransmitterAccountNumber><bn15>123456789MM0001</bn15></TransmitterAccountNumber>
+    <sbmt_ref_id>TEST01</sbmt_ref_id>
+    <summ_cnt>1</summ_cnt>
+    <lang_cd>E</lang_cd>
+    <TransmitterName><l1_nm>Test Transmitter Inc</l1_nm></TransmitterName>
+    <TransmitterCountryCode>CAN</TransmitterCountryCode>
+    <CNTC>
+      <cntc_nm>Jane Smith</cntc_nm>
+      <cntc_area_cd>604</cntc_area_cd>
+      <cntc_phn_nbr>638-8328</cntc_phn_nbr>
+      <cntc_email_area>jane@example.com</cntc_email_area>
+    </CNTC>
+  </T619>
+  <Return>
+    <NR4>
+      <NR4Slip>
+        <RCPNT_NM><snm>Smith</snm><gvn_nm>John</gvn_nm></RCPNT_NM>
+        <RCPNT_ADDR><addr_l1_txt>123 Main St</addr_l1_txt><cty_nm>Seattle</cty_nm><ste_cd>WA</ste_cd><fgn_pstl_cd>98101</fgn_pstl_cd><cntry_cd>USA</cntry_cd></RCPNT_ADDR>
+        <tx_cntry_cd>USA</tx_cntry_cd>
+        <CIN><sin_ttn_itn>000000000</sin_ttn_itn></CIN>
+        <fssn_nbr>987-65-4320</fssn_nbr>
+        <nr_acct_nbr>NRA123456</nr_acct_nbr>
+        <rcpnt_tcd>1</rcpnt_tcd>
+        <inc_1_tcd>06</inc_1_tcd>
+        <crcy_1_cd>CAD</crcy_1_cd>
+        <NR4_AMT><gro_1_incamt>5000.00</gro_1_incamt><nr_tx_1_amt>750.00</nr_tx_1_amt></NR4_AMT>
+        <rpt_tcd>O</rpt_tcd>
+      </NR4Slip>
+      <NR4Slip>
+        <ENTPRS_NM><l1_nm>Hafen Holdings GmbH</l1_nm></ENTPRS_NM>
+        <RCPNT_ADDR><addr_l1_txt>Hauptstrasse 5</addr_l1_txt><cty_nm>Berlin</cty_nm><fgn_pstl_cd>10115</fgn_pstl_cd><cntry_cd>DEU</cntry_cd></RCPNT_ADDR>
+        <tx_cntry_cd>DEU</tx_cntry_cd>
+        <CIN><bn>123456789RC0001</bn></CIN>
+        <fssn_nbr>DE123456789</fssn_nbr>
+        <nr_acct_nbr>NRA123456</nr_acct_nbr>
+        <rcpnt_tcd>3</rcpnt_tcd>
+        <inc_1_tcd>02</inc_1_tcd>
+        <crcy_1_cd>CAD</crcy_1_cd>
+        <NR4_AMT><gro_1_incamt>10000.00</gro_1_incamt><nr_tx_1_amt>2500.00</nr_tx_1_amt></NR4_AMT>
+        <rpt_tcd>O</rpt_tcd>
+      </NR4Slip>
+      <NR4Summary>
+        <nr_acct_nbr>NRA123456</nr_acct_nbr>
+        <PAYR_NM><l1_nm>Test Payer Ltd</l1_nm></PAYR_NM>
+        <PAYR_ADDR>
+          <addr_l1_txt>100 Main Street</addr_l1_txt>
+          <cty_nm>Ottawa</cty_nm>
+          <prov_cd>ON</prov_cd>
+          <cntry_cd>CAN</cntry_cd>
+          <pstl_cd>K1A0B1</pstl_cd>
+        </PAYR_ADDR>
+        <CNTC>
+          <cntc_nm>Jane Smith</cntc_nm>
+          <cntc_area_cd>613</cntc_area_cd>
+          <cntc_phn_nbr>555-0100</cntc_phn_nbr>
+        </CNTC>
+        <tx_yr>2026</tx_yr>
+        <slp_cnt>2</slp_cnt>
+        <rpt_tcd>O</rpt_tcd>
+        <NR4_TAMT><tot_gro_1_incamt>15000.00</tot_gro_1_incamt><tot_nr_tx_1_amt>3250.00</tot_nr_tx_1_amt></NR4_TAMT>
+      </NR4Summary>
+    </NR4>
+  </Return>
+</Submission>

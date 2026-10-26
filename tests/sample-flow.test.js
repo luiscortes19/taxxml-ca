@@ -30,7 +30,10 @@ const shown = (a, id) => !a.el(id).classList.contains('hidden');
     assert(a.run('parsedData.length') >= 2, `${rt}: sample rows parsed`);
     assert(shown(a, 'demo-banner'), `${rt}: demo banner visible`);
     assert.deepStrictEqual(a.named('sample_loaded'), [{ return_type: rt, page: 'home' }]);
-    assert.deepStrictEqual(a.named('file_opened'), [{ return_type: rt, is_sample: true }]);
+    // B's file_opened params, through the same code path as a real upload; the implicit return is reported once, first
+    assert.deepStrictEqual(a.named('file_opened'), [{ return_type: rt, is_sample: true, rows_bucket: '2-5', required_unmapped: 0 }]);
+    assert.deepStrictEqual(a.named('return_selected'), [{ return_type: rt, source: 'default' }]);
+    assert(a.events.findIndex(e => e[0] === 'return_selected') < a.events.findIndex(e => e[0] === 'file_opened'));
     a.run('continueFromMapping()');
     assert.strictEqual(a.run('currentStep'), 3, `${rt}: required columns of the sample are mapped`);
     assert(/demo/i.test(a.el('tx-name').value), `${rt}: demo transmitter name is obviously fake`);
@@ -66,8 +69,16 @@ const shown = (a, id) => !a.el(id).classList.contains('hidden');
     assert.strictEqual(a.el('return-type').value, 'NR4');
     assert.deepStrictEqual(a.named('sample_loaded'), [{ return_type: 'NR4', page: 'landing' }]);
     assert.strictEqual(a.run('currentStep'), 2);
+    // PR A's ?return= parser chose the return: one 'landing', no 'default' (and no separate 'sample' source)
+    assert.deepStrictEqual(a.named('return_selected'), [{ return_type: 'NR4', source: 'landing' }]);
+    assert.deepStrictEqual(a.named('file_opened').map(p => p.is_sample), [true]);
   }
-  for (const search of ['?return=T4X&sample=1', '?return=T5018', '?sample=1']) { // nothing to load
+  { // same parser as ?return=: any case
+    const a = app('T4', { search: '?sample=1&return=t5018' });
+    for (let i = 0; i < 5; i++) await tick();
+    assert.deepStrictEqual(a.named('sample_loaded'), [{ return_type: 'T5018', page: 'landing' }]);
+  }
+  for (const search of ['?return=T4X&sample=1', '?return=T5018', '?sample=1', '?return=NR4&sample=10', '?return=NR4&xsample=1']) { // nothing to load
     const a = app('T4', { search });
     for (let i = 0; i < 5; i++) await tick();
     assert.deepStrictEqual(a.named('sample_loaded'), [], search);
@@ -171,7 +182,8 @@ const shown = (a, id) => !a.el(id).classList.contains('hidden');
     const a = app('T4', { session: {} });
     await a.run(`loadSample('T5018', 'home')`);
     a.run(`chooseIntent('for_client'); addReminder()`);
-    const ALLOWED = { return_type: /^(T4|T1204|T5018|NR4)$/, page: /^(home|landing)$/, is_sample: /^(true|false)$/,
+    const ALLOWED = { return_type: /^(T4|T1204|T5018|NR4)$/, page: /^(home|landing)$/, is_sample: /^(true|false)$/, source: /^default$/,
+                      rows_bucket: /^2-5$/, required_unmapped: /^0$/, direction: /^(forward|back|reset)$/,
                       intent: /^(filing_now|exploring_format|for_client)$/, step: /^[1-4]$/ };
     for (const [name, params] of a.events) for (const [k, v] of Object.entries(params)) {
       assert(ALLOWED[k], `${name}: unexpected param ${k}`);
