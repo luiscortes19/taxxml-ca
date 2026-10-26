@@ -113,7 +113,7 @@ const NR4_RCPNT_TYPE_MAP = { 'individual': '1', 'joint account': '2', 'joint': '
 // ============================================================
 // STEP NAVIGATION
 // ============================================================
-function goToStep(step) {
+function goToStep(step, direction) {
   document.querySelectorAll('.wizard-step').forEach(el => el.classList.add('hidden'));
   document.getElementById(`step-${step}`).classList.remove('hidden');
 
@@ -124,8 +124,8 @@ function goToStep(step) {
     else if (s < step) el.classList.add('done');
   });
 
+  if (step !== currentStep) track('step_reached', { step, direction: direction || (step > currentStep ? 'forward' : 'back') });
   currentStep = step;
-  track('step_reached', { step });
   document.getElementById('converter').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -136,17 +136,23 @@ function resetAll() {
   columnMap = {};
   document.getElementById('file-info').classList.add('hidden');
   document.getElementById('file-input').value = '';
-  goToStep(1);
+  goToStep(1, 'reset');
 }
 
 // ============================================================
 // RETURN TYPE SWITCHER — updates Step 3 form
 // ============================================================
-// source: how the return was chosen, for GA4: 'default' | 'landing' (page load) | 'hero' | 'dropdown'
-function onReturnTypeChange(source = 'dropdown') {
+let returnChosen = false; // false until the visitor picks a return; a file opened before that used the preselected one
+
+// source: how the return was chosen, for GA4: 'landing' (page load from a guide page) | 'hero' | 'dropdown'.
+// 'default' is sent lazily by handleFile instead, so return_selected never doubles as a pageview count.
+function onReturnTypeChange(source) {
   const rt = getSelectedReturnType();
   const config = RETURN_TYPES[rt];
-  track('return_selected', { return_type: rt, source });
+  if (source) { // page load without ?return= sets up the UI silently
+    returnChosen = true;
+    track('return_selected', { return_type: rt, source });
+  }
   suggestSubmissionRef();
 
   // Update step 1 description + sample link
@@ -187,7 +193,10 @@ function onReturnTypeChange(source = 'dropdown') {
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('file-input');
 
-dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('click', () => {
+  track('picker_opened', { return_type: getSelectedReturnType() });
+  fileInput.click();
+});
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
 dropzone.addEventListener('drop', e => {
@@ -230,7 +239,7 @@ function suggestSubmissionRef() {
   document.getElementById('t5018-fiscal-year').value = year;
   const fromUrl = returnFromUrl(location.search);
   if (fromUrl) document.getElementById('return-type').value = fromUrl;
-  onReturnTypeChange(fromUrl ? 'landing' : 'default');
+  onReturnTypeChange(fromUrl ? 'landing' : null);
 }
 
 // category goes to GA4; msg (may hold the file name) stays on screen only
@@ -276,7 +285,11 @@ function handleFile(file) {
       autoMapColumns();
       buildPreview();
       goToStep(2);
-      track('file_opened', { return_type: getSelectedReturnType() });
+      if (!returnChosen) { returnChosen = true; track('return_selected', { return_type: getSelectedReturnType(), source: 'default' }); }
+      const n = parsedData.length;
+      track('file_opened', { return_type: getSelectedReturnType(), is_sample: isSampleFile(),
+        rows_bucket: n === 1 ? '1' : n <= 5 ? '2-5' : n <= 20 ? '6-20' : n <= 100 ? '21-100' : '100+',
+        required_unmapped: getReturnConfig().fields.filter(f => f.required && !(columnMap[f.key] >= 0)).length });
     } catch (err) {
       showFileError('Error reading file: ' + err.message, 'read_error');
     }
@@ -627,6 +640,7 @@ function checkRecipientBN(raw, program, placeholder, who, rowNum, warnings, erro
 // MASTER GENERATE FUNCTION — dispatches to return-type handler
 // ============================================================
 function generateXML() {
+  track('generate_clicked', { return_type: getSelectedReturnType() });
   const config = getReturnConfig();
   // Without these columns every slip would silently get a placeholder or 0.00 (e.g. a file for another return)
   const unmapped = config.fields.filter(f => f.required && !(columnMap[f.key] >= 0));
@@ -1339,6 +1353,21 @@ function analyticsFieldAllowlist() {
     ...Object.values(RETURN_TYPES).flatMap(rt => rt.fields.map(f => f.key)),
     ...SAVED_FIELDS, 't5018-fiscal-day', 't5018-fiscal-month', 't5018-fiscal-year',
   ]);
+}
+
+// Our own templates/*_Sample.csv files: header row + first cell of the first row. A real file built on the template
+// has different rows, so it isn't counted. Only the true/false result is sent, never the file's contents or name.
+const SAMPLE_SIGNATURES = new Set([
+  'Last Name|First Name|SIN|Box 14 - Employment Income|Box 16 - CPP Deductions|Box 18 - EI Premiums|Box 22 - Income Tax Deducted|' +
+    'Box 24 - EI Insurable Earnings|Box 26 - CPP Pensionable Earnings|Province of Employment|Doe',
+  'Vendor Name|Vendor BN|Amount Paid|Business Type|Service Payments Only|Address|Acme Corp',
+  'Subcontractor Name|Subcontractor BN/SIN|Total Construction Payments|Recipient Type|Address|BuildIt Inc',
+  'Recipient Name|Recipient Type|Foreign Tax ID|Country of Residence|Income Code|Currency|Gross Income|Tax Withheld|' +
+    'Exemption Code|Address|City|State/Province|Postal Code|Canadian Tax ID|John Smith',
+]);
+
+function isSampleFile() {
+  return SAMPLE_SIGNATURES.has([...headers, String(parsedData[0][0]).trim()].join('|'));
 }
 
 function analyticsField(field) {

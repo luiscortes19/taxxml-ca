@@ -52,12 +52,12 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
   const els = {};
   const getEl = id => (els[id] = els[id] || makeElement(id));
   const created = [];
-  // the hero picker's .return-pick buttons, so tests can click them
-  const heroButtons = ['T4', 'T5018', 'NR4', 'T1204'].map(rt => Object.assign(makeElement(), { dataset: { return: rt } }));
+  // the hero's .return-pick buttons, so tests can click them
+  const heroPicks = ['T4', 'T5018', 'NR4', 'T1204'].map(r => Object.assign(makeElement(), { dataset: { return: r } }));
   const document = {
     getElementById: getEl,
     querySelector: () => makeElement(),
-    querySelectorAll: sel => (sel === '.return-pick' ? heroButtons : []),
+    querySelectorAll: sel => (sel === '.return-pick' ? heroPicks : []),
     createElement: tag => { const e = makeElement(); e.tagName = tag.toUpperCase(); created.push(e); return e; },
     addEventListener: () => {},
     body: makeElement('body'),
@@ -86,7 +86,7 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
   }
   const run = code => vm.runInContext(code, ctx);
   return {
-    ctx, els, created, run, store, el: getEl, heroButtons,
+    ctx, els, created, run, store, el: getEl, heroPicks,
     loadFile(name, bytes) { run('handleFile')({ name, bytes: new Uint8Array(bytes) }); },
     setDetails(overrides = {}) {
       const perReturn = returnType === 'T5018' ? { 'py-bn': '987654321RZ0001' } : {}; // T5018 payer is the RZ program

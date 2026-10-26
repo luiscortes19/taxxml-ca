@@ -60,15 +60,8 @@
   }
   </script>
 
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E2F5Q3RZVH"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-E2F5Q3RZVH');
-  </script>
+  <!-- Google tag (gtag.js), loaded by js/ga.js except on local copies -->
+  <script src="/js/ga.js"></script>
 </head>
 <body>
   <header id="site-header">
@@ -78,7 +71,7 @@
       </a>
       <nav>
         <a href="#faq">FAQ</a>
-        <a href="/?return=NR4#converter" class="nav-cta">Open converter</a>
+        <a href="/?return=NR4#converter" class="nav-cta" data-cta="nav">Open converter</a>
       </nav>
     </div>
   </header>
@@ -92,7 +85,7 @@
       <h4>Information and a conversion tool, not advice</h4>
       <p>TaxXML provides information and a conversion tool only. It is not tax, legal, or accounting advice. CRA specifications change, so always verify the requirements, and your files, against the CRA's official <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html" target="_blank" rel="noopener">XML specifications for information returns</a> before you file.</p>
     </div>
-    <p><a href="/?return=NR4#converter" class="btn btn-primary btn-lg">Open the free NR4 converter</a></p>
+    <p><a href="/?return=NR4#converter" class="btn btn-primary btn-lg" data-cta="hero">Open the free NR4 converter</a></p>
 
     <h2>What an NR4 XML file is</h2>
     <p>An NR4 XML file is one <code>&lt;Submission&gt;</code> with two parts:</p>
@@ -124,7 +117,7 @@
       <li><strong>Check the columns and fill in the filing details.</strong> TaxXML matches your headers to CRA fields. Fix any it missed, then enter the transmitter and payer details and your non-resident account number. Those are saved in this browser for next time.</li>
       <li><strong>Generate and download.</strong> Problems are listed by row and column before anything downloads. Then upload the XML to IFT signed in with My Business Account, Represent a Client, or a web access code (WAC).</li>
     </ol>
-    <p><a href="/?return=NR4#converter" class="btn btn-primary">Convert my NR4 spreadsheet</a></p>
+    <p><a href="/?return=NR4#converter" class="btn btn-primary" data-cta="bottom">Convert my NR4 spreadsheet</a></p>
 
     <h2>Common reasons CRA rejects an NR4 XML file</h2>
     <ul>
@@ -184,7 +177,7 @@
       </div>
       <div class="footer-links">
         <h4>Resources</h4>
-        <a href="/?return=NR4#converter">XML Converter</a>
+        <a href="/?return=NR4#converter" data-cta="footer">XML Converter</a>
         <a href="/nr4-xml-generator">NR4 XML guide</a>
         <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" class="footer-ift">Submit to CRA (IFT) &nearr;</a>
       </div>

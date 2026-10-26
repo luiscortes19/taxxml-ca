@@ -62,15 +62,8 @@
   }
   </script>
 
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E2F5Q3RZVH"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-E2F5Q3RZVH');
-  </script>
+  <!-- Google tag (gtag.js), loaded by js/ga.js except on local copies -->
+  <script src="js/ga.js"></script>
 </head>
 <body>
   <!-- HEADER -->
@@ -81,7 +74,7 @@
       </a>
       <nav>
         <a href="#faq">FAQ</a>
-        <a href="#converter" class="nav-cta">Open converter</a>
+        <a href="#converter" class="nav-cta" data-cta="nav">Open converter</a>
       </nav>
     </div>
   </header>
@@ -92,10 +85,10 @@
       <h1>Convert Excel to CRA XML, right in your browser.</h1>
       <p class="hero-sub">Pick your return, open your spreadsheet, and download a file ready for CRA Internet File Transfer. Free, no signup.</p>
       <div class="return-picker" role="group" aria-label="Choose your return">
-        <button type="button" class="return-pick" data-return="T4"><b>T4</b><span>Remuneration paid</span></button>
-        <button type="button" class="return-pick" data-return="T5018"><b>T5018</b><span>Contract payments</span></button>
-        <button type="button" class="return-pick" data-return="NR4"><b>NR4</b><span>Non-resident amounts</span></button>
-        <button type="button" class="return-pick" data-return="T1204"><b>T1204</b><span>Government service contracts</span></button>
+        <button type="button" class="return-pick" data-cta="hero_pick" data-return="T4"><b>T4</b><span>Remuneration paid</span></button>
+        <button type="button" class="return-pick" data-cta="hero_pick" data-return="T5018"><b>T5018</b><span>Contract payments</span></button>
+        <button type="button" class="return-pick" data-cta="hero_pick" data-return="NR4"><b>NR4</b><span>Non-resident amounts</span></button>
+        <button type="button" class="return-pick" data-cta="hero_pick" data-return="T1204"><b>T1204</b><span>Government service contracts</span></button>
       </div>
       <ul class="hero-trust">
         <li>Your spreadsheet is read on this device and never sent anywhere. Turn off Wi-Fi after the page loads and it still works.</li>
@@ -460,10 +453,10 @@
       
       <div class="footer-links">
         <h4>Resources</h4>
-        <a href="#converter">T4 Converter</a>
-        <a href="#converter">T1204 Converter</a>
-        <a href="#converter">T5018 Converter</a>
-        <a href="#converter">NR4 Converter</a>
+        <a href="#converter" data-cta="footer">T4 Converter</a>
+        <a href="#converter" data-cta="footer">T1204 Converter</a>
+        <a href="#converter" data-cta="footer">T5018 Converter</a>
+        <a href="#converter" data-cta="footer">NR4 Converter</a>
         <a href="/t4-xml-generator">T4 XML guide</a>
         <a href="/t1204-xml-generator">T1204 XML guide</a>
         <a href="/t5018-xml-generator">T5018 XML guide</a>

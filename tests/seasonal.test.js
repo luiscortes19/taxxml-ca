@@ -66,10 +66,10 @@ for (const [now, year] of [['2026-10-26T12:00', '2025'], ['2027-01-20T12:00', '2
 }
 { // a suggested ref ID follows the return; one the user typed (or restored) is kept
   const app = createApp({ returnType: 'T4', now: '2027-01-20T12:00' });
-  app.heroButtons.find(b => b.dataset.return === 'NR4').click();
+  app.heroPicks.find(b => b.dataset.return === 'NR4').click();
   assert.strictEqual(app.el('tx-ref').value, 'NR4A2012');
   app.el('tx-ref').value = 'MYREF1';
-  app.heroButtons.find(b => b.dataset.return === 'T5018').click();
+  app.heroPicks.find(b => b.dataset.return === 'T5018').click();
   assert.strictEqual(app.el('tx-ref').value, 'MYREF1');
   assert.strictEqual(app.el('tx-ref').placeholder, 'T5018A20');
   app.run('clearFilingDetails()');
@@ -172,14 +172,17 @@ for (const [search, rt, source] of [
   const { app, selected } = events({ search });
   assert.strictEqual(app.el('return-type').value, rt, search);
   assert.strictEqual(app.el('sample-link').href, `templates/${rt}_Sample.csv`, search);
-  assert.deepStrictEqual(selected(), [{ return_type: rt, source }], search);
+  // landing fires on page load; default only fires lazily before the first file_opened (not a pageview count)
+  assert.deepStrictEqual(selected(), source === 'landing' ? [{ return_type: rt, source }] : [], search);
+  app.loadFile('x.csv', Buffer.from('A,B\r\n1,2\r\n'));
+  assert.deepStrictEqual(selected(), [{ return_type: rt, source }], `${search}: exactly one return_selected after a file opens`);
 }
 { // hero picker and Step 1 dropdown
   const { app, selected } = events({});
-  app.heroButtons.find(b => b.dataset.return === 'T5018').click();
+  app.heroPicks.find(b => b.dataset.return === 'T5018').click();
   app.el('return-type').value = 'NR4';
   app.el('return-type').dispatchEvent({ type: 'change' });
-  assert.deepStrictEqual(selected(), [{ return_type: 'T4', source: 'default' }, { return_type: 'T5018', source: 'hero' }, { return_type: 'NR4', source: 'dropdown' }]);
+  assert.deepStrictEqual(selected(), [{ return_type: 'T5018', source: 'hero' }, { return_type: 'NR4', source: 'dropdown' }]);
   assert.strictEqual(app.el('sample-link').href, 'templates/NR4_Sample.csv');
 }
 { // privacy page documents the source param and its values

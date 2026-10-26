@@ -52,9 +52,18 @@ See [ROADMAP.md](ROADMAP.md) for what's planned next.
   - `identifiers.test.js` — SIN / BN / foreign tax ID / ZIP keep leading zeros (CSV in UTF-8, UTF-16LE/BE; XLSX)
   - `xsd.test.js` — every sample and golden input, made in both schema modes, validated against CRA's own XSDs (needs `python3` + `lxml`; skips loudly without them)
   - `seasonal.test.js` — default tax year, target schema by date, T619 account / RepID / submission ref ID, NR4 Canadian tax ID, landing-page deep links
-  - `analytics.test.js`, `ux.test.js`, `validate.test.js` — GA4 download event, Step 2/3 UX, SIN/BN helpers
+  - `analytics.test.js`, `ux.test.js`, `validate.test.js` — GA4 funnel events (no-PII scan), Step 2/3 UX, SIN/BN helpers
+  - `ga.test.js` — `js/ga.js` gating (hostname/protocol matrix, internal flag), `cta_click` / `sample_downloaded`
   - `tests/harness.js` loads the browser code into a Node `vm` with a minimal DOM stub; no browser needed
 - Hosted on GitHub Pages
+
+## Analytics (GA4)
+
+Every page loads Google Analytics through `js/ga.js` (property `G-E2F5Q3RZVH`). Events and their parameters are listed on the Privacy page. They contain no personal data.
+
+- **Local copies never send anything.** On `localhost`, `127.0.0.1`, `::1` or `file://`, gtag.js isn't loaded and `track()` does nothing.
+- **Mark your own browser as internal:** open any page once with `?internal=1` (for example `https://taxxml.ca/?internal=1`). GA still loads, but every hit from this browser carries `traffic_type=internal`. GA4's *Internal Traffic* data filter drops those hits once the filter is Active. Do this once on each browser or device you use. To undo it, open any page with `?internal=0`. The flag is the `taxxml_internal` key in localStorage, so clearing site data also removes it.
+- **See events live:** add `?debug_mode=1` (for example `/?internal=1&debug_mode=1`), then open GA4 Admin > DebugView. It applies to that page load only.
 
 ## CRA Resources
 
