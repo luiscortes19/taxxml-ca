@@ -47,7 +47,8 @@ function makeElement(id) {
 }
 
 // Returns a fresh app instance: { ctx, run(code), els, loadFile(name, bytes), setDetails(), generate() }.
-function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage } = {}) {
+// now: pins the app's clock (e.g. '2027-01-15T10:00'); search: the page's ?query (e.g. '?return=NR4').
+function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, search } = {}) {
   const els = {};
   const getEl = id => (els[id] = els[id] || makeElement(id));
   const created = [];
@@ -76,7 +77,9 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage } = {}) 
   ctx.window = ctx;
   ctx.addEventListener = () => {};
   if (gtag) ctx.gtag = gtag;
+  if (search) ctx.location.search = search;
   vm.createContext(ctx);
+  if (now) vm.runInContext(`Date = class extends Date { constructor(...a) { super(...(a.length ? a : [${+new Date(now)}])); } static now() { return ${+new Date(now)}; } };`, ctx);
   getEl('return-type').value = returnType;
   for (const f of ['js/validate.js', 'js/app.js']) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
@@ -95,8 +98,8 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage } = {}) 
 }
 
 // file bytes -> XML, the whole pipeline. Throws with the on-screen errors if generation is blocked.
-function fileToXML(returnType, fileName, bytes, detailOverrides) {
-  const app = createApp({ returnType });
+function fileToXML(returnType, fileName, bytes, detailOverrides, appOptions) {
+  const app = createApp({ returnType, ...appOptions });
   app.loadFile(fileName, bytes);
   const fileErr = app.els['file-error'] && app.els['file-error'].textContent;
   if (fileErr) throw new Error(fileErr);

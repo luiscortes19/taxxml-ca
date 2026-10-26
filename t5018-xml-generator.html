@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Free T5018 XML Generator for CRA (2026 Schema) | TaxXML.ca</title>
+  <title>Free T5018 XML Generator for CRA (2027 Schema) | TaxXML.ca</title>
   <meta name="description" content="Turn a T5018 subcontractor payments spreadsheet into CRA XML for Internet File Transfer. Free, runs in your browser. Plain-English guide to the T5018 schema.">
   <link rel="canonical" href="https://taxxml.ca/t5018-xml-generator">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://taxxml.ca/t5018-xml-generator">
-  <meta property="og:title" content="Free T5018 XML Generator for CRA (2026 Schema)">
+  <meta property="og:title" content="Free T5018 XML Generator for CRA (2027 Schema)">
   <meta property="og:description" content="Turn a T5018 subcontractor payments spreadsheet into CRA XML for Internet File Transfer. Free, runs in your browser, no signup.">
   <meta property="og:image" content="https://taxxml.ca/img/og-image.png">
   <meta property="og:locale" content="en_CA">
@@ -39,7 +39,7 @@
       {
         "@type": "Question",
         "name": "Which CRA XML schema does TaxXML use for T5018?",
-        "acceptedAnswer": { "@type": "Answer", "text": "CRA XML schema 1-26-3: T619 2026 and T5018 2026V3. It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them." }
+        "acceptedAnswer": { "@type": "Answer", "text": "CRA XML schema 1-27-1: T619 2027V1 and T5018 2027V1, which CRA accepts from January 11, 2027. The same file is also valid under the 2026 schema 1-26-3 (T5018 2026V3), accepted until December 22, 2026. It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them." }
       },
       {
         "@type": "Question",
@@ -71,21 +71,21 @@
       </a>
       <nav>
         <a href="#faq">FAQ</a>
-        <a href="/#converter" class="nav-cta" data-cta="nav">Open converter</a>
+        <a href="/?return=T5018#converter" class="nav-cta" data-cta="nav">Open converter</a>
       </nav>
     </div>
   </header>
 
   <main class="legal">
     <h1>Free T5018 XML generator for CRA</h1>
-    <p class="legal-updated">Built to CRA XML schema 1-26-3 (T619 2026, T5018 2026V3)</p>
+    <p class="legal-updated">Built to CRA XML schema 1-27-1 (T619 2027V1, T5018 2027V1) for the 2027 filing season, and valid under 1-26-3 (T5018 2026V3)</p>
 
     <p>If your business's primary activity is construction, you report the payments you made to subcontractors for construction services on the T5018 Statement of Contract Payments: a T5018 slip for each subcontractor and a T5018 Summary. The return is due within 6 months after the end of your reporting period, which can be the calendar year or your fiscal period. TaxXML turns the T5018 spreadsheet you already have into the XML file CRA accepts through Internet File Transfer (IFT), in your browser, for free.</p>
     <div id="disclaimer" class="warnings-box" role="note">
       <h4>Information and a conversion tool, not advice</h4>
       <p>TaxXML provides information and a conversion tool only. It is not tax, legal, or accounting advice. CRA specifications change, so always verify the requirements, and your files, against the CRA's official <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html" target="_blank" rel="noopener">XML specifications for information returns</a> before you file.</p>
     </div>
-    <p><a href="/#converter" class="btn btn-primary btn-lg" data-cta="hero">Open the free T5018 converter</a></p>
+    <p><a href="/?return=T5018#converter" class="btn btn-primary btn-lg" data-cta="hero">Open the free T5018 converter</a></p>
 
     <h2>What a T5018 XML file is</h2>
     <p>A T5018 XML file is one <code>&lt;Submission&gt;</code> with two parts:</p>
@@ -96,7 +96,7 @@
     <p>You upload the file to IFT, which checks it against CRA's XML schema. Electronic filing is required once you file more than 5 slips of a type in a calendar year. Below that, it is optional but still accepted.</p>
 
     <h2>CRA XML specifications in plain terms</h2>
-    <p>TaxXML follows <strong>schema 1-26-3</strong>: <strong>T619 2026</strong> for the transmitter record and <strong>T5018 2026V3</strong> for the return. The elements you will see most:</p>
+    <p>TaxXML follows <strong>schema 1-27-1</strong>, CRA's 2027 package for files sent from January 11, 2027 (normally for the 2026 tax year): <strong>T619 2027V1</strong> for the transmitter record and <strong>T5018 2027V1</strong> for the return. The T5018 file it makes is also valid under the 2026 package, schema 1-26-3 (T5018 2026V3), which CRA accepts until December 22, 2026. The elements you will see most:</p>
     <ul>
       <li><code>bn</code>: the payer's 15-character account number on the RZ program, for example <code>123456789RZ0001</code>, on every slip and the summary.</li>
       <li><code>RCPNT_NM</code> or <code>CORP_PTNRP_NM</code>: the subcontractor's name. Individuals use <code>RCPNT_NM</code>; corporations and partnerships use <code>CORP_PTNRP_NM</code>.</li>
@@ -107,7 +107,7 @@
       <li><code>slp_cnt</code>, <code>tot_sbctrcr_amt</code>: on the summary, the number of slips and the total paid.</li>
       <li><code>rpt_tcd</code>: report type. <code>O</code> for original, <code>A</code> for amendment, <code>C</code> for cancel.</li>
     </ul>
-    <p>The full rules are on CRA's site: <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html" target="_blank" rel="noopener">XML specifications for information returns</a> and the <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/t619-2026.html" target="_blank" rel="noopener">T619 2026 specification</a>.</p>
+    <p>The full rules are on CRA's site: <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html" target="_blank" rel="noopener">XML specifications for information returns</a> and the <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/t619-2027.html" target="_blank" rel="noopener">T619 2027 specification</a>.</p>
 
     <h2>How to make a T5018 XML file in 3 steps</h2>
     <ol>
@@ -115,7 +115,7 @@
       <li><strong>Check the columns and fill in the filing details.</strong> TaxXML matches your headers to CRA fields. Fix any it missed, then enter the transmitter and payer details and the end date of your reporting period. Those are saved in this browser for next time.</li>
       <li><strong>Generate and download.</strong> Problems are listed by row and column before anything downloads. Then upload the XML to IFT signed in with My Business Account, Represent a Client, or a web access code (WAC).</li>
     </ol>
-    <p><a href="/#converter" class="btn btn-primary" data-cta="bottom">Convert my T5018 spreadsheet</a></p>
+    <p><a href="/?return=T5018#converter" class="btn btn-primary" data-cta="bottom">Convert my T5018 spreadsheet</a></p>
 
     <h2>Common reasons CRA rejects a T5018 XML file</h2>
     <ul>
@@ -148,7 +148,7 @@
       </details>
       <details class="faq-item">
         <summary>Which CRA XML schema does TaxXML use for T5018?</summary>
-        <p>CRA XML schema <strong>1-26-3</strong>: T619 2026 and T5018 2026V3. It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them.</p>
+        <p>CRA XML schema <strong>1-27-1</strong>: T619 2027V1 and T5018 2027V1, which CRA accepts from January 11, 2027. The same file is also valid under the 2026 schema 1-26-3 (T5018 2026V3), accepted until December 22, 2026. It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them.</p>
       </details>
       <details class="faq-item">
         <summary>Is my data uploaded anywhere?</summary>
@@ -174,7 +174,7 @@
       </div>
       <div class="footer-links">
         <h4>Resources</h4>
-        <a href="/#converter" data-cta="footer">XML Converter</a>
+        <a href="/?return=T5018#converter" data-cta="footer">XML Converter</a>
         <a href="/t5018-xml-generator">T5018 XML guide</a>
         <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" class="footer-ift">Submit to CRA (IFT) &nearr;</a>
       </div>

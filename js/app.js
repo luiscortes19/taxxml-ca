@@ -72,6 +72,8 @@ const RETURN_TYPES = {
       { key: 'rcpnt_name',   label: 'Recipient Name',                autoMatch: ['recipient name', 'payee name', 'name'], required: true },
       { key: 'rcpnt_type',   label: 'Recipient Type',                autoMatch: ['recipient type', 'payee type', 'entity type', 'type'] },
       { key: 'fssn_nbr',     label: 'Foreign Tax ID',                autoMatch: ['foreign tax id', 'foreign tax', 'tax identification', 'fssn', 'tax id'], required: true },
+      // Box 13 from schema 1-27-1; blank -> CRA's 000000000. Ignored in 1-26-3 files, which have no such element.
+      { key: 'cin',          label: 'Canadian Tax ID (Box 13)',      autoMatch: ['canadian tax identification', 'canadian tax id', 'canadian tax', 'sin/ttn/itn'] },
       { key: 'tx_cntry_cd',  label: 'Country of Residence (3 letters)', autoMatch: ['country of residence', 'residence country', 'tax country', 'country'] },
       { key: 'inc_1_tcd',    label: 'Income Code (Box 14)',          autoMatch: ['income code', 'income type', 'type of income', 'box 14'] },
       { key: 'crcy_1_cd',    label: 'Currency Code (Box 15)',        autoMatch: ['currency', 'crcy', 'box 15'] },
@@ -142,11 +144,16 @@ function resetAll() {
 // ============================================================
 let returnChosen = false; // false until the visitor picks a return; a file opened before that used the preselected one
 
+// source: how the return was chosen, for GA4: 'landing' (page load from a guide page) | 'hero' | 'dropdown'.
+// 'default' is sent lazily by handleFile instead, so return_selected never doubles as a pageview count.
 function onReturnTypeChange(source) {
   const rt = getSelectedReturnType();
   const config = RETURN_TYPES[rt];
-  returnChosen = true;
-  track('return_selected', { return_type: rt, source });
+  if (source) { // page load without ?return= sets up the UI silently
+    returnChosen = true;
+    track('return_selected', { return_type: rt, source });
+  }
+  suggestSubmissionRef();
 
   // Update step 1 description + sample link
   const step1Data = { T4: 'T4 payroll', T5018: 'T5018 sub-contractor payment', NR4: 'NR4 non-resident payment', T1204: 'T1204 payment' };
@@ -204,11 +211,36 @@ document.getElementById('return-type').addEventListener('change', () => onReturn
 
 // Hero return picker: preselect the return and jump to Step 1
 document.querySelectorAll('.return-pick').forEach(btn => btn.addEventListener('click', () => {
-  const sel = document.getElementById('return-type');
-  sel.value = btn.dataset.return;
+  document.getElementById('return-type').value = btn.dataset.return;
   onReturnTypeChange('hero');
   document.getElementById('converter').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }));
+
+// Landing pages link to /?return=NR4#converter. Only the four return codes count (any case); anything else is ignored.
+function returnFromUrl(search) {
+  const m = /[?&]return=([^&#]*)/i.exec(search || '');
+  const rt = m && m[1].toUpperCase();
+  return rt && Object.hasOwn(RETURN_TYPES, rt) ? rt : null;
+}
+
+// The suggested Submission Reference ID follows the return until the user types their own
+let suggestedRef = '';
+function suggestSubmissionRef() {
+  const ref = document.getElementById('tx-ref');
+  const next = defaultSubmissionRef(getSelectedReturnType(), new Date());
+  if (!ref.value || ref.value === suggestedRef) ref.value = next;
+  ref.placeholder = suggestedRef = next;
+}
+
+// Page load: this filing season's tax year (still editable), then the return from the URL or the default
+{
+  const year = defaultTaxYear(new Date());
+  document.getElementById('tax-year').value = year;
+  document.getElementById('t5018-fiscal-year').value = year;
+  const fromUrl = returnFromUrl(location.search);
+  if (fromUrl) document.getElementById('return-type').value = fromUrl;
+  onReturnTypeChange(fromUrl ? 'landing' : null);
+}
 
 // category goes to GA4; msg (may hold the file name) stays on screen only
 function showFileError(msg, category) {
@@ -530,8 +562,14 @@ function validateFilingDetails(requiredIds, extraChecks = []) {
   requiredIds.forEach(id => {
     if (!document.getElementById(id).value.trim()) { fieldError(id, 'Required.'); bad.add(id); }
   });
+  // T619: the transmitter account number, the RepID, or both (T619 2027 spec)
+  if (!document.getElementById('tx-bn').value.trim() && !document.getElementById('tx-repid').value.trim()) {
+    fieldError('tx-bn', 'Enter the transmitter CRA account number, a RepID, or both.'); bad.add('tx-bn');
+  }
   const checks = [
-    { id: 'tx-bn', test: v => BN_PATTERN.test(cleanBN(v)), msg: 'Must be exactly 15 characters: 9 digits + 2 letters + 4 digits (e.g. 123456789MM0001).' },
+    { id: 'tx-bn', test: v => transmitterAccountTag(cleanBN(v)), msg: v => `Use the account you sign in to IFT with: a 15-character BN (e.g. 123456789RP0001), a 9-digit BN (My Business Account sign-in only), a trust account (e.g. T12345678) or a non-resident account (e.g. NRA123456). You entered ${cleanBN(v).length} characters.` },
+    { id: 'tx-repid', test: v => REPID_PATTERN.test(cleanBN(v)), msg: 'RepID: up to 7 letters or digits.' },
+    { id: 'tx-ref', test: v => SUBMISSION_REF_PATTERN.test(v.trim()), msg: 'Use up to 8 letters or digits, no spaces, hyphens or other characters (CRA rule).' },
     { id: 'tx-email', test: v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim()), msg: 'Enter a valid email address.' },
     ...extraChecks,
   ];
@@ -618,7 +656,7 @@ function generateXML() {
 // T1204 XML GENERATION (existing logic)
 // ============================================================
 function generateT1204XML() {
-  if (!validateFilingDetails(['tx-bn','tx-name','tx-ref','tx-contact','tx-phone','tx-email',
+  if (!validateFilingDetails(['tx-name','tx-ref','tx-contact','tx-phone','tx-email',
                               'py-bn','py-name','py-addr','py-city','py-prov','py-postal','py-contact','py-phone'],
                              [PAYER_BN_CHECK])) return;
 
@@ -754,7 +792,7 @@ function generateT1204XML() {
 // ============================================================
 function generateT4XML() {
   // Validate required form fields — T4 uses py-* for employer
-  if (!validateFilingDetails(['tx-bn','tx-name','tx-ref','tx-contact','tx-phone','tx-email',
+  if (!validateFilingDetails(['tx-name','tx-ref','tx-contact','tx-phone','tx-email',
                               'py-bn','py-name','py-contact','py-phone'],
                              [PAYER_BN_CHECK])) return;
 
@@ -936,7 +974,7 @@ function generateT4XML() {
 // ============================================================
 function generateT5018XML() {
   // Validate required form fields, including fiscal period end date
-  if (!validateFilingDetails(['tx-bn','tx-name','tx-ref','tx-contact','tx-phone','tx-email',
+  if (!validateFilingDetails(['tx-name','tx-ref','tx-contact','tx-phone','tx-email',
                               'py-bn','py-name','py-contact','py-phone',
                               't5018-fiscal-day','t5018-fiscal-month','t5018-fiscal-year'],
                              [T5018_PAYER_BN_CHECK])) return;
@@ -1084,11 +1122,12 @@ function generateT5018XML() {
 // NR4 XML GENERATION (nr4.xsd / T619_NR4.xsd)
 // ============================================================
 function generateNR4XML() {
-  if (!validateFilingDetails(['tx-bn','tx-name','tx-ref','tx-contact','tx-phone','tx-email',
+  if (!validateFilingDetails(['tx-name','tx-ref','tx-contact','tx-phone','tx-email',
                               'nr4-acct','py-name','py-contact','py-phone'],
                              [{ id: 'nr4-acct', test: v => NR_ACCT_PATTERN.test(cleanBN(v)), msg: 'Must be 3 letters + 6 digits (e.g. NRA123456).' }])) return;
 
   const nrAcct = cleanBN(document.getElementById('nr4-acct').value);
+  const withCIN = targetSchema(new Date()) === '1-27-1';
   const pyPhone = parsePhone(document.getElementById('py-phone').value);
   const taxYear = document.getElementById('tax-year').value;
   const reportType = document.getElementById('report-type').value;
@@ -1129,6 +1168,8 @@ function generateNR4XML() {
     if (incCd && !/^\d{2}$/.test(incCd)) rowErr('inc_1_tcd', `income code "${incRaw}" must be 2 digits.`);
     if (crcy && !/^[A-Z]{3}$/.test(crcy)) rowErr('crcy_1_cd', `currency "${crcy}" must be a 3-letter code (e.g. CAD, USD).`);
     if (xmptCd.length > 1) rowErr('tx_xmpt_1_cd', `exemption code "${xmptCd}" must be 1 character.`);
+    const cin = withCIN && nr4CIN(getVal(row, 'cin'));
+    if (withCIN && !cin) rowErr('cin', `Canadian tax ID "${getVal(row, 'cin')}" must be a 9-digit SIN/TTN/ITN, a 15-character BN (e.g. 123456789RC0001) or a trust account (e.g. T12345678). Leave it blank if the recipient has none.`);
     if (errors.length > before) continue;
 
     // Individuals and joint accounts use RCPNT_NM; corporations, other and government use ENTPRS_NM
@@ -1164,6 +1205,7 @@ function generateNR4XML() {
         ${nameXml}
         ${addrXml}
         ${xmlTag('tx_cntry_cd', cntry)}
+        ${cin ? `<CIN>${xmlTag(cin[0], cin[1])}</CIN>` : ''}
         ${xmlTag('fssn_nbr', fssn)}
         ${xmlTag('nr_acct_nbr', nrAcct)}
         ${xmlTag('rcpnt_tcd', rcpntTcd)}
@@ -1179,6 +1221,7 @@ function generateNR4XML() {
 
   if (!errors.length && slipCount === 0) errors.push('No valid recipient rows found. Please check your column mapping.');
   if (errors.length) { showGenerateErrors(errors); return; }
+  if (!withCIN && columnMap.cin >= 0) warnings.push('The Canadian Tax ID column is left out: CRA only takes it in files built to the 2027 schema (1-27-1), which this tool makes from December 22, 2026.');
   if (currencies.size > 1) warnings.push(`Slips use more than one currency (${[...currencies].join(', ')}) — the summary totals add them together as-is. Check them before filing.`);
 
   const pyAddr = document.getElementById('py-addr').value.trim();
@@ -1227,10 +1270,14 @@ function generateNR4XML() {
 // ============================================================
 function buildT619Wrapper(returnType, slipsXml, summaryXml) {
   const txPhone = parsePhone(document.getElementById('tx-phone').value);
+  const acct = cleanBN(document.getElementById('tx-bn').value);
+  const repId = cleanBN(document.getElementById('tx-repid').value);
+  // The XSD requires <TransmitterAccountNumber>; with a RepID only it stays empty
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Submission xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <T619>
-    <TransmitterAccountNumber>${xmlTag('bn15', cleanBN(document.getElementById('tx-bn').value))}</TransmitterAccountNumber>
+    <TransmitterAccountNumber>${acct ? xmlTag(transmitterAccountTag(acct), acct) : ''}</TransmitterAccountNumber>
+    ${repId ? `<TransmitterRepID>${xmlTag('RepID', repId)}</TransmitterRepID>` : ''}
     ${xmlTag('sbmt_ref_id', document.getElementById('tx-ref').value.trim())}
     ${xmlTag('summ_cnt', '1')}
     ${xmlTag('lang_cd', document.getElementById('tx-lang').value)}
@@ -1272,6 +1319,8 @@ function showResults(slips, stats, warnings) {
     ['Return', `${rt}, ${period}`],
     ['Report type', `${REPORT_TYPE_NAMES[rptCd]} (${rptCd})`],
     ['Submission ref. ID', document.getElementById('tx-ref').value.trim(), true],
+    ['CRA XML schema', rt !== 'NR4' ? '1-26-3 and 1-27-1' : targetSchema(new Date()) === '1-27-1'
+      ? '1-27-1 (CRA accepts it from January 11, 2027)' : '1-26-3 (CRA accepts it until December 22, 2026)'],
     ['Slips', slips],
     ...stats.filter(s => s.label !== 'Slips Generated').map(s => [s.label, s.value]),
   ];
@@ -1314,7 +1363,7 @@ const SAMPLE_SIGNATURES = new Set([
   'Vendor Name|Vendor BN|Amount Paid|Business Type|Service Payments Only|Address|Acme Corp',
   'Subcontractor Name|Subcontractor BN/SIN|Total Construction Payments|Recipient Type|Address|BuildIt Inc',
   'Recipient Name|Recipient Type|Foreign Tax ID|Country of Residence|Income Code|Currency|Gross Income|Tax Withheld|' +
-    'Exemption Code|Address|City|State/Province|Postal Code|John Smith',
+    'Exemption Code|Address|City|State/Province|Postal Code|Canadian Tax ID|John Smith',
 ]);
 
 function isSampleFile() {
@@ -1408,7 +1457,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // require re-entering transmitter/payer info from scratch.
 // ============================================================
 const SAVED_FIELDS = [
-  'tx-bn','tx-name','tx-ref','tx-lang','tx-contact','tx-phone','tx-email',
+  'tx-bn','tx-repid','tx-name','tx-ref','tx-lang','tx-contact','tx-phone','tx-email',
   'py-bn','py-name','py-addr','py-city','py-prov','py-postal','py-contact','py-phone',
   't4-dental-code','nr4-acct'
 ];
@@ -1439,19 +1488,9 @@ function restoreFilingDetails() {
   });
 
   if (anyRestored) {
-    // Auto-increment the submission ref ID to prevent duplicate rejections
+    // Auto-increment the saved submission ref ID to prevent duplicate rejections (A→B, 1→2, 9→A)
     const refEl = document.getElementById('tx-ref');
-    if (refEl && refEl.value) {
-      const val = refEl.value.trim();
-      // Increment last character: A→B, B→C, ... Z→ZA, 1→2, etc.
-      const last = val.slice(-1);
-      if (/[A-Za-z]/.test(last)) {
-        const next = last === 'Z' ? 'ZA' : String.fromCharCode(last.toUpperCase().charCodeAt(0) + 1);
-        refEl.value = val.slice(0, -1) + next;
-      } else if (/[0-9]/.test(last)) {
-        refEl.value = val.slice(0, -1) + (parseInt(last) + 1);
-      }
-    }
+    if (refEl && data['tx-ref']) refEl.value = nextSubmissionRef(refEl.value.trim());
 
     // Restore notice with a visible way out; saved data is only removed when the user clicks Start fresh
     const notice = document.createElement('p');
@@ -1475,6 +1514,7 @@ function clearFilingDetails() {
     const el = document.getElementById(id);
     if (el) el.value = el.options ? el.options[0].value : ''; // selects go back to their first (default) option
   });
+  suggestSubmissionRef();
 }
 
 // Attach save listeners to all Step 3 fields

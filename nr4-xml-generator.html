@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Free NR4 XML Generator for CRA (2026 Schema) | TaxXML.ca</title>
+  <title>Free NR4 XML Generator for CRA (2027 Schema) | TaxXML.ca</title>
   <meta name="description" content="Turn an NR4 spreadsheet of non-resident payments into CRA XML for Internet File Transfer. Free, runs in your browser. Plain-English guide to the NR4 XML schema.">
   <link rel="canonical" href="https://taxxml.ca/nr4-xml-generator">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://taxxml.ca/nr4-xml-generator">
-  <meta property="og:title" content="Free NR4 XML Generator for CRA (2026 Schema)">
+  <meta property="og:title" content="Free NR4 XML Generator for CRA (2027 Schema)">
   <meta property="og:description" content="Turn an NR4 spreadsheet of non-resident payments into CRA XML for Internet File Transfer. Free, runs in your browser, no signup.">
   <meta property="og:image" content="https://taxxml.ca/img/og-image.png">
   <meta property="og:locale" content="en_CA">
@@ -39,7 +39,7 @@
       {
         "@type": "Question",
         "name": "Which CRA XML schema does TaxXML use for NR4?",
-        "acceptedAnswer": { "@type": "Answer", "text": "CRA XML schema 1-26-3: T619 2026 and NR4 2026V3. It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them." }
+        "acceptedAnswer": { "@type": "Answer", "text": "For files made from December 22, 2026: CRA XML schema 1-27-1, T619 2027V1 and NR4 2027V1, which CRA accepts from January 11, 2027. Files made before then use schema 1-26-3 (T619 2026 and NR4 2026V3), accepted until December 22, 2026. It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them." }
       },
       {
         "@type": "Question",
@@ -71,21 +71,21 @@
       </a>
       <nav>
         <a href="#faq">FAQ</a>
-        <a href="/#converter" class="nav-cta" data-cta="nav">Open converter</a>
+        <a href="/?return=NR4#converter" class="nav-cta" data-cta="nav">Open converter</a>
       </nav>
     </div>
   </header>
 
   <main class="legal">
     <h1>Free NR4 XML generator for CRA</h1>
-    <p class="legal-updated">Built to CRA XML schema 1-26-3 (T619 2026, NR4 2026V3)</p>
+    <p class="legal-updated">Built to CRA XML schema 1-27-1 (T619 2027V1, NR4 2027V1) for files made from December 22, 2026, and 1-26-3 (T619 2026, NR4 2026V3) before then</p>
 
     <p>If you pay or credit amounts such as interest, dividends or pensions to non-residents of Canada, you report them on the NR4 information return: an NR4 slip for each recipient and an NR4 Summary. Those amounts are generally subject to Part XIII non-resident tax. The return is due no later than March 31 following the calendar year. TaxXML turns the NR4 spreadsheet you already have into the XML file CRA accepts through Internet File Transfer (IFT), in your browser, for free.</p>
     <div id="disclaimer" class="warnings-box" role="note">
       <h4>Information and a conversion tool, not advice</h4>
       <p>TaxXML provides information and a conversion tool only. It is not tax, legal, or accounting advice. CRA specifications change, so always verify the requirements, and your files, against the CRA's official <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html" target="_blank" rel="noopener">XML specifications for information returns</a> before you file.</p>
     </div>
-    <p><a href="/#converter" class="btn btn-primary btn-lg" data-cta="hero">Open the free NR4 converter</a></p>
+    <p><a href="/?return=NR4#converter" class="btn btn-primary btn-lg" data-cta="hero">Open the free NR4 converter</a></p>
 
     <h2>What an NR4 XML file is</h2>
     <p>An NR4 XML file is one <code>&lt;Submission&gt;</code> with two parts:</p>
@@ -96,19 +96,20 @@
     <p>You upload the file to IFT, which checks it against CRA's XML schema. Electronic filing is required once you file more than 5 slips of a type in a calendar year. Below that, it is optional but still accepted.</p>
 
     <h2>CRA XML specifications in plain terms</h2>
-    <p>TaxXML follows <strong>schema 1-26-3</strong>: <strong>T619 2026</strong> for the transmitter record and <strong>NR4 2026V3</strong> for the return. The elements you will see most:</p>
+    <p>TaxXML follows CRA's 2027 package, <strong>schema 1-27-1</strong> (<strong>T619 2027V1</strong> for the transmitter record and <strong>NR4 2027V1</strong> for the return), for files you make from December 22, 2026; CRA accepts it from January 11, 2027, normally for the 2026 tax year. Files made before then follow <strong>schema 1-26-3</strong> (T619 2026 and <strong>NR4 2026V3</strong>), which CRA accepts until December 22, 2026. The two differ for NR4: a 2027 slip must carry the recipient's Canadian tax identification number (Box 13), and a 2026 slip must not. The elements you will see most:</p>
     <ul>
       <li><code>nr_acct_nbr</code>: the payer's non-resident account number, 3 letters and 6 digits, for example <code>NRA123456</code>. The same number goes on the summary and every slip.</li>
       <li><code>RCPNT_NM</code> or <code>ENTPRS_NM</code>: the recipient's name. Individuals and joint accounts use <code>RCPNT_NM</code>; corporations and everyone else use <code>ENTPRS_NM</code>.</li>
       <li><code>rcpnt_tcd</code>: recipient type. <code>1</code> individual, <code>2</code> joint account, <code>3</code> corporation, <code>4</code> other (association, trust, partnership), <code>5</code> government or international organization.</li>
-      <li><code>tx_cntry_cd</code>, <code>fssn_nbr</code>: the recipient's 3-letter country of tax residence (Box 12) and their foreign or Canadian tax identification number (Box 13).</li>
+      <li><code>tx_cntry_cd</code>, <code>fssn_nbr</code>: the recipient's 3-letter country of tax residence (Box 12) and their foreign tax identification number (Box 30 on 2027 slips; Box 13 before).</li>
+      <li><code>CIN</code>, new in schema 1-27-1: the recipient's Canadian tax identification number (Box 13): a SIN, TTN or ITN (<code>sin_ttn_itn</code>), a business number (<code>bn</code>) or a trust account number (<code>trust</code>). When the recipient hasn't provided one, CRA says to enter <code>&lt;sin_ttn_itn&gt;000000000&lt;/sin_ttn_itn&gt;</code>; TaxXML does that for a blank or missing Canadian Tax ID column.</li>
       <li><code>RCPNT_ADDR</code>: a foreign address, so it uses <code>ste_cd</code> and <code>fgn_pstl_cd</code> instead of a province and postal code.</li>
       <li><code>inc_1_tcd</code>, <code>crcy_1_cd</code>: the income code (Box 14) and currency code (Box 15).</li>
       <li><code>NR4_AMT</code>: gross income (Box 16) and non-resident tax withheld (Box 17).</li>
       <li><code>tx_xmpt_1_cd</code>: the exemption code (Box 18), when one applies.</li>
       <li><code>rpt_tcd</code>: report type. <code>O</code> for original, <code>A</code> for amendment, <code>C</code> for cancel on a slip. The summary takes <code>O</code> or <code>A</code> only.</li>
     </ul>
-    <p>The full rules are on CRA's site: <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html" target="_blank" rel="noopener">XML specifications for information returns</a> and the <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/t619-2026.html" target="_blank" rel="noopener">T619 2026 specification</a>.</p>
+    <p>The full rules are on CRA's site: <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html" target="_blank" rel="noopener">XML specifications for information returns</a> and the <a href="https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/t619-2027.html" target="_blank" rel="noopener">T619 2027 specification</a>.</p>
 
     <h2>How to make an NR4 XML file in 3 steps</h2>
     <ol>
@@ -116,7 +117,7 @@
       <li><strong>Check the columns and fill in the filing details.</strong> TaxXML matches your headers to CRA fields. Fix any it missed, then enter the transmitter and payer details and your non-resident account number. Those are saved in this browser for next time.</li>
       <li><strong>Generate and download.</strong> Problems are listed by row and column before anything downloads. Then upload the XML to IFT signed in with My Business Account, Represent a Client, or a web access code (WAC).</li>
     </ol>
-    <p><a href="/#converter" class="btn btn-primary" data-cta="bottom">Convert my NR4 spreadsheet</a></p>
+    <p><a href="/?return=NR4#converter" class="btn btn-primary" data-cta="bottom">Convert my NR4 spreadsheet</a></p>
 
     <h2>Common reasons CRA rejects an NR4 XML file</h2>
     <ul>
@@ -150,7 +151,7 @@
       </details>
       <details class="faq-item">
         <summary>Which CRA XML schema does TaxXML use for NR4?</summary>
-        <p>CRA XML schema <strong>1-26-3</strong>: T619 2026 and NR4 2026V3. It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them.</p>
+        <p>For files made from December 22, 2026: CRA XML schema <strong>1-27-1</strong>, T619 2027V1 and NR4 2027V1, which CRA accepts from January 11, 2027. Files made before then use schema 1-26-3 (T619 2026 and NR4 2026V3), accepted until December 22, 2026. It also follows CRA's rule that empty optional tags must be left out, because IFT rejects them.</p>
       </details>
       <details class="faq-item">
         <summary>Is my data uploaded anywhere?</summary>
@@ -176,7 +177,7 @@
       </div>
       <div class="footer-links">
         <h4>Resources</h4>
-        <a href="/#converter" data-cta="footer">XML Converter</a>
+        <a href="/?return=NR4#converter" data-cta="footer">XML Converter</a>
         <a href="/nr4-xml-generator">NR4 XML guide</a>
         <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" class="footer-ift">Submit to CRA (IFT) &nearr;</a>
       </div>

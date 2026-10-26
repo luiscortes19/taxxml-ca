@@ -55,8 +55,8 @@
     <p>Step 3 filing details are saved in this browser’s <strong>localStorage</strong> under the key <strong>taxxml_filing_details</strong>, so you do not have to retype them on a later visit. The site writes them when you change a saved field or leave it. They are not sent to AVANZA.</p>
     <p>What is saved:</p>
     <ul>
-      <li>Transmitter business number, transmitter name, submission reference ID, language, contact name, phone, and email</li>
-      <li>Payer or employer account number, organization name, address, city, province, postal code, contact name, and phone</li>
+      <li>Transmitter CRA account number, RepID (Represent a Client), transmitter name, submission reference ID, language, contact name, phone, and email</li>
+      <li>Payer or employer account number, NR4 non-resident account number, organization name, address, city, province, postal code, contact name, and phone</li>
       <li>T4 dental benefit code (Box 45), when that field is on the form</li>
     </ul>
     <p>When those details are restored, the last character of the submission reference ID is advanced (for example, A becomes B) so a later download is less likely to reuse the same reference.</p>
@@ -71,7 +71,7 @@
     <p><strong>Google Analytics 4.</strong> Pages load Google’s tag from <code>www.googletagmanager.com</code> with measurement ID <strong>G-E2F5Q3RZVH</strong>. Local copies of the site (<code>localhost</code>, <code>127.0.0.1</code>, or a file opened from disk) don’t load it. Besides pageviews, the site sends a few usage events: <code>return_selected</code>, <code>file_opened</code>, <code>file_parse_error</code>, <code>step_reached</code>, <code>picker_opened</code>, <code>generate_clicked</code>, <code>validation_failed</code>, <code>validation_passed</code>, <code>xml_downloaded</code>, <code>start_fresh</code>, <code>cta_click</code>, and <code>sample_downloaded</code>. They carry only these values:</p>
     <ul>
       <li>the return type (<code>return_type</code>);</li>
-      <li>how the return was chosen (<code>source</code>: <code>default</code>, <code>hero</code>, or <code>dropdown</code>);</li>
+      <li>how the return was chosen (<code>source</code>: <code>default</code> when a file is opened with the preselected return, <code>landing</code> when a guide page’s link chose it, <code>hero</code> for the buttons at the top of the home page, or <code>dropdown</code> for the Step 1 list);</li>
       <li>the step number and whether you moved forward, back, or started over (<code>step</code>, <code>direction</code>);</li>
       <li>an error count and a general error category (<code>error_count</code>, <code>error_category</code>);</li>
       <li>for <code>validation_failed</code>, the name of the first field that failed (<code>first_error_field</code>). This is one of the converter’s own column or form-field names, such as <code>sin</code> or <code>tx-email</code>. Anything else, including your own column headers, is sent as <code>other</code>;</li>

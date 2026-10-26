@@ -7,6 +7,12 @@
 const BN_PATTERN = /^\d{9}[A-Z]{2}\d{4}$/;
 // CRA nrType: Non-Resident account number, 3 letters + 6 digits (e.g. NRA123456)
 const NR_ACCT_PATTERN = /^[A-Z]{3}\d{6}$/;
+// CRA trustType: trust account number, 1 letter + 8 digits (e.g. T12345678)
+const TRUST_PATTERN = /^[A-Z]\d{8}$/;
+// T619 sbmt_ref_id: up to 8 letters or digits, no spaces, hyphens or special characters (T619 2027 spec)
+const SUBMISSION_REF_PATTERN = /^[A-Za-z0-9]{1,8}$/;
+// T619 RepID (Represent a Client): up to 7 letters or digits
+const REPID_PATTERN = /^[A-Z0-9]{1,7}$/;
 
 function cleanBN(raw) {
   return String(raw || '').toUpperCase().trim().replace(/[-\s]/g, '');
@@ -58,4 +64,55 @@ function sinDigits(raw) {
   return /^\d+\.\d*$|^\d(\.\d+)?e[+-]?\d+$/i.test(s) ? s : s.replace(/\D/g, '');
 }
 
-if (typeof module !== 'undefined') module.exports = { BN_PATTERN, NR_ACCT_PATTERN, cleanBN, sanitizeBN, isValidSIN, keepDigitText, padIdNumber, sinDigits };
+// ---- Filing season ----
+// Information returns filed in a year are normally for the year before (Jan-Feb 2027 -> tax year 2026).
+function defaultTaxYear(now = new Date()) {
+  return now.getFullYear() - 1;
+}
+
+// CRA XML schema to build for on `now`: the 2026 T619 version (1-26-3) "is accepted for processing until December 22,
+// 2026"; the 2027 version (1-27-1) "will be accepted starting January 11, 2027". IFT is closed in between, so from
+// Dec 22 a file can only be filed under 1-27-1. Source:
+// https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/xml-specs.html
+// ponytail: one hard-coded cutover; add the next one when CRA publishes the 2028 package
+function targetSchema(now = new Date()) {
+  return now >= new Date(2026, 11, 22) ? '1-27-1' : '1-26-3';
+}
+
+// Suggested sbmt_ref_id: return type + month letter (A = Jan) + day + hour, cut to 8. T4 on Jan 15 at 9am -> T4A1509.
+function defaultSubmissionRef(rt, now = new Date()) {
+  const two = n => String(n).padStart(2, '0');
+  return (rt + 'ABCDEFGHIJKL'[now.getMonth()] + two(now.getDate()) + two(now.getHours())).slice(0, 8);
+}
+
+// Next ref ID for a resubmission: the last character steps through 0-9 then A-Z (Z wraps to 0), so it stays valid.
+function nextSubmissionRef(ref) {
+  const SEQ = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const i = SEQ.indexOf(ref.slice(-1).toUpperCase());
+  return i < 0 ? ref : ref.slice(0, -1) + SEQ[(i + 1) % SEQ.length];
+}
+
+// T619 <TransmitterAccountNumber> child for a cleaned account number, or null if it's none of CRA's forms
+// (complex.xsd TransmitterAccountNumberType). bn9 is only for My Business Account sign-ins (T619 2027 spec).
+function transmitterAccountTag(acct) {
+  if (BN_PATTERN.test(acct)) return 'bn15';
+  if (/^\d{9}$/.test(acct)) return 'bn9';
+  if (TRUST_PATTERN.test(acct)) return 'trust';
+  if (NR_ACCT_PATTERN.test(acct)) return 'nr4';
+  return null;
+}
+
+// NR4 box 13 (schema 1-27-1 <CIN>): the recipient's Canadian tax ID -> [tag, value], or null if it isn't one.
+// Blank -> <sin_ttn_itn>000000000</sin_ttn_itn>, as CRA's NR4 2027 spec instructs. Source:
+// https://www.canada.ca/en/revenue-agency/services/e-services/filing-information-returns-electronically-t4-t5-other-types-returns-overview/t619-2027/nr4-2027.html
+function nr4CIN(raw) {
+  const v = cleanBN(padIdNumber(raw));
+  if (!v) return ['sin_ttn_itn', '000000000'];
+  if (/^\d{9}$/.test(v)) return ['sin_ttn_itn', v];
+  if (BN_PATTERN.test(v)) return ['bn', v];
+  if (TRUST_PATTERN.test(v)) return ['trust', v];
+  return null;
+}
+
+if (typeof module !== 'undefined') module.exports = { BN_PATTERN, NR_ACCT_PATTERN, TRUST_PATTERN, SUBMISSION_REF_PATTERN, REPID_PATTERN, cleanBN, sanitizeBN, isValidSIN, keepDigitText, padIdNumber, sinDigits,
+  defaultTaxYear, targetSchema, defaultSubmissionRef, nextSubmissionRef, transmitterAccountTag, nr4CIN };

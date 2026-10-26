@@ -12,6 +12,7 @@ function setup({ xml = '<Submission/>', createObjectURL } = {}) {
     revokeObjectURL: () => log.push(['revoke']),
   };
   const app = createApp({ returnType: 'NR4', gtag, URL });
+  log.length = 0; // drop the page-load return_selected
   app.el('tax-year').value = '2025';
   app.run(`xmlOutput = ${JSON.stringify(xml)}`);
   const origCreate = app.ctx.document.createElement;
@@ -200,7 +201,7 @@ const csv = s => Buffer.from(s);
   for (const n of ['return_selected', 'file_opened', 'file_parse_error', 'step_reached', 'validation_failed', 'validation_passed', 'xml_downloaded', 'start_fresh',
                    'picker_opened', 'generate_clicked'])
     assert(names.has(n), `expected ${n} in ${[...names]}`);
-  const ALLOWED = { return_type: /^(T4|T1204|T5018|NR4)$/, step: /^[1-4]$/, error_count: /^\d+$/,
+  const ALLOWED = { return_type: /^(T4|T1204|T5018|NR4)$/, source: /^(default|hero|dropdown|landing)$/, step: /^[1-4]$/, error_count: /^\d+$/,
                     error_category: /^(filing_details|row_data|unsupported_type|no_data_rows|read_error)$/,
                     first_error_field: /^[a-z0-9_-]+$/, source: /^(default|hero|dropdown)$/, direction: /^(forward|back|reset)$/,
                     is_sample: /^(true|false)$/, rows_bucket: /^(1|2-5|6-20|21-100|100\+)$/, required_unmapped: /^\d$/ };

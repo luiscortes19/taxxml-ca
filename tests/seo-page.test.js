@@ -21,7 +21,7 @@ for (const code of ['T4', 'NR4', 'T5018', 'T1204']) {
   assert(html.includes(`<link rel="canonical" href="${URL}">`), msg('canonical'));
   assert(html.includes(`<meta property="og:url" content="${URL}">`), msg('og:url'));
   assert(html.includes('<link rel="icon" type="image/svg+xml" href="/favicon.svg">'), msg('favicon'));
-  assert(/<a href="\/#converter" class="btn btn-primary[^"]*"/.test(html), msg('CTA button to the converter'));
+  assert(new RegExp(`<a href="/\\?return=${code}#converter" class="btn btn-primary[^"]*"`).test(html), msg('CTA button deep-links the converter to this return'));
   assert(html.includes('<script src="/js/ga.js"></script>'), msg('same GA4 loader as the other pages'));
 
   // Disclaimer near the CTA points at CRA's XML specs; liability release in the footer links /terms
@@ -82,14 +82,22 @@ assert.strictEqual(visibleAnswer(t1204, efileQ), efileA, 't1204: visible e-filin
 assert.strictEqual(ldAnswer(t1204, efileQ), efileA, 't1204: JSON-LD e-filing FAQ');
 assert(t1204.includes('<code>rcpnt_tcd</code>: recipient type: <code>1</code> sole proprietor, <code>3</code> corporation, <code>4</code> partnership.'), 't1204: rcpnt_tcd codes');
 
-// NR4: spec version 2026V3; fssn_nbr boxes
+// NR4: 2027V1 (schema 1-27-1) from Dec 22 2026, 2026V3 (1-26-3) before; CIN box 13, fssn_nbr box 30 (NR4 2027 spec)
 const nr4 = page('nr4-xml-generator');
-assert(!/NR4 2026(?!V3)/.test(nr4), 'nr4: every "NR4 2026" is "NR4 2026V3"');
-assert(nr4.includes('T619 2026, NR4 2026V3'), 'nr4: subtitle version');
+assert(!/NR4 2026(?!V3)/.test(nr4) && !/NR4 2027(?!V1)/.test(nr4), 'nr4: every "NR4 2026" is 2026V3, every "NR4 2027" is 2027V1');
+assert(nr4.includes('1-27-1 (T619 2027V1, NR4 2027V1) for files made from December 22, 2026, and 1-26-3 (T619 2026, NR4 2026V3) before then'), 'nr4: subtitle version');
 const nr4SchemaQ = 'Which CRA XML schema does TaxXML use for NR4?';
-assert(ldAnswer(nr4, nr4SchemaQ).startsWith('CRA XML schema 1-26-3: T619 2026 and NR4 2026V3.'), 'nr4: JSON-LD schema version');
-assert(visibleAnswer(nr4, nr4SchemaQ).includes('T619 2026 and NR4 2026V3.'), 'nr4: visible schema version');
-assert(nr4.includes("<code>tx_cntry_cd</code>, <code>fssn_nbr</code>: the recipient's 3-letter country of tax residence (Box 12) and their foreign or Canadian tax identification number (Box 13)."), 'nr4: fssn_nbr wording');
+assert(ldAnswer(nr4, nr4SchemaQ).startsWith('For files made from December 22, 2026: CRA XML schema 1-27-1, T619 2027V1 and NR4 2027V1, which CRA accepts from January 11, 2027.'), 'nr4: JSON-LD schema version');
+assert(visibleAnswer(nr4, nr4SchemaQ).includes('schema 1-26-3 (T619 2026 and NR4 2026V3), accepted until December 22, 2026.'), 'nr4: visible schema version');
+assert(nr4.includes("<code>fssn_nbr</code>: the recipient's 3-letter country of tax residence (Box 12) and their foreign tax identification number (Box 30 on 2027 slips; Box 13 before)."), 'nr4: fssn_nbr wording');
+assert(nr4.includes('CRA says to enter <code>&lt;sin_ttn_itn&gt;000000000&lt;/sin_ttn_itn&gt;</code>'), 'nr4: CIN placeholder wording');
+// T4, T5018, T1204: output is the same under both schemas (tests/xsd.test.js), so the pages claim both
+for (const [code, v26] of [['T4', '2026V4'], ['T5018', '2026V3'], ['T1204', '2026V3']]) {
+  const html = page(`${code.toLowerCase()}-xml-generator`);
+  assert(html.includes(`<title>Free ${code} XML Generator for CRA (2027 Schema) | TaxXML.ca</title>`), `${code}: title`);
+  assert(html.includes(`CRA XML schema <strong>1-27-1</strong>: T619 2027V1 and ${code} 2027V1, which CRA accepts from January 11, 2027. The same file is also valid under the 2026 schema 1-26-3 (${code} ${v26}), accepted until December 22, 2026.`), `${code}: schema FAQ`);
+  assert(html.includes('t619-2027.html') && !html.includes('t619-2026.html'), `${code}: links the T619 2027 spec`);
+}
 
 // Payer account program: T5018 uses RZ, T1204 uses RP (CRA 2026 specs / schema 1-26-3)
 const t5018 = page('t5018-xml-generator');
