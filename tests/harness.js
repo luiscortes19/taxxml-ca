@@ -47,7 +47,7 @@ function makeElement(id) {
 }
 
 // Returns a fresh app instance: { ctx, run(code), els, loadFile(name, bytes), setDetails(), generate() }.
-function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage } = {}) {
+function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, search = '', fetch, session } = {}) {
   const els = {};
   const getEl = id => (els[id] = els[id] || makeElement(id));
   const created = [];
@@ -65,7 +65,8 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage } = {}) 
   const store = withStorage || {};
   const ctx = {
     document, FileReader, XLSX, console, setTimeout, clearTimeout, TextDecoder,
-    location: { hostname: 'taxxml.ca' },
+    location: { hostname: 'taxxml.ca', search }, URLSearchParams, fetch,
+    sessionStorage: { getItem: k => (session || {})[k] ?? null, setItem: (k, v) => { if (session) session[k] = String(v); } },
     localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } },
     Blob: class Blob { constructor(parts, opts) { this.parts = parts; this.type = opts && opts.type; } },
     URL: urlImpl || { createObjectURL: () => 'blob:test', revokeObjectURL: () => {} },

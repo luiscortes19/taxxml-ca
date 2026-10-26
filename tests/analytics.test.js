@@ -131,7 +131,7 @@ const csv = s => Buffer.from(s);
   const names = new Set(events.map(e => e[0]));
   for (const n of ['return_selected', 'file_opened', 'file_parse_error', 'step_reached', 'validation_failed', 'validation_passed', 'xml_downloaded', 'start_fresh'])
     assert(names.has(n), `expected ${n} in ${[...names]}`);
-  const ALLOWED = { return_type: /^(T4|T1204|T5018|NR4)$/, step: /^[1-4]$/, error_count: /^\d+$/,
+  const ALLOWED = { return_type: /^(T4|T1204|T5018|NR4)$/, step: /^[1-4]$/, error_count: /^\d+$/, is_sample: /^(true|false)$/,
                     error_category: /^(filing_details|row_data|unsupported_type|no_data_rows|read_error)$/,
                     first_error_field: /^[a-z0-9_-]+$/ };
   for (const [name, params] of events) {

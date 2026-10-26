@@ -45,7 +45,7 @@
 
   <main class="legal">
     <h1>Privacy</h1>
-    <p class="legal-updated">Last updated: 14 October 2026</p>
+    <p class="legal-updated">Last updated: 26 October 2026</p>
 
     <p>TaxXML.ca is a free tool from <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a>. It turns a spreadsheet into XML for certain Canada Revenue Agency (CRA) information returns. This notice describes what the site actually does with information. It is written for people using the site in Canada.</p>
 
@@ -67,6 +67,9 @@
       <li>T4 dental benefit code (Box 45), when that field is on the form</li>
     </ul>
     <p>When those details are restored, the last character of the submission reference ID is advanced (for example, A becomes B) so a later download is less likely to reuse the same reference.</p>
+    <p>The <strong>Try it with sample data</strong> button fills empty filing fields with made-up demo values. Those demo values are not saved, and they are cleared when you open your own file.</p>
+    <p>If you answer or close the “What brings you here?” question, the site stores the flag <strong>taxxml_intent_asked</strong> in this browser’s <strong>sessionStorage</strong> so it does not ask again until you close the tab. Your answer itself is not stored.</p>
+    <p>The deadline reminder is a calendar file (.ics) built in your browser and downloaded to your device. It contains only the return type, the due date and links to TaxXML.ca and canada.ca.</p>
     <p>What is not saved in localStorage: the spreadsheet, the generated XML, the taxation year, the report type (original, amendment, or cancel), and the T5018 fiscal-period end date.</p>
     <p>You can remove the saved details with the <strong>Clear</strong> link on the filing step, or by clearing site data for taxxml.ca in your browser. Anyone who uses the same browser profile can see the saved fields.</p>
 
@@ -75,7 +78,7 @@
 
     <p><strong>GitHub Pages.</strong> The site is static files hosted on GitHub Pages. Loading a page, stylesheet, image, or sample CSV template means GitHub receives an ordinary request for that file, including your IP address and browser. Those requests do not contain your spreadsheet.</p>
 
-    <p><strong>Google Analytics 4.</strong> Pages load Google’s tag from <code>www.googletagmanager.com</code> with measurement ID <strong>G-E2F5Q3RZVH</strong>. Besides pageviews, the converter sends a few usage events: <code>return_selected</code>, <code>file_opened</code>, <code>file_parse_error</code>, <code>step_reached</code>, <code>validation_failed</code>, <code>validation_passed</code>, <code>xml_downloaded</code>, and <code>start_fresh</code>. They carry only the return type, the step number, an error count, a general error category, and, for <code>validation_failed</code>, the name of the first field that failed (one of the converter’s own column or form-field names, such as <code>sin</code> or <code>tx-email</code>; anything else, including your own column headers, is sent as <code>other</code>). They never include spreadsheet cells, the values you type into filing fields, your column headers, file names, SINs, names, or amounts. Google can receive the page address, rough location, device and browser details, and a client identifier stored in cookies (such as <code>_ga</code>). Google’s policy is at <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>.</p>
+    <p><strong>Google Analytics 4.</strong> Pages load Google’s tag from <code>www.googletagmanager.com</code> with measurement ID <strong>G-E2F5Q3RZVH</strong>. Besides pageviews, the converter sends a few usage events: <code>return_selected</code>, <code>file_opened</code>, <code>file_parse_error</code>, <code>step_reached</code>, <code>validation_failed</code>, <code>validation_passed</code>, <code>xml_downloaded</code>, <code>start_fresh</code>, <code>sample_loaded</code>, <code>reminder_added</code>, and <code>intent_selected</code>. They carry only the return type, the step number, an error count, a general error category, whether the opened file was the built-in sample (<code>is_sample</code>, true or false), where a sample was loaded from (<code>page</code>: <code>home</code> or <code>landing</code>), the answer to the optional “What brings you here?” question (<code>intent</code>: <code>filing_now</code>, <code>exploring_format</code>, or <code>for_client</code>), and, for <code>validation_failed</code>, the name of the first field that failed (one of the converter’s own column or form-field names, such as <code>sin</code> or <code>tx-email</code>; anything else, including your own column headers, is sent as <code>other</code>). They never include spreadsheet cells, the values you type into filing fields, your column headers, file names, SINs, names, or amounts. Google can receive the page address, rough location, device and browser details, and a client identifier stored in cookies (such as <code>_ga</code>). Google’s policy is at <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>.</p>
 
     <p><strong>Google Fonts.</strong> Pages request the IBM Plex Sans and IBM Plex Mono fonts from <code>fonts.googleapis.com</code> and <code>fonts.gstatic.com</code>. Your browser sends that request, including your IP address, to Google.</p>
 

@@ -132,6 +132,7 @@ function resetAll() {
   headers = [];
   xmlOutput = '';
   columnMap = {};
+  setDemoMode(false);
   document.getElementById('file-info').classList.add('hidden');
   document.getElementById('file-input').value = '';
   goToStep(1);
@@ -148,7 +149,9 @@ function onReturnTypeChange() {
   // Update step 1 description + sample link
   const step1Data = { T4: 'T4 payroll', T5018: 'T5018 sub-contractor payment', NR4: 'NR4 non-resident payment', T1204: 'T1204 payment' };
   document.querySelector('#step-1 .card > p').textContent =
-    `Choose the return, then open the .xlsx or .csv file with your ${step1Data[rt]} data.`;
+    `Open the .xlsx or .csv file with your ${step1Data[rt]} data.`;
+  document.getElementById('return-current').textContent = config.label;
+  renderNeeds(rt);
   const sampleLink = document.getElementById('sample-link');
   sampleLink.href = `templates/${rt}_Sample.csv`;
   sampleLink.textContent = `Download the ${rt} sample spreadsheet`;
@@ -221,13 +224,18 @@ function handleFile(file) {
   }
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = e => openWorkbook(e.target.result, file.name, ext, false);
+  reader.readAsArrayBuffer(file);
+}
+
+// Parses the file bytes and moves to Step 2. isSample: the one-click sample (fetched, not chosen by the user).
+function openWorkbook(buffer, name, ext, isSample) {
     try {
-      const bytes = new Uint8Array(e.target.result);
+      const bytes = new Uint8Array(buffer);
       // SheetJS reads UTF-8 and UTF-16LE CSVs itself but not UTF-16BE, so decode that one here
       const wb = bytes[0] === 0xFE && bytes[1] === 0xFF
         ? XLSX.read(new TextDecoder('utf-16be').decode(bytes), { type: 'string' })
-        : XLSX.read(e.target.result, { type: 'array' });
+        : XLSX.read(buffer, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       Object.keys(ws).forEach(k => { if (k[0] !== '!') keepDigitText(ws[k], ext === 'csv'); }); // keep SIN/BN/ZIP leading zeros
       const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
@@ -239,7 +247,8 @@ function handleFile(file) {
       badCells.clear();
 
       const info = document.getElementById('file-info');
-      info.innerHTML = `<i data-lucide="check-circle" class="icon-sm"></i> ${file.name} &mdash; ${parsedData.length} rows, ${headers.length} columns`;
+      info.innerHTML = `<i data-lucide="check-circle" class="icon-sm"></i> ${escapeXml(name)} &mdash; ${parsedData.length} rows, ${headers.length} columns`;
+      setDemoMode(isSample);
       info.classList.remove('hidden');
       document.getElementById('step1-actions').classList.remove('hidden');
       if (window.lucide) window.lucide.createIcons();
@@ -247,12 +256,10 @@ function handleFile(file) {
       autoMapColumns();
       buildPreview();
       goToStep(2);
-      track('file_opened', { return_type: getSelectedReturnType() });
+      track('file_opened', { return_type: getSelectedReturnType(), is_sample: isSample });
     } catch (err) {
       showFileError('Error reading file: ' + err.message, 'read_error');
     }
-  };
-  reader.readAsArrayBuffer(file);
 }
 
 // ============================================================
@@ -299,6 +306,7 @@ function buildPreview() {
   const config = getReturnConfig();
   const tbody = document.getElementById('mapping-tbody');
   tbody.innerHTML = '';
+  document.getElementById('mapping-errors').classList.add('hidden'); // a new file or return starts with a clean slate
 
   config.fields.forEach(field => {
     const tr = document.createElement('tr');
@@ -317,6 +325,13 @@ function buildPreview() {
       tdField.append(tag, box[1]);
     } else {
       tdField.textContent = field.label;
+    }
+    if (field.required) {
+      const star = document.createElement('span');
+      star.className = 'req';
+      star.title = 'Required';
+      star.textContent = '*';
+      tdField.appendChild(star);
     }
     tr.appendChild(tdField);
 
@@ -591,10 +606,27 @@ function checkRecipientBN(raw, program, placeholder, who, rowNum, warnings, erro
 // ============================================================
 // MASTER GENERATE FUNCTION — dispatches to return-type handler
 // ============================================================
+// Without these columns every slip would silently get a placeholder or 0.00 (e.g. a file for another return)
+function unmappedRequired() {
+  return getReturnConfig().fields.filter(f => f.required && !(columnMap[f.key] >= 0));
+}
+
+// Step 2 "Continue": stop here, not after the user has filled in Step 3, when a required column is unmapped
+function continueFromMapping() {
+  const unmapped = unmappedRequired();
+  const box = document.getElementById('mapping-errors');
+  box.innerHTML = unmapped.length
+    ? `<h4>Map ${unmapped.length === 1 ? 'this required field' : `these ${unmapped.length} required fields`} before you continue</h4>` +
+      `<ul>${unmapped.map(f => `<li>${escapeXml(f.label)}</li>`).join('')}</ul>` +
+      `<p>Pick the matching column in the "Your Excel Column" dropdown above. If none fits, add that column to your spreadsheet and open it again, or check that ${getSelectedReturnType()} is the right return for this file.</p>`
+    : '';
+  box.classList.toggle('hidden', !unmapped.length);
+  if (!unmapped.length) goToStep(3);
+}
+
 function generateXML() {
   const config = getReturnConfig();
-  // Without these columns every slip would silently get a placeholder or 0.00 (e.g. a file for another return)
-  const unmapped = config.fields.filter(f => f.required && !(columnMap[f.key] >= 0));
+  const unmapped = unmappedRequired();
   if (unmapped.length) {
     clearFieldErrors();
     showGenerateErrors(unmapped.map(f => `No column is mapped to "${f.label}". Map it in Step 2, or check that ${getSelectedReturnType()} is the right return for this file.`));
@@ -1392,7 +1424,7 @@ function saveFilingDetails() {
   const data = {};
   SAVED_FIELDS.forEach(id => {
     const el = document.getElementById(id);
-    if (el) data[id] = el.value;
+    if (el && !isDemoValue(id, el.value)) data[id] = el.value;
   });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
@@ -1460,6 +1492,205 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   restoreFilingDetails();
 });
+
+// ============================================================
+// ONE-CLICK SAMPLE DATA
+// templates/<RT>_Sample.csv is fetched and opened like a user's file. Step 3 gets obviously fake demo
+// details, but only in empty fields; they are never saved, and opening a real file clears them.
+// ============================================================
+function demoDetails(rt) {
+  return {
+    'tx-bn': '123456789MM0001', 'tx-name': 'DEMO Transmitter Inc', 'tx-ref': 'DEMO1', 'tx-contact': 'Demo Contact',
+    'tx-phone': '555-555-0100', 'tx-email': 'demo@example.com',
+    'py-bn': rt === 'T5018' ? '123456789RZ0001' : '123456789RP0001', 'py-name': 'DEMO Payer Ltd',
+    'py-addr': '1 Demo Street', 'py-city': 'Demo City', 'py-prov': 'ON', 'py-postal': 'K1A 0B1',
+    'py-contact': 'Demo Contact', 'py-phone': '555-555-0100', 'nr4-acct': 'NRA123456',
+    't5018-fiscal-day': '31', 't5018-fiscal-month': '12',
+    't5018-fiscal-year': document.getElementById('tax-year').value || String(new Date().getFullYear() - 1),
+  };
+}
+let demoFilled = {}; // field id -> the demo value we put there
+
+function isDemoValue(id, value) {
+  return demoFilled[id] === value;
+}
+
+function fillDemoDetails(rt) {
+  for (const [id, v] of Object.entries(demoDetails(rt))) {
+    const el = document.getElementById(id);
+    if (el.value.trim() && demoFilled[id] !== el.value) continue; // keep what the user typed or restored
+    el.value = demoFilled[id] = v;
+  }
+}
+
+function setDemoMode(on) {
+  document.getElementById('demo-banner').classList.toggle('hidden', !on);
+  if (on) return;
+  for (const [id, v] of Object.entries(demoFilled)) {
+    const el = document.getElementById(id);
+    if (el.value === v) el.value = '';
+  }
+  demoFilled = {};
+}
+
+// page: 'home' (button in Step 1) or 'landing' (a generator page's /?return=RT&sample=1 link)
+function loadSample(rt, page) {
+  const sel = document.getElementById('return-type');
+  if (sel.value !== rt) { sel.value = rt; onReturnTypeChange(); }
+  showFileError('');
+  return fetch(`templates/${rt}_Sample.csv`)
+    .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer(); })
+    .then(buf => {
+      fillDemoDetails(rt);
+      track('sample_loaded', { return_type: rt, page });
+      openWorkbook(buf, `${rt}_Sample.csv (sample data)`, 'csv', true);
+    })
+    .catch(() => showFileError(`Couldn't load the ${rt} sample data. Check your connection, or download the sample spreadsheet below and open it.`));
+}
+
+// ============================================================
+// STEP 1: WHAT YOU'LL NEED + RETURN SUMMARY
+// Payer accounts: canada.ca T4 Summary / T1204 Summary (RP), T5018 Summary (RZ); NR account format: T619 2026 spec.
+// ============================================================
+const NEEDS = {
+  T4: ["The employer's 15-character payroll account number (RP), for example 123456789RP0001.",
+       'One row per employee: name, SIN and the T4 box amounts.'],
+  T5018: ["The payer's 15-character account number on the RZ program, for example 123456789RZ0001.",
+          'One row per subcontractor: name, BN or SIN, and the amount paid.',
+          'The end date of your reporting period (calendar year or fiscal period).'],
+  NR4: ['Your non-resident (NR) account number: 3 letters + 6 digits, as on your NR76 statement of account.',
+        'One row per recipient: name, foreign tax ID, country of residence, income code, gross income and tax withheld.'],
+  T1204: ["The department's 15-character payroll account number (RP), for example 123456789RP0001, and its mailing address.",
+          'One row per contractor: name, BN or SIN, amount paid, business type, whether it was for services only, and address.'],
+};
+const DUE_NOTES = {
+  T5018: " if you report by calendar year; with a fiscal period it's 6 months after the period ends",
+  NR4: '; estates and trusts have 90 days after their tax year ends',
+};
+const WHEN_TO_FILE_URL = 'https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/file-information-returns-slip-summaries/when-to-file.html';
+
+function renderNeeds(rt) {
+  const { year, due } = nextFilingDue(rt);
+  const items = [...NEEDS[rt],
+    'For the T619 transmitter record: the CRA account number you will sign in to Internet File Transfer with (usually a 15-character business number).',
+    'A contact name and phone number for the transmitter and for the payer, and an email for the transmitter.'];
+  document.getElementById('needs').innerHTML =
+    `<h4>What you'll need</h4><ul>${items.map(i => `<li>${escapeXml(i)}</li>`).join('')}</ul>` +
+    `<p class="needs-due">The ${rt} return for ${year} is due ${formatDue(due)}${DUE_NOTES[rt] || ''} ` +
+    `(<a href="${WHEN_TO_FILE_URL}" target="_blank" rel="noopener">CRA due dates</a>). ` +
+    `<button type="button" class="link-btn" onclick="addReminder()">Remind me 2 weeks before</button></p>`;
+}
+
+function showReturnSelect() {
+  document.getElementById('return-select-group').classList.remove('hidden');
+  document.getElementById('return-type').focus();
+}
+
+// ============================================================
+// FILING DEADLINE REMINDER (.ics, built in the browser, no personal data)
+// canada.ca "When to file information returns": T4 last day of February, T1204 March 31, T5018 6 months after
+// the reporting period (calendar year assumed); NR4 March 31 (canada.ca "Get ready to file").
+// A due date on a Saturday, Sunday or CRA public holiday moves to the next business day.
+// ============================================================
+const DAY_MS = 864e5;
+const DUE_DATES = { T4: [2, 0], NR4: [2, 31], T1204: [2, 31], T5018: [5, 30] }; // [month index, day]; day 0 = last day of the month before
+
+function easterUTC(y) { // anonymous Gregorian algorithm
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4,
+        f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30,
+        i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const n = h + l - 7 * m + 114;
+  return Date.UTC(y, Math.floor(n / 31) - 1, (n % 31) + 1);
+}
+
+// Due date (YYYY-MM-DD) of the return for calendar year `year`.
+// ponytail: only the holidays that can follow these dates (Good Friday, Easter Monday, Canada Day); add more if a date changes
+function filingDueDate(rt, year) {
+  const [mo, dy] = DUE_DATES[rt];
+  const easter = easterUTC(year + 1);
+  const holidays = [easter - 2 * DAY_MS, easter + DAY_MS, Date.UTC(year + 1, 6, 1)];
+  let t = Date.UTC(year + 1, mo, dy);
+  while ([0, 6].includes(new Date(t).getUTCDay()) || holidays.includes(t)) t += DAY_MS;
+  return new Date(t).toISOString().slice(0, 10);
+}
+
+// The next deadline on or after `today` (local date): { year: calendar year reported, due: 'YYYY-MM-DD' }
+function nextFilingDue(rt, today = new Date()) {
+  const ymd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const year = filingDueDate(rt, today.getFullYear() - 1) >= ymd ? today.getFullYear() - 1 : today.getFullYear();
+  return { year, due: filingDueDate(rt, year) };
+}
+
+function formatDue(iso) { // 'Monday, March 1, 2027'
+  return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+}
+
+// All-day event 2 weeks before the due date, with a 9:00 alarm that day. Generic text only.
+function reminderICS(rt, today = new Date()) {
+  const { year, due } = nextFilingDue(rt, today);
+  const ymd = t => new Date(t).toISOString().slice(0, 10).replace(/-/g, '');
+  const start = Date.parse(due) - 14 * DAY_MS;
+  const text = s => s.replace(/[\;,]/g, '\\$&');
+  const summary = `File your ${rt} information return: due ${formatDue(due)}`;
+  const lines = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//TaxXML.ca//Deadline reminder//EN', 'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `UID:${rt.toLowerCase()}-${year}-${ymd(start)}@taxxml.ca`,
+    `DTSTAMP:${today.toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`,
+    `DTSTART;VALUE=DATE:${ymd(start)}`,
+    `DTEND;VALUE=DATE:${ymd(start + DAY_MS)}`,
+    `SUMMARY:${text(summary)}`,
+    `DESCRIPTION:${text(`Your ${rt} information return for ${year} is due to the CRA by ${formatDue(due)}${DUE_NOTES[rt] || ''}.`)}` +
+      `\\n\\nMake the XML file: https://taxxml.ca/?return=${rt}#converter\\n\\nCheck the due date on canada.ca: ${WHEN_TO_FILE_URL}`,
+    `URL:https://taxxml.ca/?return=${rt}#converter`,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${text(summary)}`, 'TRIGGER;RELATED=START:PT9H', 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR',
+  ];
+  return lines.map(l => l.match(/.{1,74}/g).join('\r\n ')).join('\r\n') + '\r\n'; // fold to 75 octets (ASCII only)
+}
+
+function addReminder() {
+  const rt = getSelectedReturnType();
+  const url = URL.createObjectURL(new Blob([reminderICS(rt)], { type: 'text/calendar;charset=utf-8' }));
+  track('reminder_added', { return_type: rt });
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${rt}-filing-deadline.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+// ============================================================
+// HERO INTENT CHIP: one optional question, asked once per browser session
+// ============================================================
+const INTENTS = ['filing_now', 'exploring_format', 'for_client'];
+const INTENT_KEY = 'taxxml_intent_asked';
+
+function chooseIntent(intent) {
+  if (!INTENTS.includes(intent)) return;
+  track('intent_selected', { intent });
+  dismissIntent();
+}
+
+function dismissIntent() {
+  try { sessionStorage.setItem(INTENT_KEY, '1'); } catch (e) { /* storage blocked: just hide */ }
+  document.getElementById('intent').classList.add('hidden');
+}
+
+// ---- Page load ----
+{
+  let asked = false;
+  try { asked = !!sessionStorage.getItem(INTENT_KEY); } catch (e) { /* ask */ }
+  document.getElementById('intent').classList.toggle('hidden', asked);
+  document.getElementById('return-current').textContent = getReturnConfig().label;
+  renderNeeds(getSelectedReturnType());
+  // Generator pages link to /?return=<RT>&sample=1#converter
+  const q = new URLSearchParams(location.search);
+  const rt = q.get('return');
+  if (q.get('sample') === '1' && Object.prototype.hasOwnProperty.call(RETURN_TYPES, rt)) loadSample(rt, 'landing');
+}
 
 // ============================================================
 // DEV TOOL — localhost only, invisible on production
