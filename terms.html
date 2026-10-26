@@ -20,15 +20,8 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
 
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E2F5Q3RZVH"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-E2F5Q3RZVH');
-  </script>
+  <!-- Google tag (gtag.js), loaded by js/ga.js except on local copies -->
+  <script src="/js/ga.js"></script>
 </head>
 <body>
   <header id="site-header">
@@ -38,7 +31,7 @@
       </a>
       <nav>
         <a href="/privacy">Privacy</a>
-        <a href="/#converter" class="nav-cta">Start Converting</a>
+        <a href="/#converter" class="nav-cta" data-cta="nav">Start Converting</a>
       </nav>
     </div>
   </header>
@@ -96,7 +89,7 @@
       </div>
       <div class="footer-links">
         <h4>Resources</h4>
-        <a href="/#converter">XML Converter</a>
+        <a href="/#converter" data-cta="footer">XML Converter</a>
         <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" class="footer-ift">Submit to CRA (IFT) &nearr;</a>
       </div>
       <div class="footer-links">

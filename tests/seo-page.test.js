@@ -21,8 +21,8 @@ for (const code of ['T4', 'NR4', 'T5018', 'T1204']) {
   assert(html.includes(`<link rel="canonical" href="${URL}">`), msg('canonical'));
   assert(html.includes(`<meta property="og:url" content="${URL}">`), msg('og:url'));
   assert(html.includes('<link rel="icon" type="image/svg+xml" href="/favicon.svg">'), msg('favicon'));
-  assert(/<a href="\/#converter" class="btn btn-primary[^"]*">/.test(html), msg('CTA button to the converter'));
-  assert(html.includes("gtag('config', 'G-E2F5Q3RZVH')"), msg('same GA4 tag as the other pages'));
+  assert(/<a href="\/#converter" class="btn btn-primary[^"]*"/.test(html), msg('CTA button to the converter'));
+  assert(html.includes('<script src="/js/ga.js"></script>'), msg('same GA4 loader as the other pages'));
 
   // Disclaimer near the CTA points at CRA's XML specs; liability release in the footer links /terms
   const disclaimer = html.match(/<div id="disclaimer"[^>]*>([\s\S]*?)<\/div>/);

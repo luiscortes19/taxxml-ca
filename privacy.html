@@ -20,15 +20,8 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
 
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-E2F5Q3RZVH"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-E2F5Q3RZVH');
-  </script>
+  <!-- Google tag (gtag.js), loaded by js/ga.js except on local copies -->
+  <script src="/js/ga.js"></script>
 </head>
 <body>
   <header id="site-header">
@@ -38,7 +31,7 @@
       </a>
       <nav>
         <a href="/terms">Terms</a>
-        <a href="/#converter" class="nav-cta">Start Converting</a>
+        <a href="/#converter" class="nav-cta" data-cta="nav">Start Converting</a>
       </nav>
     </div>
   </header>
@@ -75,7 +68,17 @@
 
     <p><strong>GitHub Pages.</strong> The site is static files hosted on GitHub Pages. Loading a page, stylesheet, image, or sample CSV template means GitHub receives an ordinary request for that file, including your IP address and browser. Those requests do not contain your spreadsheet.</p>
 
-    <p><strong>Google Analytics 4.</strong> Pages load Google’s tag from <code>www.googletagmanager.com</code> with measurement ID <strong>G-E2F5Q3RZVH</strong>. Besides pageviews, the converter sends a few usage events: <code>return_selected</code>, <code>file_opened</code>, <code>file_parse_error</code>, <code>step_reached</code>, <code>validation_failed</code>, <code>validation_passed</code>, <code>xml_downloaded</code>, and <code>start_fresh</code>. They carry only the return type, the step number, an error count, a general error category, and, for <code>validation_failed</code>, the name of the first field that failed (one of the converter’s own column or form-field names, such as <code>sin</code> or <code>tx-email</code>; anything else, including your own column headers, is sent as <code>other</code>). They never include spreadsheet cells, the values you type into filing fields, your column headers, file names, SINs, names, or amounts. Google can receive the page address, rough location, device and browser details, and a client identifier stored in cookies (such as <code>_ga</code>). Google’s policy is at <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>.</p>
+    <p><strong>Google Analytics 4.</strong> Pages load Google’s tag from <code>www.googletagmanager.com</code> with measurement ID <strong>G-E2F5Q3RZVH</strong>. Local copies of the site (<code>localhost</code>, <code>127.0.0.1</code>, or a file opened from disk) don’t load it. Besides pageviews, the site sends a few usage events: <code>return_selected</code>, <code>file_opened</code>, <code>file_parse_error</code>, <code>step_reached</code>, <code>picker_opened</code>, <code>generate_clicked</code>, <code>validation_failed</code>, <code>validation_passed</code>, <code>xml_downloaded</code>, <code>start_fresh</code>, <code>cta_click</code>, and <code>sample_downloaded</code>. They carry only these values:</p>
+    <ul>
+      <li>the return type (<code>return_type</code>);</li>
+      <li>how the return was chosen (<code>source</code>: <code>default</code>, <code>hero</code>, or <code>dropdown</code>);</li>
+      <li>the step number and whether you moved forward, back, or started over (<code>step</code>, <code>direction</code>);</li>
+      <li>an error count and a general error category (<code>error_count</code>, <code>error_category</code>);</li>
+      <li>for <code>validation_failed</code>, the name of the first field that failed (<code>first_error_field</code>). This is one of the converter’s own column or form-field names, such as <code>sin</code> or <code>tx-email</code>. Anything else, including your own column headers, is sent as <code>other</code>;</li>
+      <li>for <code>file_opened</code>: whether the file is one of the site’s own sample templates, worked out on your device (<code>is_sample</code>); a row-count range such as <code>6-20</code> (<code>rows_bucket</code>); and how many required columns weren’t matched automatically (<code>required_unmapped</code>);</li>
+      <li>for <code>cta_click</code>, a short page name such as <code>home</code> or <code>t4</code> (<code>page</code>) and which button or link was clicked, such as <code>nav</code> or <code>hero</code> (<code>cta</code>).</li>
+    </ul>
+    <p>The events never include spreadsheet cells, the values you type into filing fields, your column headers, file names, SINs, names, or amounts. Opening the site with <code>?internal=1</code> is meant for the site owner’s own testing. It saves the key <strong>taxxml_internal</strong> in this browser’s localStorage (<code>?internal=0</code> removes it), and the browser’s hits then carry <code>traffic_type</code> set to <code>internal</code> so they can be left out of reports. <code>?debug_mode=1</code> adds <code>debug_mode</code> to that page’s hits for Google’s debugging view. Google can receive the page address, rough location, device and browser details, and a client identifier stored in cookies (such as <code>_ga</code>). Google’s policy is at <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>.</p>
 
     <p><strong>Google Fonts.</strong> Pages request the IBM Plex Sans and IBM Plex Mono fonts from <code>fonts.googleapis.com</code> and <code>fonts.gstatic.com</code>. Your browser sends that request, including your IP address, to Google.</p>
 
@@ -112,7 +115,7 @@
       </div>
       <div class="footer-links">
         <h4>Resources</h4>
-        <a href="/#converter">XML Converter</a>
+        <a href="/#converter" data-cta="footer">XML Converter</a>
         <a href="https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html" target="_blank" rel="noopener" class="footer-ift">Submit to CRA (IFT) &nearr;</a>
       </div>
       <div class="footer-links">
