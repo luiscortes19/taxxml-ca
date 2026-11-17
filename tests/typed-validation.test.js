@@ -288,6 +288,74 @@ for (const [rt, field, n, extra] of [['T4', 'empe_snm', 20], ['T4', 'empe_gvn_nm
   assert.deepStrictEqual([...t.run(`cellEditor(0, ${t.col('svc_only')})`).matchAll(/<option value="([^"]*)"/g)].map(m => m[1]), ['Yes', 'No']);
 }
 
+// ---- editing in the table: a code cell's select stays open in WebKit, which fires focusout on the td as its select takes focus ----
+{
+  const a = open('T4', { empt_prov_cd: 'CAN' });
+  const body = a.el('editor-tbody');
+  const out = (target, relatedTarget) => body.dispatchEvent({ type: 'focusout', target, relatedTarget });
+  const key = (target, k) => body.dispatchEvent({ type: 'keydown', key: k, target, preventDefault() {} });
+  // a td of the editor, enough of one for startEdit / stopEdit; its select focuses the way WebKit does
+  const cell = (k, webkit = true) => {
+    const td = { dataset: { r: '0', c: String(a.col(k)), f: k }, textContent: '', className: '', title: '', select: null,
+      set innerHTML(h) {
+        const m = h.match(/<option value="([^"]*)" selected/);
+        td.select = /^<select/.test(h) ? { tagName: 'SELECT', value: m ? m[1] : '', closest: () => td, focus: () => webkit && out(td, td.select) } : null;
+      },
+      querySelector: s => (s === 'select' ? td.select : null), contains: n => n === td || (!!n && n === td.select),
+      closest: () => td, focus() {}, removeAttribute() {} };
+    return td;
+  };
+  const prov = () => plain(a.run(`cellState(0, 'empt_prov_cd')`)).cls;
+  const td = cell('empt_prov_cd');
+  a.ctx.td = td;
+  a.run('startEdit(td)');
+  assert(a.run('editing') && a.run('editing.td') === td, 'focusout into its own select keeps the edit open');
+  assert(td.querySelector('select'), 'the select is still in the cell');
+  td.select.value = 'ON';
+  body.dispatchEvent({ type: 'change', target: td.select });
+  assert.strictEqual(a.run('editing'), null, 'picking a code commits');
+  assert.strictEqual(a.run(`parsedData[0][${a.col('empt_prov_cd')}]`), 'ON');
+  assert.strictEqual(prov(), '', 'the error clears');
+  // a real blur away from the cell still commits; to nowhere (null) too
+  for (const away of [{ tagName: 'BUTTON' }, null]) {
+    a.run(`editCell(0, ${a.col('empt_prov_cd')}, 'CAN')`);
+    a.run('startEdit(td)');
+    td.select.value = 'QC';
+    out(td.select, away);
+    assert.strictEqual(a.run('editing'), null, `focusout to ${away && away.tagName} closes`);
+    assert.strictEqual(a.run(`parsedData[0][${a.col('empt_prov_cd')}]`), 'QC');
+  }
+  // Escape cancels, Enter commits, on the select
+  a.run('startEdit(td)');
+  td.select.value = 'AB';
+  key(td.select, 'Escape');
+  assert.strictEqual(a.run('editing'), null);
+  assert.strictEqual(a.run(`parsedData[0][${a.col('empt_prov_cd')}]`), 'QC', 'Escape keeps the old value');
+  a.run('startEdit(td)');
+  td.select.value = 'AB';
+  key(td.select, 'Enter');
+  assert.strictEqual(a.run(`parsedData[0][${a.col('empt_prov_cd')}]`), 'AB', 'Enter commits');
+  // typed cells: live preview on input, commit on blur, unchanged
+  const m = cell('empt_incamt');
+  a.ctx.m = m;
+  a.ctx.document.createRange = () => ({ selectNodeContents() {}, collapse() {} }); // startEdit puts the caret at the end
+  a.ctx.getSelection = () => ({ removeAllRanges() {}, addRange() {} });
+  a.run('startEdit(m)');
+  assert(a.run('editing.td') === m && !a.run('editing.select'));
+  m.textContent = '60000X';
+  body.dispatchEvent({ type: 'input', target: m });
+  assert.strictEqual(m.className, 'cell-error', 'live preview while typing');
+  assert.strictEqual(a.run(`parsedData[0][${a.col('empt_incamt')}]`), '100', 'preview changes nothing');
+  out(m, null);
+  assert.strictEqual(a.run('editing'), null, 'blur commits a typed cell');
+  assert.strictEqual(plain(a.run(`cellState(0, 'empt_incamt')`)).cls, 'cell-error');
+  a.run('startEdit(m)');
+  m.textContent = '60000.00';
+  out(m, { tagName: 'BUTTON' });
+  assert.strictEqual(a.run(`parsedData[0][${a.col('empt_incamt')}]`), '60000.00');
+  assert.strictEqual(plain(a.run(`cellState(0, 'empt_incamt')`)).cls, '');
+}
+
 // ---- Generate is blocked by any error, for every return; warnings never block ----
 for (const [rt, field, value] of [['T4', 'empt_prov_cd', 'CAN'], ['T4', 'cpp_cntrb_amt', '1e5'], ['T1204', 'amount', '--5'], ['T1204', 'svc_only', 'maybe'],
   ['T5018', 'sbctrcr_amt', '12,34,5'], ['T5018', 'rcpnt_type', 'Llc'], ['NR4', 'ste_cd', 'XX'], ['NR4', 'gro_1_incamt', '$'], ['NR4', 'fgn_pstl_cd', 'AB#1']]) {
