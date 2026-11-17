@@ -20,7 +20,7 @@ for (const page of ['terms.html', 'privacy.html']) {
   for (const e of events) assert(privacy.includes(`<code>${e}</code>`), `privacy.html names event ${e}`);
   // ...and every event parameter, by name
   for (const p of ['return_type', 'source', 'step', 'direction', 'error_count', 'error_category', 'first_error_field',
-                   'is_sample', 'rows_bucket', 'required_unmapped', 'page', 'cta', 'traffic_type', 'debug_mode'])
+                   'is_sample', 'rows_bucket', 'required_unmapped', 'page', 'cta', 'traffic_type', 'debug_mode', 'field', 'method'])
     assert(privacy.includes(`<code>${p}</code>`), `privacy.html names parameter ${p}`);
 }
 
