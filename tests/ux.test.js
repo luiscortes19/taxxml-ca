@@ -14,21 +14,20 @@ const csv = s => Buffer.from(s);
   assert(xml.includes('<gvn_nm>John Q</gvn_nm>'));
 }
 
-{ // errors name the row, the column and the fix; the preview cell is marked
+{ // errors name the row, the column and the fix; the editor marks the cells as soon as the file opens
   const app = createApp({ returnType: 'T4' });
   app.loadFile('t4.csv', csv('Last Name,First Name,SIN,Box 14 - Employment Income\r\nDoe,John,46454286,100\r\nRoe,Jane,123456789,100\r\n'));
+  assert.strictEqual((app.el('editor-tbody').innerHTML.match(/class="cell-error"/g) || []).length, 2, app.el('editor-tbody').innerHTML);
   app.setDetails();
   assert.strictEqual(app.generate(), '');
   const html = app.errors();
   assert(/Row 2, column &quot;SIN&quot;/.test(html), html);
   assert(/8 digits/.test(html) && /format the column as Text/i.test(html), html);
   assert(/Row 3, column &quot;SIN&quot;/.test(html) && /checksum/.test(html), html);
-  const tbody = app.el('preview-tbody').innerHTML;
-  assert.strictEqual((tbody.match(/class="cell-error"/g) || []).length, 2, tbody);
-  // fixing the mapping/data and regenerating clears the marks
-  app.run('parsedData[0][2] = "046454286"; parsedData[1][2] = "130692544"');
+  // fixing the cells in the editor clears the marks and unblocks Generate
+  app.run('editCell(0, 2, "046454286"); editCell(1, 2, "130692544"); renderEditor()');
+  assert(!/cell-error/.test(app.el('editor-tbody').innerHTML));
   assert(app.generate().includes('<sin>046454286</sin>'));
-  assert(!/cell-error/.test(app.el('preview-tbody').innerHTML));
 }
 
 { // NR4 row errors also point at the column

@@ -34,7 +34,7 @@ const shown = (a, id) => !a.el(id).classList.contains('hidden');
     assert.deepStrictEqual(a.named('file_opened'), [{ return_type: rt, is_sample: true, rows_bucket: '2-5', required_unmapped: 0 }]);
     assert.deepStrictEqual(a.named('return_selected'), [{ return_type: rt, source: 'default' }]);
     assert(a.events.findIndex(e => e[0] === 'return_selected') < a.events.findIndex(e => e[0] === 'file_opened'));
-    a.run('continueFromMapping()');
+    a.run('continueFromEditor()');
     assert.strictEqual(a.run('currentStep'), 3, `${rt}: required columns of the sample are mapped`);
     assert(/demo/i.test(a.el('tx-name').value), `${rt}: demo transmitter name is obviously fake`);
     const xml = a.generate();
@@ -84,24 +84,24 @@ const shown = (a, id) => !a.el(id).classList.contains('hidden');
     assert.deepStrictEqual(a.named('sample_loaded'), [], search);
   }
 
-  // ---- 2. Step 2 Continue blocks on unmapped required columns ----
+  // ---- 2. Step 2 Continue blocks on required fields with no column ----
   {
     const a = app('T4');
     a.loadFile('t4.csv', Buffer.from('Nom,Prenom,Pay\r\nDoe,John,100\r\n'));
-    a.run('continueFromMapping()');
+    a.run('continueFromEditor()');
     assert.strictEqual(a.run('currentStep'), 2, 'blocked on Step 2');
-    const box = a.el('mapping-errors');
-    assert(shown(a, 'mapping-errors'));
+    const box = a.el('editor-errors');
+    assert(shown(a, 'editor-errors'));
     for (const l of ['Last Name (Box 12)', 'SIN (Box 12)', 'Employment Income (Box 14)']) assert(box.innerHTML.includes(l), `lists ${l}: ${box.innerHTML}`);
-    assert(/Your Excel Column/.test(box.innerHTML), 'says how to fix');
-    a.run('columnMap.empe_snm = 0; columnMap.sin = 1; columnMap.empt_incamt = 2; continueFromMapping()');
+    assert(/dropdown at the top of the column/.test(box.innerHTML), 'says how to fix');
+    a.run('columnMap.empe_snm = 0; columnMap.sin = 1; columnMap.empt_incamt = 2; continueFromEditor()');
     assert.strictEqual(a.run('currentStep'), 3);
-    assert(!shown(a, 'mapping-errors'), 'errors cleared once mapped');
+    assert(!shown(a, 'editor-errors'), 'errors cleared once mapped');
   }
-  { // required fields are starred in the mapping table
+  { // required fields are starred in the table editor's header
     const a = app('T5018');
     a.loadFile('t.csv', Buffer.from('Recipient Name,Recipient BN,Subcontractor Payments\r\nAcme,123456789,100\r\n'));
-    const stars = a.created.filter(e => e.className === 'req' && e.textContent === '*').length;
+    const stars = (a.el('editor-thead').innerHTML.match(/class="req"/g) || []).length;
     assert.strictEqual(stars, 3, 'T5018 has 3 required fields');
   }
 

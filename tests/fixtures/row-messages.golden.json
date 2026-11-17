@@ -1,0 +1,108 @@
+{
+  "T4_errors": {
+    "xmlSha1": null,
+    "errors": [
+      "Row 2, column &quot;SIN&quot; (John Doe): SIN &quot;46454286&quot; has 8 digits; a SIN must be 9 digits. If your spreadsheet dropped a leading zero, format the column as Text and re-open the file.",
+      "Row 3, column &quot;SIN&quot; (Jane Roe): SIN &quot;123456789&quot; fails the SIN checksum. Check it for a typo.",
+      "Row 4, column &quot;SIN&quot; (Poe): SIN &quot;150000000&quot; fails the SIN checksum. Check it for a typo.",
+      "Row 5, column &quot;SIN&quot; (Solo): SIN &quot;12345678901&quot; has 11 digits; a SIN must be 9 digits. If your spreadsheet dropped a leading zero, format the column as Text and re-open the file."
+    ],
+    "warnings": []
+  },
+  "T4_warnings": {
+    "xmlSha1": "786406fae53022386cfb8124ea0f637c97643c69",
+    "errors": [],
+    "warnings": [
+      "Row 2: &quot;John Doe&quot; has no SIN — using 000000000",
+      "Row 3: &quot;Jane Roe&quot; province of employment not specified, defaulting to ON",
+      "Row 5: &quot;Solo &quot; province of employment not specified, defaulting to ON"
+    ]
+  },
+  "T4_xlsx_number": {
+    "xmlSha1": "37bceb22c22730365e6754eb1747849c2de18026",
+    "errors": [],
+    "warnings": [
+      "Row 2: &quot;John Doe&quot; SIN 46454286 was stored as a number, so the leading zero was restored: 046454286. Check it."
+    ]
+  },
+  "T4_xlsx_short": {
+    "xmlSha1": null,
+    "errors": [
+      "Row 2, column &quot;SIN&quot; (Max Moe): SIN &quot;1234567&quot; fails the SIN checksum. Check it for a typo."
+    ],
+    "warnings": []
+  },
+  "T1204_errors": {
+    "xmlSha1": null,
+    "errors": [
+      "Row 2, column &quot;Business Type&quot; (Acme): business type &quot;Llc&quot; isn&apos;t recognized. Use Individual (or Sole proprietor), Corporation, Partnership, or the CRA code 1, 3 or 4.",
+      "Row 3, column &quot;Vendor BN&quot; (Jo Doe): SIN &quot;46454286&quot; has 8 digits; a SIN must be 9 digits. If your spreadsheet dropped a leading zero, format the column as Text and re-open the file.",
+      "Row 4, column &quot;Vendor BN&quot; (Beta Corp): BN &quot;12345&quot; is invalid: use the 15-character BN (9 digits + 2 letters + 4 digits, e.g. 123456789RT0001) or its 9-digit root. Got 5 characters. If your spreadsheet dropped a leading zero, format the column as Text and re-open the file.",
+      "Row 6, column &quot;Business Type&quot; (Gamma): business type &quot;&quot; isn&apos;t recognized. Use Individual (or Sole proprietor), Corporation, Partnership, or the CRA code 1, 3 or 4."
+    ],
+    "warnings": []
+  },
+  "T1204_warnings": {
+    "xmlSha1": "6acf7d9dcc387930bbfe6c729a0654611f835e07",
+    "errors": [],
+    "warnings": [
+      "Row 2: &quot;Jo Doe&quot; has no SIN — using 000000000",
+      "Row 3: &quot;Beta Corp&quot; has no BN — using 000000000RC0000",
+      "Row 4: &quot;Gamma Inc&quot; BN root 123456789 expanded to 123456789RT0001 — confirm the program account"
+    ]
+  },
+  "T5018_errors": {
+    "xmlSha1": null,
+    "errors": [
+      "Row 2, column &quot;Subcontractor BN/SIN&quot; (Jo Doe): SIN &quot;46454286&quot; has 8 digits; a SIN must be 9 digits. If your spreadsheet dropped a leading zero, format the column as Text and re-open the file.",
+      "Row 3, column &quot;Subcontractor BN/SIN&quot; (Beta Corp): BN &quot;12345&quot; is invalid: use the 15-character BN (9 digits + 2 letters + 4 digits, e.g. 123456789RZ0001) or its 9-digit root. Got 5 characters. If your spreadsheet dropped a leading zero, format the column as Text and re-open the file.",
+      "Row 4, column &quot;Subcontractor BN/SIN&quot; (Gamma): BN &quot;12345678&quot; is invalid: use the 15-character BN (9 digits + 2 letters + 4 digits, e.g. 123456789RZ0001) or its 9-digit root. Got 8 characters. If your spreadsheet dropped a leading zero, format the column as Text and re-open the file."
+    ],
+    "warnings": []
+  },
+  "T5018_warnings": {
+    "xmlSha1": "fcf228118924f55fbfe6b877482ae43ecdee43ea",
+    "errors": [],
+    "warnings": [
+      "Row 2: &quot;Jo Doe&quot; has no SIN — using 000000000",
+      "Row 3: &quot;Beta Corp&quot; has no BN — using 000000000RZ0000",
+      "Row 4: &quot;Gamma Inc&quot; BN root 123456789 expanded to 123456789RZ0001 — confirm the program account"
+    ]
+  },
+  "NR4_errors_1_26_3": {
+    "xmlSha1": null,
+    "errors": [
+      "Row 2, column &quot;Recipient Name&quot; (no name): the recipient name is missing.",
+      "Row 3, column &quot;Recipient Type&quot; (Al): recipient type &quot;alien&quot; isn&apos;t recognized. Use Individual, Joint account, Corporation, Other, Government, or 1–5.",
+      "Row 3, column &quot;Country of Residence&quot; (Al): country of residence &quot;NARNIA&quot; must be a 3-letter code (e.g. USA, GBR).",
+      "Row 3, column &quot;Income Code&quot; (Al): income code &quot;ABC&quot; must be 2 digits.",
+      "Row 3, column &quot;Currency&quot; (Al): currency &quot;US&quot; must be a 3-letter code (e.g. CAD, USD).",
+      "Row 3, column &quot;Exemption Code&quot; (Al): exemption code &quot;AB&quot; must be 1 character.",
+      "Row 4, column &quot;Foreign Tax ID&quot; (Bo): the foreign tax ID is missing (CRA requires it).",
+      "Row 5, column &quot;Foreign Tax ID&quot; (Cy): the foreign tax ID is longer than 20 characters."
+    ],
+    "warnings": []
+  },
+  "NR4_errors_1_27_1": {
+    "xmlSha1": null,
+    "errors": [
+      "Row 2, column &quot;Canadian Tax ID&quot; (Al): Canadian tax ID &quot;BADID&quot; must be a 9-digit SIN/TTN/ITN, a 15-character BN (e.g. 123456789RC0001) or a trust account (e.g. T12345678). Leave it blank if the recipient has none."
+    ],
+    "warnings": []
+  },
+  "NR4_number_fssn": {
+    "xmlSha1": null,
+    "errors": [
+      "Row 2, column &quot;Foreign Tax ID&quot; (Al): foreign tax ID &quot;12345678901234567000&quot; was stored as a number and may have been rounded. Format the column as Text, retype it, and re-open the file."
+    ],
+    "warnings": []
+  },
+  "NR4_warnings_1_26_3": {
+    "xmlSha1": "d6909444a2a6f45d0957b21ec78dd849344c2118",
+    "errors": [],
+    "warnings": [
+      "The Canadian Tax ID column is left out: CRA only takes it in files built to the 2027 schema (1-27-1), which this tool makes from December 22, 2026.",
+      "Slips use more than one currency (USD, CAD) — the summary totals add them together as-is. Check them before filing."
+    ]
+  }
+}
