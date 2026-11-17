@@ -37,15 +37,15 @@ function isValidSIN(sin) {
   return sum % 10 === 0;
 }
 
-// SheetJS cell fix-up, run on every cell before sheet_to_json. A numeric cell whose text is all digits keeps
-// that text: always for CSV (the file says exactly what was typed), and for XLSX when the number doesn't
-// round-trip (a 000000000 cell format, a >15-digit ID that lost precision). XLSX numbers shown as plain
-// digits stay numbers so padIdNumber can repair a dropped SIN zero. parseFloat reads digit text the same as
-// the number, and other amounts aren't digits-only ("50000.00", "1,234.56"), so amounts are unaffected.
+// SheetJS cell fix-up, run on every cell before sheet_to_json. For CSV every numeric cell keeps its text: the
+// file says exactly what was typed, and SheetJS's guesses are wrong for us ("--5" becomes the date 37012,
+// "12,34,5" becomes 12345), so the amount and ID checks see the real text. For XLSX a number keeps its digits
+// only when they don't round-trip (a 000000000 cell format, a >15-digit ID that lost precision); numbers shown
+// as plain digits stay numbers so padIdNumber can repair a dropped SIN zero.
 function keepDigitText(cell, fromText = false) {
   if (cell && cell.t === 'n' && typeof cell.w === 'string') {
     const w = cell.w.trim();
-    if (/^\d+$/.test(w) && (fromText || String(cell.v) !== w)) { cell.t = 's'; cell.v = w; }
+    if (fromText || (/^\d+$/.test(w) && String(cell.v) !== w)) { cell.t = 's'; cell.v = w; }
   }
   return cell;
 }
@@ -62,6 +62,70 @@ function padIdNumber(raw) {
 function sinDigits(raw) {
   const s = String(padIdNumber(raw)).trim();
   return /^\d+\.\d*$|^\d(\.\d+)?e[+-]?\d+$/i.test(s) ? s : s.replace(/\D/g, '');
+}
+
+// ---- Field types (source: CRA XML schemas 1-26-3 and 1-27-1, simple.xsd; tests/xsd-types.test.js checks them) ----
+// provinceType: the 13 provinces and territories, US and ZZ (another country). The schema also takes these old
+// aliases, which we don't offer: AL (Alberta), LB (Labrador), MA (Manitoba), NF (Newfoundland), NN (Nunavut),
+// PQ / QU (Quebec), SA (Saskatchewan).
+const PROVINCES = ['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'];
+const T4_PROVINCE_CODES = [...PROVINCES, 'US', 'ZZ'];
+const LEGACY_PROVINCE_CODES = ['AL', 'LB', 'MA', 'NF', 'NN', 'PQ', 'QU', 'SA'];
+// NR4 foreign address ste_cd, forcesProvinceStateType: provinces + stateType (US states and territories) + forcesProvType
+const NR4_STATE_CODES = [...T4_PROVINCE_CODES,
+  ...'AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY PR AS FM GU MH MP PW VI'.split(' '),
+  'AA', 'AE', 'AP'];
+
+// Trimmed, upper-case code as the file gets it ('bc ' -> 'BC')
+function normCode(raw) {
+  return String(raw ?? '').trim().toUpperCase();
+}
+
+// Dollar amount cell -> { value: number | null (blank), error: null | 'not_amount' | 'negative' | 'decimals' | 'too_big' }.
+// digits: digits before the decimal point allowed by the box's decimalNType (decimal10Type -> 8). CRA amounts are
+// unsigned, with cents. Text may have a leading $ and comma thousands separators: 1234, 1,234.56, $1234.5.
+function parseMoney(raw, digits) {
+  let value;
+  if (typeof raw === 'number') {
+    if (!Number.isFinite(raw)) return { value: null, error: 'not_amount' };
+    value = raw;
+  } else {
+    const s = String(raw ?? '').trim();
+    if (!s) return { value: null, error: null };
+    const m = /^(-?)\$?\s*(\d+|\d{1,3}(?:,\d{3})+)?(?:\.(\d*))?$/.exec(s);
+    if (!m || (!m[2] && !m[3])) return { value: null, error: 'not_amount' };
+    if ((m[3] || '').length > 2) return { value: null, error: 'decimals' };
+    value = Number((m[2] || '0').replace(/,/g, '') + '.' + (m[3] || '0')) * (m[1] ? -1 : 1);
+  }
+  if (value < 0) return { value: null, error: 'negative' };
+  if (Math.abs(Math.round(value * 100) - value * 100) > 1e-6) return { value: null, error: 'decimals' };
+  value = Math.round(value * 100) / 100;
+  if (value >= 10 ** digits) return { value: null, error: 'too_big' };
+  return { value, error: null };
+}
+
+// Display only: 1234.5 -> '1,234.50'
+function formatMoney(n) {
+  return n.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// pcType postal / ZIP code as the file gets it (spaces out, upper case): '' when blank, null when it isn't one
+function foreignPostal(raw) {
+  const v = String(raw ?? '').replace(/\s/g, '').toUpperCase();
+  return !v || /^[A-Z0-9-]{1,10}$/.test(v) ? v : null;
+}
+
+// Canadian postal code A1A 1A1 (space optional, any case)
+const CA_POSTAL_PATTERN = /^[A-Z]\d[A-Z] ?\d[A-Z]\d$/i;
+
+// yearType: 1966-2099
+function isTaxYear(y) {
+  return /^(?:20\d{2}|196[6-9]|19[7-9]\d)$/.test(String(y).trim());
+}
+
+function isRealDate(y, m, d) {
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === +y && t.getUTCMonth() === m - 1 && t.getUTCDate() === +d;
 }
 
 // ---- Filing season ----
@@ -114,5 +178,6 @@ function nr4CIN(raw) {
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { BN_PATTERN, NR_ACCT_PATTERN, TRUST_PATTERN, SUBMISSION_REF_PATTERN, REPID_PATTERN, cleanBN, sanitizeBN, isValidSIN, keepDigitText, padIdNumber, sinDigits,
+if (typeof module !== 'undefined') module.exports = { PROVINCES, T4_PROVINCE_CODES, LEGACY_PROVINCE_CODES, NR4_STATE_CODES, normCode, parseMoney, formatMoney,
+  foreignPostal, CA_POSTAL_PATTERN, isTaxYear, isRealDate, BN_PATTERN, NR_ACCT_PATTERN, TRUST_PATTERN, SUBMISSION_REF_PATTERN, REPID_PATTERN, cleanBN, sanitizeBN, isValidSIN, keepDigitText, padIdNumber, sinDigits,
   defaultTaxYear, targetSchema, defaultSubmissionRef, nextSubmissionRef, transmitterAccountTag, nr4CIN };

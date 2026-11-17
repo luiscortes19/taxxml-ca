@@ -25,8 +25,13 @@ assert.strictEqual(keepDigitText(undefined), undefined);
 // CSV cells: digits-only text is kept as typed, even when it round-trips (no guessing at padding later)
 assert.strictEqual(keepDigitText({ t: 'n', v: 46454286, w: '46454286' }, true).v, '46454286');
 assert.strictEqual(keepDigitText({ t: 'n', v: 5000, w: '5000' }, true).v, '5000');
-assert.strictEqual(keepDigitText({ t: 'n', v: 50000, w: '50000.00' }, true).v, 50000);
-assert.strictEqual(keepDigitText({ t: 'n', v: 1234.56, w: '1,234.56' }, true).v, 1234.56);
+// CSV: every number keeps the text as typed, so the amount check sees "--5" or "12,34,5", not SheetJS's guess (37012, 12345)
+assert.strictEqual(keepDigitText({ t: 'n', v: 50000, w: '50000.00' }, true).v, '50000.00');
+assert.strictEqual(keepDigitText({ t: 'n', v: 1234.56, w: '1,234.56' }, true).v, '1,234.56');
+assert.strictEqual(keepDigitText({ t: 'n', v: 37012, w: '--5' }, true).v, '--5');
+assert.strictEqual(keepDigitText({ t: 'n', v: 100000, w: '1e5' }, true).t, 's');
+// XLSX: a real number stays a number
+assert.strictEqual(keepDigitText({ t: 'n', v: 50000, w: '50,000.00' }).v, 50000);
 
 // ---- padIdNumber: only whole 7–8 digit numbers get their zero(s) back ----
 assert.strictEqual(padIdNumber(46454286), '046454286');

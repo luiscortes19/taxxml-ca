@@ -93,15 +93,15 @@ const shown = (a, id) => !a.el(id).classList.contains('hidden');
     const box = a.el('editor-errors');
     assert(shown(a, 'editor-errors'));
     for (const l of ['Last Name (Box 12)', 'SIN (Box 12)', 'Employment Income (Box 14)']) assert(box.innerHTML.includes(l), `lists ${l}: ${box.innerHTML}`);
-    assert(/dropdown at the top of the column/.test(box.innerHTML), 'says how to fix');
+    assert(/Move to CRA column/.test(box.innerHTML), 'says how to fix');
     a.run('columnMap.empe_snm = 0; columnMap.sin = 1; columnMap.empt_incamt = 2; continueFromEditor()');
     assert.strictEqual(a.run('currentStep'), 3);
     assert(!shown(a, 'editor-errors'), 'errors cleared once mapped');
   }
-  { // required fields are starred in the table editor's header
+  { // mandatory CRA columns are badged in the table editor's header
     const a = app('T5018');
     a.loadFile('t.csv', Buffer.from('Recipient Name,Recipient BN,Subcontractor Payments\r\nAcme,123456789,100\r\n'));
-    const stars = (a.el('editor-thead').innerHTML.match(/class="req"/g) || []).length;
+    const stars = (a.el('editor-thead').innerHTML.match(/class="badge badge-mandatory">Mandatory</g) || []).length;
     assert.strictEqual(stars, 3, 'T5018 has 3 required fields');
   }
 

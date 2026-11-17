@@ -156,23 +156,24 @@
 
     <!-- Step 2: Review & edit (table editor) -->
     <div class="wizard-step hidden" id="step-2">
-      <div class="card">
+      <div class="card card-wide">
         <h3>Check and edit your data</h3>
-        <p>Each column of your file is matched to a CRA field. Change a column's field with the dropdown at its top, or drag the <span aria-hidden="true">⠿</span> handle onto another column to swap them. Click a cell to fix it. Your data stays in this browser: edits are never sent anywhere.</p>
+        <p>The top row lists the CRA columns for this return, in CRA order. Under each one is the column of your file that fills it. If one is wrong, drag your column (<span aria-hidden="true">⠿</span>) under the right CRA column, or pick it in the column's “Move to CRA column” dropdown. Click a cell to fix it. Your data stays in this browser: edits are never sent anywhere.</p>
         <div id="editor-missing" class="errors-box ed-missing hidden"></div>
         <p id="editor-status" class="ed-status" role="status" aria-live="polite"></p>
+        <div id="editor-ignored" class="ed-ignored" data-drop="ignore"></div>
         <div class="ed-tools">
           <label class="ed-filter"><input type="checkbox" id="editor-only-problems"> Show only rows with problems</label>
           <button type="button" class="btn btn-ghost" onclick="addRow()">+ Add row</button>
         </div>
         <div class="ed-wrap">
-          <table id="editor-table" class="ed-table" aria-label="Your rows, one column per spreadsheet column" aria-describedby="editor-help">
+          <table id="editor-table" class="ed-table" aria-label="Your rows under the CRA columns" aria-describedby="editor-help">
             <thead id="editor-thead"></thead>
             <tbody id="editor-tbody"></tbody>
           </table>
         </div>
         <div id="editor-pager" class="ed-pager"></div>
-        <p id="editor-help" class="ed-legend"><span class="req">*</span> Required field. Columns set to “Ignored” are left out of the file. Keys: arrows or Tab move between cells, Enter or F2 edits, Enter saves, Escape cancels. Red cells are errors, amber cells are warnings.</p>
+        <p id="editor-help" class="ed-legend"><span class="badge badge-mandatory">Mandatory</span> CRA columns need a column of your file; <span class="badge badge-optional">Optional</span> ones can stay empty. Keys: arrows or Tab move between cells, Enter or F2 edits, Enter saves, Escape cancels; ← and → under a column move it to the previous or next CRA column. Red cells are errors, amber cells are warnings.</p>
         <div id="editor-msgs" class="sr-only"></div>
         <div id="editor-errors" class="errors-box hidden" role="alert"></div>
         <div class="btn-row">
