@@ -14,16 +14,24 @@ let columnMap = {};
 // ============================================================
 // RETURN TYPE REGISTRY
 // ============================================================
+// Field-type table. fields are in CRA order (schema / box order): the Step 2 table's fixed header.
+// type 'money': digits = digits before the decimal point in the box's XSD decimalNType (xsd: the element names, when
+// they aren't the key); type 'code': codes = the choices the editor offers, [value, label]. Checked against the CRA
+// schemas by tests/xsd-types.test.js. Everything else is free text, checked in checkRow.
+const moneyField = digits => ({ type: 'money', digits });
+const provCode = c => [c, { US: 'US (United States)', ZZ: 'ZZ (another country)' }[c] || c];
+const BIZ_TYPE_CODES = [['Individual', 'Individual (sole proprietor)'], ['Corporation', 'Corporation'], ['Partnership', 'Partnership']];
+const EXEMPT_CODES = [['', '(blank) Not exempt'], ['0', '0 Not exempt'], ['1', '1 Exempt']];
 const RETURN_TYPES = {
   T1204: {
     label: 'T1204 — Government Service Contract Payments',
     fields: [
       { key: 'vendor_name',   label: 'Vendor Name',            autoMatch: ['vendor name', 'recipient name', 'payee name'], required: true },
       { key: 'vendor_bn',     label: 'Vendor BN / SIN',        autoMatch: ['vendor bn', 'vendor business', 'vendor sin', 'recipient bn', 'recipient business', 'payee bn', 'payee sin'], required: true },
-      { key: 'amount',        label: 'Amount Paid',            autoMatch: ['amount paid', 'amount', 'payment amount', 'total paid'] },
-      { key: 'biz_type',      label: 'Business Type',          autoMatch: ['business type', 'recipient type', 'entity type'] },
-      { key: 'svc_only',      label: 'Service Payments Only',  autoMatch: ['service payments', 'service only', 'services only'] },
+      { key: 'biz_type',      label: 'Business Type',          autoMatch: ['business type', 'recipient type', 'entity type'], type: 'code', codes: BIZ_TYPE_CODES },
       { key: 'address',       label: 'Address',                autoMatch: ['vendor address', 'recipient address', 'address', 'addr'] },
+      { key: 'amount',        label: 'Amount Paid',            autoMatch: ['amount paid', 'amount', 'payment amount', 'total paid'], ...moneyField(10), xsd: ['srvc_pay_amt', 'mxd_gd_pay_amt'] },
+      { key: 'svc_only',      label: 'Service Payments Only',  autoMatch: ['service payments', 'service only', 'services only'], type: 'code', codes: [['Yes', 'Yes'], ['No', 'No']] },
     ],
     summaryLabel: 'T1204 Summary — Payer Information',
     summaryHint: 'The government department that made the payments.',
@@ -34,19 +42,21 @@ const RETURN_TYPES = {
     fields: [
       { key: 'empe_snm',       label: 'Last Name (Box 12)',        autoMatch: ['last name', 'surname', 'family name', 'snm'], required: true },
       { key: 'empe_gvn_nm',    label: 'First Name',                autoMatch: ['first name', 'given name', 'gvn'] },
-      { key: 'sin',             label: 'SIN (Box 12)',              autoMatch: ['sin', 'social insurance'], required: true },
-      { key: 'empt_incamt',    label: 'Employment Income (Box 14)', autoMatch: ['employment income', 'box 14', 'salary', 'wages', 'gross pay', 'income'], required: true },
-      { key: 'cpp_cntrb_amt',  label: 'CPP Contributions (Box 16)', autoMatch: ['cpp', 'pension plan', 'box 16', 'cpp contrib'] },
-      { key: 'cppe_cntrb_amt', label: 'CPP2 Contributions (Box 16A)', autoMatch: ['cpp2', 'second cpp', 'box 16a', 'cppe'] },
-      { key: 'qpp_cntrb_amt',  label: 'QPP Contributions (Box 17)', autoMatch: ['qpp', 'quebec pension', 'box 17'] },
-      { key: 'empe_eip_amt',   label: 'EI Premiums (Box 18)',      autoMatch: ['ei premium', 'employment insurance', 'box 18', 'ei'] },
-      { key: 'rpp_cntrb_amt',  label: 'RPP Contributions (Box 20)', autoMatch: ['rpp', 'registered pension', 'box 20'] },
-      { key: 'itx_ddct_amt',   label: 'Income Tax Deducted (Box 22)', autoMatch: ['income tax', 'tax deducted', 'box 22', 'tax withheld'] },
-      { key: 'ei_insu_ern_amt', label: 'EI Insurable Earnings (Box 24)', autoMatch: ['insurable earnings', 'box 24', 'ei earn'] },
-      { key: 'cpp_qpp_ern_amt', label: 'CPP/QPP Pensionable Earnings (Box 26)', autoMatch: ['pensionable earnings', 'box 26', 'cpp earn', 'qpp earn'] },
-      { key: 'unn_dues_amt',   label: 'Union Dues (Box 44)',       autoMatch: ['union dues', 'box 44', 'union'] },
-      { key: 'empt_prov_cd',   label: 'Province of Employment (Box 10)', autoMatch: ['province of employment', 'box 10', 'prov emp', 'employment prov'] },
       { key: 'address',        label: 'Employee Address',          autoMatch: ['address', 'addr', 'employee address'] },
+      { key: 'empt_prov_cd',   label: 'Province of Employment (Box 10)', autoMatch: ['province of employment', 'box 10', 'prov emp', 'employment prov'], type: 'code', codes: T4_PROVINCE_CODES.map(provCode) },
+      { key: 'sin',             label: 'SIN (Box 12)',              autoMatch: ['sin', 'social insurance'], required: true },
+      { key: 'empt_incamt',    label: 'Employment Income (Box 14)', autoMatch: ['employment income', 'box 14', 'salary', 'wages', 'gross pay', 'income'], required: true, ...moneyField(8) },
+      { key: 'cpp_cntrb_amt',  label: 'CPP Contributions (Box 16)', autoMatch: ['cpp', 'pension plan', 'box 16', 'cpp contrib'], ...moneyField(4) },
+      { key: 'cppe_cntrb_amt', label: 'CPP2 Contributions (Box 16A)', autoMatch: ['cpp2', 'second cpp', 'box 16a', 'cppe'], ...moneyField(4) },
+      { key: 'qpp_cntrb_amt',  label: 'QPP Contributions (Box 17)', autoMatch: ['qpp', 'quebec pension', 'box 17'], ...moneyField(4) },
+      { key: 'empe_eip_amt',   label: 'EI Premiums (Box 18)',      autoMatch: ['ei premium', 'employment insurance', 'box 18', 'ei'], ...moneyField(4) },
+      { key: 'rpp_cntrb_amt',  label: 'RPP Contributions (Box 20)', autoMatch: ['rpp', 'registered pension', 'box 20'], ...moneyField(5) },
+      { key: 'itx_ddct_amt',   label: 'Income Tax Deducted (Box 22)', autoMatch: ['income tax', 'tax deducted', 'box 22', 'tax withheld'], ...moneyField(8) },
+      { key: 'ei_insu_ern_amt', label: 'EI Insurable Earnings (Box 24)', autoMatch: ['insurable earnings', 'box 24', 'ei earn'], ...moneyField(5) },
+      { key: 'cpp_qpp_ern_amt', label: 'CPP/QPP Pensionable Earnings (Box 26)', autoMatch: ['pensionable earnings', 'box 26', 'cpp earn', 'qpp earn'], ...moneyField(7) },
+      { key: 'cpp_qpp_xmpt_cd', label: 'CPP/QPP Exempt (Box 28)',  autoMatch: ['cpp exempt', 'cpp qpp exempt', 'qpp exempt'], type: 'code', codes: EXEMPT_CODES },
+      { key: 'ei_xmpt_cd',     label: 'EI Exempt (Box 28)',        autoMatch: ['ei exempt'], type: 'code', codes: EXEMPT_CODES },
+      { key: 'unn_dues_amt',   label: 'Union Dues (Box 44)',       autoMatch: ['union dues', 'box 44', 'union'], ...moneyField(7) },
     ],
     summaryLabel: 'T4 Summary — Employer Information',
     summaryHint: 'The employer who paid the remuneration.',
@@ -57,9 +67,9 @@ const RETURN_TYPES = {
     fields: [
       { key: 'rcpnt_name',    label: 'Recipient Name',             autoMatch: ['contractor name', 'recipient name', 'subcontractor', 'payee name', 'company name', 'name'], required: true },
       { key: 'rcpnt_bn',      label: 'Recipient BN / SIN (Box 24)', autoMatch: ['contractor bn', 'recipient bn', 'subcontractor bn', 'contractor sin', 'recipient sin', 'business number'], required: true },
-      { key: 'sbctrcr_amt',   label: 'Sub-contractor Payments (Box 22)', autoMatch: ['sub-contractor', 'subcontractor payment', 'contract payment', 'amount paid', 'amount', 'payment'], required: true },
-      { key: 'rcpnt_type',    label: 'Recipient Type',             autoMatch: ['recipient type', 'contractor type', 'entity type', 'type'] },
+      { key: 'rcpnt_type',    label: 'Recipient Type',             autoMatch: ['recipient type', 'contractor type', 'entity type', 'type'], type: 'code', codes: BIZ_TYPE_CODES },
       { key: 'address',       label: 'Recipient Address',          autoMatch: ['contractor address', 'recipient address', 'subcontractor address', 'address', 'addr'] },
+      { key: 'sbctrcr_amt',   label: 'Sub-contractor Payments (Box 22)', autoMatch: ['sub-contractor', 'subcontractor payment', 'contract payment', 'amount paid', 'amount', 'payment'], required: true, ...moneyField(10) },
     ],
     summaryLabel: 'T5018 Summary — Payer Information',
     summaryHint: 'The business that made the contract payments.',
@@ -69,20 +79,21 @@ const RETURN_TYPES = {
     label: 'NR4 — Statement of Amounts Paid or Credited to Non-Residents of Canada',
     fields: [
       { key: 'rcpnt_name',   label: 'Recipient Name',                autoMatch: ['recipient name', 'payee name', 'name'], required: true },
-      { key: 'rcpnt_type',   label: 'Recipient Type',                autoMatch: ['recipient type', 'payee type', 'entity type', 'type'] },
-      { key: 'fssn_nbr',     label: 'Foreign Tax ID',                autoMatch: ['foreign tax id', 'foreign tax', 'tax identification', 'fssn', 'tax id'], required: true },
-      // Box 13 from schema 1-27-1; blank -> CRA's 000000000. Ignored in 1-26-3 files, which have no such element.
-      { key: 'cin',          label: 'Canadian Tax ID (Box 13)',      autoMatch: ['canadian tax identification', 'canadian tax id', 'canadian tax', 'sin/ttn/itn'] },
-      { key: 'tx_cntry_cd',  label: 'Country of Residence (3 letters)', autoMatch: ['country of residence', 'residence country', 'tax country', 'country'] },
-      { key: 'inc_1_tcd',    label: 'Income Code (Box 14)',          autoMatch: ['income code', 'income type', 'type of income', 'box 14'] },
-      { key: 'crcy_1_cd',    label: 'Currency Code (Box 15)',        autoMatch: ['currency', 'crcy', 'box 15'] },
-      { key: 'gro_1_incamt', label: 'Gross Income (Box 16)',         autoMatch: ['gross income', 'gross amount', 'gross', 'box 16'], required: true },
-      { key: 'nr_tx_1_amt',  label: 'Non-Resident Tax Withheld (Box 17)', autoMatch: ['tax withheld', 'non-resident tax', 'withholding', 'box 17'] },
-      { key: 'tx_xmpt_1_cd', label: 'Exemption Code (Box 18)',       autoMatch: ['exemption code', 'exemption', 'exempt', 'box 18'] },
       { key: 'addr_l1',      label: 'Address Line 1',                autoMatch: ['street address', 'address line', 'address', 'addr'] },
       { key: 'city',         label: 'City',                          autoMatch: ['city'] },
-      { key: 'ste_cd',       label: 'State / Province (2 letters)',  autoMatch: ['state/province', 'state', 'province'] },
+      { key: 'ste_cd',       label: 'State / Province (2 letters)',  autoMatch: ['state/province', 'state', 'province'], type: 'code', codes: [['', '(none)'], ...NR4_STATE_CODES.map(c => [c, c])] },
       { key: 'fgn_pstl_cd',  label: 'Postal / ZIP Code',             autoMatch: ['postal code', 'zip code', 'postal', 'zip'] },
+      { key: 'tx_cntry_cd',  label: 'Country of Residence (3 letters)', autoMatch: ['country of residence', 'residence country', 'tax country', 'country'] },
+      // Box 13 from schema 1-27-1; blank -> CRA's 000000000. Ignored in 1-26-3 files, which have no such element.
+      { key: 'cin',          label: 'Canadian Tax ID (Box 13)',      autoMatch: ['canadian tax identification', 'canadian tax id', 'canadian tax', 'sin/ttn/itn'] },
+      { key: 'fssn_nbr',     label: 'Foreign Tax ID',                autoMatch: ['foreign tax id', 'foreign tax', 'tax identification', 'fssn', 'tax id'], required: true },
+      { key: 'rcpnt_type',   label: 'Recipient Type',                autoMatch: ['recipient type', 'payee type', 'entity type', 'type'], type: 'code',
+        codes: [['Individual', 'Individual'], ['Joint account', 'Joint account'], ['Corporation', 'Corporation'], ['Other', 'Other'], ['Government', 'Government']] },
+      { key: 'inc_1_tcd',    label: 'Income Code (Box 14)',          autoMatch: ['income code', 'income type', 'type of income', 'box 14'] },
+      { key: 'crcy_1_cd',    label: 'Currency Code (Box 15)',        autoMatch: ['currency', 'crcy', 'box 15'] },
+      { key: 'gro_1_incamt', label: 'Gross Income (Box 16)',         autoMatch: ['gross income', 'gross amount', 'gross', 'box 16'], required: true, ...moneyField(9) },
+      { key: 'nr_tx_1_amt',  label: 'Non-Resident Tax Withheld (Box 17)', autoMatch: ['tax withheld', 'non-resident tax', 'withholding', 'box 17'], ...moneyField(9) },
+      { key: 'tx_xmpt_1_cd', label: 'Exemption Code (Box 18)',       autoMatch: ['exemption code', 'exemption', 'exempt', 'box 18'] },
     ],
     summaryLabel: 'NR4 Summary — Payer Information',
     summaryHint: 'The payer or agent who paid or credited amounts to non-residents.',
@@ -99,8 +110,9 @@ function getReturnConfig() {
 }
 
 // ---- Helpers ----
-const VALID_PROVINCES = new Set(['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT']);
-const ALL_PROV_CODES = new Set(['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT','US','ZZ']);
+const VALID_PROVINCES = new Set(PROVINCES);
+const T4_PROVINCES = new Set(T4_PROVINCE_CODES);
+const NR4_STATES = new Set(NR4_STATE_CODES);
 const COUNTRY_MAP = { 'CA': 'CAN', 'US': 'USA', 'CAN': 'CAN', 'USA': 'USA' };
 // CRA rcpnt_tcd: 1 sole proprietor (an individual in business), 3 corporation, 4 partnership. Keys are lower case.
 const BIZ_TYPE_MAP = {
@@ -294,10 +306,11 @@ function openWorkbook(buffer, name, ext, isSample) {
 }
 
 // ============================================================
-// STEP 2: TABLE EDITOR — the user's rows, a CRA-field dropdown on every column, live validation.
+// STEP 2: TABLE EDITOR — a fixed header of the return's CRA columns in CRA order, each with the user's column that
+// fills it (one at most); unmatched columns wait in "Ignored columns". The user's rows below, live validation.
 // columnMap (field key -> column index, -1 = none) stays the one source of truth that generate*XML reads.
 // ============================================================
-const EDITOR_PAGE = 100; // rows rendered at once, so thousands of rows stay fast
+const EDITOR_PAGE = 200; // rows rendered at once, so thousands of rows stay fast
 let editorPage = 0;
 let onlyProblems = false;
 let rowIssues = new Map(); // parsedData index -> its issues, from the last validateRows()
@@ -354,8 +367,13 @@ function colLetter(c) {
   return s;
 }
 
-// Dropdown choices: Ignored, then (T4 only) one column holding the whole name, then the return's CRA fields
-function editorFieldOptions() {
+// The table's fixed header: the return's CRA columns, in CRA order
+function editorSlots() {
+  return getReturnConfig().fields.map(f => f.key);
+}
+
+// "Move to CRA column" choices: Ignored, then (T4 only) one column holding the whole name, then the CRA columns
+function moveOptions() {
   const rt = getSelectedReturnType();
   return [{ key: 'ignore', label: 'Ignored' },
     ...(rt === 'T4' ? [{ key: 'full_name', label: 'Full name (first and last name in one column)' }] : []),
@@ -368,18 +386,18 @@ function columnField(c) {
   return getReturnConfig().fields.find(f => columnMap[f.key] === c)?.key || 'ignore';
 }
 
-// Display order: columns in CRA field order, then the ignored ones in file order
-function editorColumns() {
-  const order = [...new Set(getReturnConfig().fields.map(f => columnMap[f.key]).filter(c => c >= 0 && c < headers.length))];
-  return order.concat(headers.map((_, c) => c).filter(c => !order.includes(c)));
-}
-
 const isColumn = c => Number.isInteger(c) && c >= 0 && c < headers.length;
 
-// Points column c at a CRA field. One field, one column: the column that had it is left ignored.
-// method ('dropdown' | 'drag' | 'keyboard') is for GA4 only.
+// Source columns in no CRA column, in file order
+function ignoredColumns() {
+  const used = new Set(getReturnConfig().fields.map(f => columnMap[f.key]));
+  return headers.map((_, c) => c).filter(c => !used.has(c));
+}
+
+// Puts column c under a CRA column (or 'ignore' / 'full_name'). One CRA column, one source column: the column that
+// was there goes to Ignored. method ('dropdown' | 'drag' | 'keyboard') is for GA4 only.
 function remapColumn(c, field, method) {
-  if (!isColumn(c) || !editorFieldOptions().some(o => o.key === field) || columnField(c) === field) return;
+  if (!isColumn(c) || !moveOptions().some(o => o.key === field) || columnField(c) === field) return;
   getReturnConfig().fields.forEach(f => { if (columnMap[f.key] === c) columnMap[f.key] = -1; });
   if (field === 'full_name') columnMap.empe_snm = columnMap.empe_gvn_nm = c;
   else if (field !== 'ignore') columnMap[field] = c;
@@ -387,7 +405,7 @@ function remapColumn(c, field, method) {
   refreshEditor();
 }
 
-// Columns a and b trade CRA fields (drag one onto the other, or move left/right)
+// Columns a and b trade CRA columns
 function swapColumns(a, b, method) {
   if (!isColumn(a) || !isColumn(b) || columnField(a) === columnField(b)) return;
   const keys = c => getReturnConfig().fields.filter(f => columnMap[f.key] === c).map(f => f.key);
@@ -398,12 +416,22 @@ function swapColumns(a, b, method) {
   refreshEditor();
 }
 
-// Keyboard alternative to dragging: column c trades fields with its left (-1) or right (+1) neighbour
+// Column c dropped on CRA column f: a column coming from another CRA column trades places with the one there;
+// one coming from Ignored sends it to Ignored
+function dropOnSlot(c, f, method) {
+  if (!isColumn(c) || !editorSlots().includes(f) || columnMap[f] === c) return;
+  const there = columnMap[f];
+  if (there >= 0 && !['ignore', 'full_name'].includes(columnField(c))) swapColumns(c, there, method);
+  else remapColumn(c, f, method);
+}
+
+// Keyboard alternative to dragging: column c moves to the previous (-1) or next (+1) CRA column
 function moveColumn(c, dir) {
-  const order = editorColumns();
-  const i = order.indexOf(c);
-  if (i < 0 || order[i + dir] === undefined) return;
-  swapColumns(c, order[i + dir], 'keyboard');
+  const slots = editorSlots();
+  const f = columnField(c);
+  const i = slots.indexOf(f === 'full_name' ? 'empe_snm' : f);
+  if (i < 0 || !slots[i + dir]) return;
+  dropOnSlot(c, slots[i + dir], 'keyboard');
   document.querySelector(`#editor-thead [data-move="${dir}"][data-col="${c}"]`)?.focus();
 }
 
@@ -420,12 +448,33 @@ function editCell(r, c, value) {
   return true;
 }
 
+// How cell (r, column c) would look with `value`, while it's being typed; changes nothing
+function previewCell(r, c, value) {
+  const row = parsedData[r].slice();
+  row[c] = String(value);
+  const fields = getReturnConfig().fields.filter(f => columnMap[f.key] === c).map(f => f.key);
+  return issueState((checkRow(getSelectedReturnType(), row, r)?.issues || []).filter(x => fields.includes(x.field)));
+}
+
+// A code column is edited with a select of its CRA codes (null: typed in). A value that isn't one stays first.
+function cellEditor(r, c) {
+  const f = getReturnConfig().fields.find(x => x.key === columnField(c));
+  if (!f || f.type !== 'code') return null;
+  const cur = String(parsedData[r][c] ?? '').trim();
+  const match = f.codes.find(([v]) => v.toUpperCase() === cur.toUpperCase());
+  const opts = match ? f.codes
+    : [[cur, cur ? `${cur} (${cellState(r, f.key).cls === 'cell-error' ? 'not valid' : 'as typed'})` : '(blank)'], ...f.codes];
+  const selected = match ? match[0] : cur;
+  return `<select class="ed-cell-select" aria-label="${escapeXml(f.label)}, row ${r + 2}">` +
+    opts.map(([v, label]) => `<option value="${escapeXml(v)}"${v === selected ? ' selected' : ''}>${escapeXml(label)}</option>`).join('') + '</select>';
+}
+
 function addRow() {
   parsedData.push(headers.map(() => ''));
   onlyProblems = document.getElementById('editor-only-problems').checked = false;
   editorPage = Infinity; // clamped to the last page
   refreshEditor();
-  focusCell(parsedData.length - 1, editorColumns()[0]);
+  focusCell(parsedData.length - 1, editorSlots().find(f => columnMap[f] >= 0));
 }
 
 function deleteRow(r) {
@@ -455,12 +504,13 @@ function refreshEditor() {
 
 function renderEditor() {
   renderEditorHead();
+  renderEditorIgnored();
   renderEditorBody();
   renderEditorStatus();
 }
 
-// A warning about a field with no column (e.g. T4 province defaulting to ON) has no cell to mark:
-// it's summed up in the status line and listed in Step 4. Errors always count.
+// A warning about a field with no column (e.g. T4 province defaulting to ON) isn't marked on every row:
+// it's summed up in the status line and listed in Step 4. Errors always count, and show in the empty column.
 const placed = x => columnMap[x.field] >= 0;
 const counted = x => x.severity === 'error' || placed(x);
 
@@ -468,41 +518,66 @@ function issueState(list) {
   return { cls: list.some(x => x.severity === 'error') ? 'cell-error' : list.length ? 'cell-warning' : '', msg: list.map(x => x.message).join(' ') };
 }
 
-// How the editor shows cell (r, c): { cls: 'cell-error' | 'cell-warning' | '', msg }
-function cellState(r, c) {
-  return issueState((rowIssues.get(r) || []).filter(x => columnMap[x.field] === c));
+// How the editor shows row r under CRA column f: { cls: 'cell-error' | 'cell-warning' | '', msg }
+function cellState(r, f) {
+  return issueState((rowIssues.get(r) || []).filter(x => x.field === f && counted(x)));
 }
 
-// Errors on a field with no column are shown on the row number instead
-function rowHeaderState(r) {
-  return issueState((rowIssues.get(r) || []).filter(x => x.severity === 'error' && !placed(x)));
+// The cell's text: amounts with thousands separators and 2 decimals (display only), anything else as typed
+function cellText(r, f) {
+  const raw = parsedData[r][columnMap[f]] ?? '';
+  const field = getReturnConfig().fields.find(x => x.key === f);
+  const m = field.type === 'money' && parseMoney(raw, field.digits);
+  return m && !m.error && m.value !== null ? formatMoney(m.value) : String(raw);
+}
+
+// A source column: drag handle, name, and its "Move to CRA column" dropdown (in a slot, or in the Ignored area)
+function columnChip(c, tag, extra = '') {
+  const L = colLetter(c);
+  const name = escapeXml(headers[c] || '(no header)');
+  const here = columnField(c);
+  const opts = moveOptions().map(o => {
+    const at = columnMap[o.key];
+    const note = !o.autoMatch ? '' : at >= 0 && at !== c ? ` (now column ${colLetter(at)})` : o.required ? ' (mandatory)' : '';
+    return `<option value="${o.key}"${o.key === here ? ' selected' : ''}>${escapeXml(o.label)}${note}</option>`;
+  }).join('');
+  return `<${tag} class="ed-chip" draggable="true" data-drag="${c}">` +
+    `<span class="ed-chip-name" title="${name}"><span class="ed-grip" aria-hidden="true">⠿</span> ${L} · ${name}</span>` +
+    `<label class="sr-only" for="ed-col-${c}">Move column ${L} (${name}) to CRA column</label>` +
+    `<select id="ed-col-${c}" data-col="${c}" class="ed-move-to"><option value="" disabled>Move to CRA column…</option>${opts}</select>${extra}</${tag}>`;
 }
 
 function renderEditorHead() {
-  const options = editorFieldOptions();
   const fields = getReturnConfig().fields;
-  document.getElementById('editor-thead').innerHTML = '<tr><th scope="col" class="ed-rownum">Row</th>' + editorColumns().map(c => {
-    const field = columnField(c);
-    const L = colLetter(c);
-    const required = fields.find(f => f.key === (field === 'full_name' ? 'empe_snm' : field))?.required;
-    const opts = options.map(o => {
-      const elsewhere = columnMap[o.key] >= 0 && columnMap[o.key] !== c ? ` (column ${colLetter(columnMap[o.key])})` : '';
-      return `<option value="${o.key}"${o.key === field ? ' selected' : ''}>${escapeXml(o.label)}${o.required ? ' *' : ''}${elsewhere}</option>`;
-    }).join('');
-    return `<th scope="col" data-c="${c}" class="${field === 'ignore' ? 'is-ignored' : 'is-mapped'}">` +
-      `<div class="ed-src"><span class="ed-drag" draggable="true" data-drag="${c}" title="Drag onto another column to swap their CRA fields" aria-hidden="true">⠿</span>` +
-      `<span class="ed-head-name">${L} · ${escapeXml(headers[c] || '(no header)')}</span></div>` +
-      `<label class="sr-only" for="ed-col-${c}">CRA field for column ${L}</label>` +
-      `<div class="ed-pick"><select id="ed-col-${c}" data-col="${c}">${opts}</select>${required ? '<span class="req" title="Required">*</span>' : ''}</div>` +
-      `<div class="ed-move"><button type="button" data-move="-1" data-col="${c}" aria-label="Move column ${L} left">←</button>` +
-      `<button type="button" data-move="1" data-col="${c}" aria-label="Move column ${L} right">→</button></div></th>`;
-  }).join('') + '</tr>';
+  const cra = fields.map(f => `<th scope="col" class="ed-cra${f.required ? ' is-mandatory' : ''}" data-slot="${f.key}">` +
+    `<span class="ed-cra-label">${escapeXml(f.label)}</span> ` +
+    `<span class="badge badge-${f.required ? 'mandatory' : 'optional'}">${f.required ? 'Mandatory' : 'Optional'}</span></th>`).join('');
+  const slots = fields.map(f => {
+    const c = columnMap[f.key];
+    let body;
+    if (c >= 0 && f.key === 'empe_gvn_nm' && columnMap.empe_snm === c) body = '<span class="ed-slot-note">Same column as Last Name (full name)</span>';
+    else if (c >= 0) {
+      const L = colLetter(c);
+      body = columnChip(c, 'span', `<span class="ed-move"><button type="button" data-move="-1" data-col="${c}" aria-label="Move column ${L} to the previous CRA column">←</button>` +
+        `<button type="button" data-move="1" data-col="${c}" aria-label="Move column ${L} to the next CRA column">→</button></span>`);
+    } else body = f.required ? '<span class="ed-slot-empty"><span aria-hidden="true">⚠</span> Mandatory: no column yet</span>' : '<span class="ed-slot-empty">No column</span>';
+    const cls = c >= 0 ? 'is-filled' : f.required ? 'is-empty is-missing' : 'is-empty';
+    return `<th scope="col" class="ed-slot ${cls}" data-slot="${f.key}">${body}</th>`;
+  }).join('');
+  document.getElementById('editor-thead').innerHTML = `<tr><th scope="col" class="ed-rownum" rowspan="2">Row</th>${cra}</tr><tr>${slots}</tr>`;
+}
+
+function renderEditorIgnored() {
+  const cols = ignoredColumns();
+  document.getElementById('editor-ignored').innerHTML =
+    `<h4>Ignored columns (${cols.length})</h4><p class="ed-hint">Left out of the file. Drag one onto a CRA column in the table header, or pick its CRA column in its dropdown. Drop a column here to leave it out.</p>` +
+    `<ul class="ed-chips" data-drop="ignore">${cols.length ? cols.map(c => columnChip(c, 'li')).join('') : '<li class="ed-none">None: every column of your file is used.</li>'}</ul>`;
 }
 
 let editorVisibleRows = [];
 
 function renderEditorBody() {
-  const cols = editorColumns();
+  const slots = editorSlots();
   const list = onlyProblems ? [...rowIssues.keys()].filter(r => rowIssues.get(r).some(counted)) : null;
   const total = list ? list.length : parsedData.length;
   const pages = Math.max(1, Math.ceil(total / EDITOR_PAGE));
@@ -512,8 +587,8 @@ function renderEditorBody() {
   editorVisibleRows = list ? list.slice(start, end) : Array.from({ length: end - start }, (_, k) => start + k);
 
   document.getElementById('editor-tbody').innerHTML = editorVisibleRows.length
-    ? editorVisibleRows.map(r => editorRowHtml(r, cols)).join('')
-    : `<tr><td colspan="${cols.length + 1}" class="ed-empty">${list ? 'No rows with problems.' : 'No rows. Add one, or open another file in Step 1.'}</td></tr>`;
+    ? editorVisibleRows.map(r => editorRowHtml(r, slots)).join('')
+    : `<tr><td colspan="${slots.length + 1}" class="ed-empty">${list ? 'No rows with problems.' : 'No rows. Add one, or open another file in Step 1.'}</td></tr>`;
   renderEditorMsgs();
 
   const n = v => v.toLocaleString('en-CA');
@@ -524,38 +599,40 @@ function renderEditorBody() {
     : '';
 }
 
-function editorRowHtml(r, cols) {
-  const row = parsedData[r];
-  const head = rowHeaderState(r);
-  return `<tr data-r="${r}"><th scope="row"${head.cls ? ` class="${head.cls}" title="${escapeXml(head.msg)}" aria-describedby="ed-msg-${r}-row"` : ''}>${r + 2}` +
+// A cell under an empty CRA column has no source column (no data-c): it can't be edited, but shows that column's errors
+const cellClass = (td, s) => [td.c === undefined ? 'ed-noslot' : '', s.cls].filter(Boolean).join(' ');
+
+function editorRowHtml(r, slots) {
+  return `<tr data-r="${r}"><th scope="row" class="ed-rownum">${r + 2}` +
     `<button type="button" class="ed-del" onclick="deleteRow(${r})" aria-label="Delete row ${r + 2}" title="Delete row">×</button></th>` +
-    cols.map(c => {
-      const s = cellState(r, c);
-      return `<td tabindex="-1" data-r="${r}" data-c="${c}"${s.cls ? ` class="${s.cls}" title="${escapeXml(s.msg)}" aria-describedby="ed-msg-${r}-${c}"` : ''}>` +
-        `${escapeXml(String(row[c] ?? ''))}</td>`;
+    slots.map(f => {
+      const c = columnMap[f] >= 0 ? columnMap[f] : undefined;
+      const s = cellState(r, f);
+      const cls = cellClass({ c }, s);
+      return `<td tabindex="-1" data-r="${r}"${c === undefined ? '' : ` data-c="${c}"`} data-f="${f}"${cls ? ` class="${cls}"` : ''}` +
+        `${s.msg ? ` title="${escapeXml(s.msg)}" aria-describedby="ed-msg-${r}-${f}"` : ''}>${c === undefined ? '' : escapeXml(cellText(r, f))}</td>`;
     }).join('') + '</tr>';
 }
 
 // Hidden text the marked cells point to with aria-describedby (screen readers read the message with the cell)
 function renderEditorMsgs() {
-  const cols = editorColumns();
-  document.getElementById('editor-msgs').innerHTML = editorVisibleRows.flatMap(r => [
-    ...cols.map(c => [c, cellState(r, c)]), ['row', rowHeaderState(r)],
-  ].filter(([, s]) => s.msg).map(([c, s]) => `<span id="ed-msg-${r}-${c}">${escapeXml(s.msg)}</span>`)).join('');
+  const slots = editorSlots();
+  document.getElementById('editor-msgs').innerHTML = editorVisibleRows.flatMap(r => slots.map(f => [f, cellState(r, f)])
+    .filter(([, s]) => s.msg).map(([f, s]) => `<span id="ed-msg-${r}-${f}">${escapeXml(s.msg)}</span>`)).join('');
 }
 
-// After an edit: new marks on that row's cells without re-rendering them
+// After an edit: new marks and text on that row's cells without replacing them
 function patchEditorRow(r) {
   const tr = document.querySelector(`#editor-tbody tr[data-r="${r}"]`);
   if (!tr) return;
-  const mark = (el, s, id) => {
-    el.className = s.cls;
-    if (s.msg) { el.title = s.msg; el.setAttribute('aria-describedby', id); }
-    else { el.removeAttribute('title'); el.removeAttribute('aria-describedby'); }
-  };
-  tr.querySelectorAll('td[data-c]').forEach(td => mark(td, cellState(r, +td.dataset.c), `ed-msg-${r}-${td.dataset.c}`));
-  const th = tr.querySelector('th');
-  if (th) mark(th, rowHeaderState(r), `ed-msg-${r}-row`);
+  tr.querySelectorAll('td[data-f]').forEach(td => {
+    const f = td.dataset.f;
+    const s = cellState(r, f);
+    td.className = cellClass(td.dataset, s);
+    if (s.msg) { td.title = s.msg; td.setAttribute('aria-describedby', `ed-msg-${r}-${f}`); }
+    else { td.removeAttribute('title'); td.removeAttribute('aria-describedby'); }
+    if (td.dataset.c !== undefined) td.textContent = cellText(r, f);
+  });
   renderEditorMsgs();
 }
 
@@ -577,34 +654,38 @@ function renderEditorStatus() {
   const unmapped = unmappedRequired();
   const missing = document.getElementById('editor-missing');
   missing.innerHTML = unmapped.length
-    ? `<h4>Required, with no column yet</h4><ul>${unmapped.map(f => `<li>${escapeXml(f.label)}</li>`).join('')}</ul>`
+    ? `<h4>Mandatory, with no column yet</h4><ul>${unmapped.map(f => `<li>${escapeXml(f.label)}</li>`).join('')}</ul>`
     : '';
   missing.classList.toggle('hidden', !unmapped.length);
 }
 
-// ---- Editor events: header dropdowns, move buttons and drag-and-drop; cell editing and arrow-key navigation ----
-const edHead = document.getElementById('editor-thead');
-edHead.addEventListener('change', e => {
-  if (e.target.dataset && e.target.dataset.col !== undefined) remapColumn(+e.target.dataset.col, e.target.value, 'dropdown');
-});
-edHead.addEventListener('click', e => {
-  const btn = e.target.closest && e.target.closest('[data-move]');
-  if (btn) moveColumn(+btn.dataset.col, +btn.dataset.move);
-});
-edHead.addEventListener('dragstart', e => {
-  const handle = e.target.closest && e.target.closest('[data-drag]');
-  if (!handle) return;
-  e.dataTransfer.setData('text/plain', handle.dataset.drag);
-  e.dataTransfer.effectAllowed = 'move';
-});
-edHead.addEventListener('dragover', e => { if (e.target.closest && e.target.closest('th[data-c]')) e.preventDefault(); });
-edHead.addEventListener('drop', e => {
-  const th = e.target.closest && e.target.closest('th[data-c]');
-  if (!th) return;
-  e.preventDefault();
-  const from = e.dataTransfer.getData('text/plain');
-  if (/^\d+$/.test(from)) swapColumns(+from, +th.dataset.c, 'drag');
-});
+// ---- Mapping events (header slots and the Ignored area): move dropdowns, move buttons, drag-and-drop ----
+const dropTarget = e => e.target.closest && (e.target.closest('[data-slot]') || e.target.closest('[data-drop]'));
+for (const el of [document.getElementById('editor-thead'), document.getElementById('editor-ignored')]) {
+  el.addEventListener('change', e => {
+    if (e.target.dataset && e.target.dataset.col !== undefined) remapColumn(+e.target.dataset.col, e.target.value, 'dropdown');
+  });
+  el.addEventListener('click', e => {
+    const btn = e.target.closest && e.target.closest('[data-move]');
+    if (btn) moveColumn(+btn.dataset.col, +btn.dataset.move);
+  });
+  el.addEventListener('dragstart', e => {
+    const handle = e.target.closest && e.target.closest('[data-drag]');
+    if (!handle) return;
+    e.dataTransfer.setData('text/plain', handle.dataset.drag);
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  el.addEventListener('dragover', e => { if (dropTarget(e)) e.preventDefault(); });
+  el.addEventListener('drop', e => {
+    const t = dropTarget(e);
+    if (!t) return;
+    e.preventDefault();
+    const from = e.dataTransfer.getData('text/plain');
+    if (!/^\d+$/.test(from)) return;
+    if (t.dataset.slot) dropOnSlot(+from, t.dataset.slot, 'drag');
+    else remapColumn(+from, 'ignore', 'drag');
+  });
+}
 document.getElementById('editor-only-problems').addEventListener('change', e => {
   onlyProblems = e.target.checked;
   editorPage = 0;
@@ -623,15 +704,24 @@ function gridStep(key, shift, r, c, rows, cols) {
   return nr < 0 || nc < 0 || nr >= rows || nc >= cols ? null : [nr, nc];
 }
 
-function focusCell(r, c) {
-  document.querySelector(`#editor-tbody td[data-r="${r}"][data-c="${c}"]`)?.focus();
+function focusCell(r, f) {
+  document.querySelector(`#editor-tbody td[data-r="${r}"][data-f="${f}"]`)?.focus();
 }
 
-let editing = null; // { td, before } while a cell is being typed in
+let editing = null; // { td, r, c, select? } while a cell is being edited
 
 function startEdit(td) {
-  if (editing) return;
-  editing = { td, before: td.textContent };
+  if (editing || td.dataset.c === undefined) return;
+  const r = +td.dataset.r, c = +td.dataset.c;
+  editing = { td, r, c };
+  const select = cellEditor(r, c);
+  if (select) { // code columns: pick from the CRA codes
+    td.innerHTML = select;
+    editing.select = td.querySelector('select');
+    editing.select.focus();
+    return;
+  }
+  td.textContent = String(parsedData[r][c] ?? ''); // the value as stored, not as displayed (60,000.00)
   try { td.contentEditable = 'plaintext-only'; } catch { td.contentEditable = 'true'; } // pasted formatting stays out
   td.focus();
   const range = document.createRange(); // caret at the end
@@ -643,21 +733,29 @@ function startEdit(td) {
 
 function stopEdit(commit) {
   if (!editing) return;
-  const { td, before } = editing;
+  const { td, r, c, select } = editing;
   editing = null;
   td.removeAttribute('contenteditable');
-  if (commit) editCell(+td.dataset.r, +td.dataset.c, td.textContent);
-  else td.textContent = before;
+  if (!(commit && editCell(r, c, select ? select.value : td.textContent))) patchEditorRow(r); // back to the display
+  td.focus();
 }
 
 const edBody = document.getElementById('editor-tbody');
 edBody.addEventListener('click', e => {
-  const td = e.target.closest && e.target.closest('td[data-c]');
+  const td = e.target.closest && e.target.closest('td[data-f]');
   if (td && (!editing || editing.td !== td)) startEdit(td);
 });
-edBody.addEventListener('focusout', e => { if (editing && e.target === editing.td) stopEdit(true); });
+edBody.addEventListener('focusout', e => { if (editing && (e.target === editing.td || e.target === editing.select)) stopEdit(true); });
+edBody.addEventListener('change', e => { if (editing && e.target === editing.select) stopEdit(true); });
+// Typing: the cell turns red / amber at once, before it's saved
+edBody.addEventListener('input', e => {
+  if (!editing || editing.select || e.target !== editing.td) return;
+  const s = previewCell(editing.r, editing.c, editing.td.textContent);
+  editing.td.className = s.cls;
+  editing.td.title = s.msg;
+});
 edBody.addEventListener('keydown', e => {
-  const td = e.target.closest && e.target.closest('td[data-c]');
+  const td = e.target.closest && e.target.closest('td[data-f]');
   if (!td) return;
   if (editing) {
     if (e.key === 'Escape') { e.preventDefault(); stopEdit(false); }
@@ -671,7 +769,7 @@ edBody.addEventListener('keydown', e => {
 
 function moveFocus(e, td) {
   const rows = [...edBody.querySelectorAll('tr[data-r]')];
-  const cells = tr => [...tr.querySelectorAll('td[data-c]')];
+  const cells = tr => [...tr.querySelectorAll('td[data-f]')];
   const here = cells(td.parentElement);
   const to = gridStep(e.key, e.shiftKey, rows.indexOf(td.parentElement), here.indexOf(td), rows.length, here.length);
   if (!to) return;
@@ -696,7 +794,7 @@ function copyTransmitterToPayer() {
 // ADDRESS PARSER
 // ============================================================
 function parseAddress(addrStr) {
-  const result = { addr_l1: '', city: '', prov: '', postal: '', country: 'CAN' };
+  const result = { addr_l1: '', city: '', prov: '', postal: '', country: 'CAN', cuts: [] };
   if (!addrStr) return result;
 
   let cleaned = String(addrStr).trim().replace(/\/\s*$/, '').trim();
@@ -715,7 +813,7 @@ function parseAddress(addrStr) {
 
   let cityBlock = '';
   if (parts.length >= 2) {
-    result.addr_l1 = parts[0].substring(0, 30);
+    result.addr_l1 = parts[0];
     cityBlock = parts[parts.length - 1];
   } else if (parts.length === 1) {
     cityBlock = parts[0];
@@ -728,19 +826,23 @@ function parseAddress(addrStr) {
     const provMatch = remaining.match(/\b([A-Z]{2})$/);
     if (provMatch && VALID_PROVINCES.has(provMatch[1])) {
       result.prov = provMatch[1];
-      result.city = remaining.substring(0, provMatch.index).trim().substring(0, 28);
+      result.city = remaining.substring(0, provMatch.index).trim();
     } else {
-      result.city = remaining.substring(0, 28);
+      result.city = remaining;
     }
   } else {
     const provMatch = cityBlock.match(/\b([A-Z]{2})$/);
     if (provMatch && VALID_PROVINCES.has(provMatch[1])) {
       result.prov = provMatch[1];
-      result.city = cityBlock.substring(0, provMatch.index).trim().substring(0, 28);
+      result.city = cityBlock.substring(0, provMatch.index).trim();
     } else {
-      result.city = cityBlock.substring(0, 28);
+      result.city = cityBlock;
     }
   }
+  // CRA's slip sizes: the street line takes 30 characters, the city 28. cuts: what was shortened, for the warnings.
+  result.cuts = [['address line', result.addr_l1, 30], ['city', result.city, 28]].filter(([, v, max]) => v.length > max);
+  result.addr_l1 = result.addr_l1.substring(0, 30);
+  result.city = result.city.substring(0, 28);
   return result;
 }
 
@@ -823,6 +925,8 @@ function validateFilingDetails(requiredIds, extraChecks = []) {
     { id: 'tx-repid', test: v => REPID_PATTERN.test(cleanBN(v)), msg: 'RepID: up to 7 letters or digits.' },
     { id: 'tx-ref', test: v => SUBMISSION_REF_PATTERN.test(v.trim()), msg: 'Use up to 8 letters or digits, no spaces, hyphens or other characters (CRA rule).' },
     { id: 'tx-email', test: v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim()), msg: 'Enter a valid email address.' },
+    { id: 'py-postal', test: v => CA_POSTAL_PATTERN.test(v.trim()), msg: 'Use the Canadian postal code format A1A 1A1.' },
+    { id: 'tax-year', test: isTaxYear, msg: 'Enter the 4-digit taxation year, e.g. 2025.' },
     ...extraChecks,
   ];
   checks.forEach(c => {
@@ -837,6 +941,14 @@ function validateFilingDetails(requiredIds, extraChecks = []) {
 }
 
 const PAYER_BN_CHECK = { id: 'py-bn', test: v => BN_PATTERN.test(cleanBN(v)), msg: 'Must be exactly 15 characters: 9 digits + 2 letters + 4 digits (e.g. 123456789RP0001).' };
+// T4 slips and summary: bnRPType, the employer's payroll (RP) program account
+const T4_PAYER_BN_CHECK = { id: 'py-bn', test: v => /^\d{9}RP\d{4}$/.test(cleanBN(v)),
+  msg: v => `T4 employer account must use the RP (payroll) program, e.g. 123456789RP0001; you entered ${cleanBN(v)}.` };
+// T5018 period end: a real calendar date (dayType 1-31, monthType 1-12, yearType)
+const T5018_DATE_CHECK = { id: 't5018-fiscal-day', test: () => {
+  const [d, m, y] = ['day', 'month', 'year'].map(p => document.getElementById(`t5018-fiscal-${p}`).value.trim());
+  return isTaxYear(y) && /^\d{1,2}$/.test(d) && /^\d{1,2}$/.test(m) && isRealDate(+y, +m, +d);
+}, msg: () => `Fiscal period end: ${['year', 'month', 'day'].map(p => document.getElementById(`t5018-fiscal-${p}`).value.trim()).join('-')} isn't a real date.` };
 // T5018 is filed under the payer's RZ (information return) program account
 const T5018_PAYER_BN_CHECK = { id: 'py-bn', test: v => /^\d{9}RZ\d{4}$/.test(cleanBN(v)),
   msg: v => `T5018 payer account must use the RZ program, e.g. 123456789RZ0001; you entered ${cleanBN(v)}.` };
@@ -852,6 +964,10 @@ const LEADING_ZERO_FIX = 'If your spreadsheet dropped a leading zero, format the
 function checkSIN(raw, who, key, { warn, err }) {
   who = who || '(no name)';
   const sin = sinDigits(raw);
+  if (!sin && String(raw ?? '').trim()) {
+    err(key, who, `SIN "${raw}" is not a whole number. Format the column as Text, type the 9 digits, and re-open the file.`);
+    return null;
+  }
   if (!sin) {
     warn(key, `"${who}" has no SIN — using 000000000`);
     return '000000000';
@@ -885,21 +1001,34 @@ function checkRecipientBN(raw, program, placeholder, who, key, { warn, err }) {
   return bn;
 }
 
-// T5018 recipient type: anything unrecognized is a corporation
+// T5018 recipient type: blank is a corporation (as before); anything else unrecognized is null
 function t5018RecipientType(raw) {
   const typeStr = raw.toLowerCase();
+  if (!typeStr) return '3';
   if (BIZ_TYPE_MAP[typeStr]) return BIZ_TYPE_MAP[typeStr];
-  if (typeStr.includes('individual') || typeStr === '1') return '1';
-  if (typeStr.includes('partnership') || typeStr === '4') return '4';
-  return '3';
+  if (typeStr.includes('individual')) return '1';
+  if (typeStr.includes('partnership')) return '4';
+  if (typeStr.includes('corp')) return '3';
+  return null;
 }
 
+const PROV_CHOICES = `${PROVINCES.join(', ')}, US (United States) or ZZ (another country)`;
+const YES_NO = { '': false, YES: true, Y: true, NO: false, N: false };
+const EXEMPT = { '': '0', 0: '0', 1: '1', YES: '1', Y: '1', NO: '0', N: '0' };
+const MONEY_ERRORS = {
+  not_amount: "isn't a dollar amount. Use digits with up to 2 decimals, e.g. 1234.56, 1,234.56 or $1234.56.",
+  negative: "can't be negative: CRA slips take amounts of 0 or more.",
+  decimals: 'has more than 2 decimals; CRA takes dollars and cents.',
+  too_big: 'is over the CRA maximum of {max} for this box.',
+};
+
 // One data row (index i in parsedData) -> null when it's blank for this return (skipped like a blank spreadsheet
-// row), else { ok, issues, get, ...the cleaned values generate*XML needs }. ok is false after a hard-stop error.
-// issues: [{ row: i, field: our column key, severity: 'error' | 'warning', message }].
+// row), else { ok, issues, get, amt, ...the cleaned values generate*XML needs }. ok is false after any error.
+// issues: [{ row: i, field: our column key, severity: 'error' | 'warning', message }]. Every problem in the row is reported.
 function checkRow(rt, row, i, map = columnMap, hdrs = headers) {
   const get = key => (map[key] >= 0 ? row[map[key]] ?? '' : '');
   const str = key => String(get(key)).trim();
+  const fields = RETURN_TYPES[rt].fields;
   const issues = [];
   const ck = {
     warn: (field, msg) => issues.push({ row: i, field, severity: 'warning', message: `Row ${i + 2}: ${msg}` }),
@@ -908,6 +1037,29 @@ function checkRow(rt, row, i, map = columnMap, hdrs = headers) {
       const col = hdrs[map[field]];
       issues.push({ row: i, field, severity: 'error', message: `Row ${i + 2}${col ? `, column "${col}"` : ''} (${who || 'no name'}): ${msg}` });
     },
+  };
+  // Names and address lines longer than the slip takes are cut, with a warning (never silently)
+  const cut = (field, who, what, value, max) => {
+    if (value.length > max) ck.warn(field, `"${who}" ${what} is ${value.length} characters; the slip takes ${max}, so it will be cut to "${value.substring(0, max)}".`);
+  };
+  const cutName = (field, who, name, individual) => {
+    if (individual) {
+      const parts = name.split(/\s+/);
+      cut(field, who, 'last name', parts[parts.length - 1], 20);
+      if (parts.length > 1) cut(field, who, 'first name', parts[0], 12);
+    } else cut(field, who, 'name', name, 60);
+  };
+  const cutAddress = (who, addr) => addr.cuts.forEach(([what, v, max]) => cut('address', who, what, v, max));
+  // Every amount column: { key: number } for the XML, 0 when blank
+  const amounts = who => {
+    const amt = {};
+    for (const f of fields.filter(f => f.type === 'money')) {
+      const raw = get(f.key);
+      const r = parseMoney(raw, f.digits);
+      if (r.error) ck.err(f.key, who, `${f.label} "${String(raw).trim()}" ${MONEY_ERRORS[r.error].replace('{max}', formatMoney(10 ** f.digits - 0.01))}`);
+      amt[f.key] = r.value || 0;
+    }
+    return amt;
   };
   const done = values => ({ ok: !issues.some(x => x.severity === 'error'), issues, get, ...values });
 
@@ -920,42 +1072,60 @@ function checkRow(rt, row, i, map = columnMap, hdrs = headers) {
       lastName = parts.pop();
       firstName = parts.join(' ');
     }
-    const provCdRaw = str('empt_prov_cd').toUpperCase();
     const addressRaw = str('address');
     if (!lastName && !str('sin')) return null;
-    // SIN validation — invalid SIN is a hard stop
-    const sinVal = checkSIN(get('sin'), `${firstName} ${lastName}`.trim(), 'sin', ck);
-    if (!sinVal) return done();
-    let empProvCd = provCdRaw;
-    if (!ALL_PROV_CODES.has(empProvCd)) {
-      empProvCd = parseAddress(addressRaw).prov || 'ON'; // derive from the address, default ON if unknown
-      if (!provCdRaw) ck.warn('empt_prov_cd', `"${firstName} ${lastName}" province of employment not specified, defaulting to ${empProvCd}`);
+    const who = `${firstName} ${lastName}`.trim();
+    const sinVal = checkSIN(get('sin'), who, 'sin', ck);
+    // Box 10: a code from the list. Blank: the address's province; no province column at all: that, or ON.
+    let empProvCd = normCode(get('empt_prov_cd'));
+    if (empProvCd && !T4_PROVINCES.has(empProvCd)) {
+      ck.err('empt_prov_cd', who, `province of employment "${str('empt_prov_cd')}" isn't a province or territory code. Use ${PROV_CHOICES}.`);
+    } else if (!empProvCd) {
+      empProvCd = parseAddress(addressRaw).prov || (map.empt_prov_cd >= 0 ? '' : 'ON');
+      if (empProvCd) ck.warn('empt_prov_cd', `"${firstName} ${lastName}" province of employment not specified, defaulting to ${empProvCd}`);
+      else ck.err('empt_prov_cd', who, `province of employment is blank. Use ${PROV_CHOICES}.`);
     }
-    return done({ lastName, firstName, sinVal, empProvCd, addressRaw });
+    const xmpt = {};
+    for (const key of ['cpp_qpp_xmpt_cd', 'ei_xmpt_cd']) {
+      xmpt[key] = EXEMPT[normCode(get(key))];
+      if (!xmpt[key]) ck.err(key, who, `${fields.find(f => f.key === key).label} "${str(key)}" must be 0 (not exempt) or 1 (exempt); Yes and No work too.`);
+    }
+    cut('empe_snm', who, 'last name', lastName, 20);
+    cut('empe_gvn_nm', who, 'first name', firstName, 12);
+    cutAddress(who, parseAddress(addressRaw));
+    const amt = amounts(who);
+    return done({ lastName, firstName, sinVal, empProvCd, addressRaw, xmpt, amt });
   }
 
   if (rt === 'T1204' || rt === 'T5018') {
     const [nameKey, idKey] = rt === 'T1204' ? ['vendor_name', 'vendor_bn'] : ['rcpnt_name', 'rcpnt_bn'];
     const name = str(nameKey);
     if (!name && !str(idKey)) return null;
-    let rcpntTcd;
-    if (rt === 'T1204') {
-      const bizType = str('biz_type');
-      rcpntTcd = BIZ_TYPE_MAP[bizType.toLowerCase()];
-      if (!rcpntTcd) {
-        ck.err('biz_type', name, `business type "${bizType}" isn't recognized. Use Individual (or Sole proprietor), Corporation, Partnership, or the CRA code 1, 3 or 4.`);
-        return done();
-      }
+    const typeKey = rt === 'T1204' ? 'biz_type' : 'rcpnt_type';
+    const typeRaw = str(typeKey);
+    const rcpntTcd = rt === 'T1204' ? BIZ_TYPE_MAP[typeRaw.toLowerCase()] : t5018RecipientType(typeRaw);
+    let idVal = null;
+    if (!rcpntTcd) {
+      // without the type there's no telling whether the ID is a SIN or a BN
+      ck.err(typeKey, name, `${rt === 'T1204' ? 'business' : 'recipient'} type "${typeRaw}" isn't recognized. Use Individual (or Sole proprietor), Corporation, Partnership, or the CRA code 1, 3 or 4.`);
     } else {
-      rcpntTcd = t5018RecipientType(str('rcpnt_type'));
+      idVal = rcpntTcd === '1'
+        ? checkSIN(get(idKey), name, idKey, ck)
+        : checkRecipientBN(get(idKey), rt === 'T1204' ? 'RT' : 'RZ', rt === 'T1204' ? '000000000RC0000' : '000000000RZ0000', name, idKey, ck);
     }
-    const idVal = rcpntTcd === '1'
-      ? checkSIN(get(idKey), name, idKey, ck)
-      : checkRecipientBN(get(idKey), rt === 'T1204' ? 'RT' : 'RZ', rt === 'T1204' ? '000000000RC0000' : '000000000RZ0000', name, idKey, ck);
-    return done({ name, rcpntTcd, idVal });
+    let svcOnly = false;
+    if (rt === 'T1204') {
+      svcOnly = YES_NO[normCode(get('svc_only'))];
+      if (svcOnly === undefined) ck.err('svc_only', name, `service payments only "${str('svc_only')}" must be Yes or No.`);
+    }
+    cutName(nameKey, name, name, false);
+    if (rcpntTcd === '1') cutName(nameKey, name, name, true);
+    cutAddress(name, parseAddress(str('address')));
+    const amt = amounts(name);
+    return done({ name, rcpntTcd, idVal, svcOnly, amt });
   }
 
-  // NR4: every problem in the row is reported, then the row is skipped
+  // NR4
   const name = str('rcpnt_name');
   const fssn = str('fssn_nbr');
   if (!name && !fssn) return null;
@@ -968,7 +1138,8 @@ function checkRow(rt, row, i, map = columnMap, hdrs = headers) {
   const incCd = incRaw ? incRaw.padStart(2, '0') : '';
   const crcy = str('crcy_1_cd').toUpperCase();
   const xmptCd = str('tx_xmpt_1_cd').toUpperCase();
-  const steCd = str('ste_cd').toUpperCase();
+  const steCd = normCode(get('ste_cd'));
+  const postal = foreignPostal(get('fgn_pstl_cd'));
   const fssnCell = get('fssn_nbr');
   if (!name) rowErr('rcpnt_name', 'the recipient name is missing.');
   if (!rcpntTcd) rowErr('rcpnt_type', `recipient type "${typeRaw}" isn't recognized. Use Individual, Joint account, Corporation, Other, Government, or 1–5.`);
@@ -979,10 +1150,17 @@ function checkRow(rt, row, i, map = columnMap, hdrs = headers) {
   if (incCd && !/^\d{2}$/.test(incCd)) rowErr('inc_1_tcd', `income code "${incRaw}" must be 2 digits.`);
   if (crcy && !/^[A-Z]{3}$/.test(crcy)) rowErr('crcy_1_cd', `currency "${crcy}" must be a 3-letter code (e.g. CAD, USD).`);
   if (xmptCd.length > 1) rowErr('tx_xmpt_1_cd', `exemption code "${xmptCd}" must be 1 character.`);
+  else if (xmptCd && !/^[A-Z]$/.test(xmptCd)) rowErr('tx_xmpt_1_cd', `exemption code "${xmptCd}" must be a letter.`);
+  if (steCd && !NR4_STATES.has(steCd)) rowErr('ste_cd', `state or province "${str('ste_cd')}" isn't a state or province code. Use the 2-letter code, e.g. WA, NY or ON.`);
+  if (postal === null) rowErr('fgn_pstl_cd', `postal or ZIP code "${str('fgn_pstl_cd')}" can only have up to 10 letters, digits, spaces and hyphens.`);
   const withCIN = targetSchema(new Date()) === '1-27-1';
   const cin = withCIN && nr4CIN(get('cin'));
   if (withCIN && !cin) rowErr('cin', `Canadian tax ID "${get('cin')}" must be a 9-digit SIN/TTN/ITN, a 15-character BN (e.g. 123456789RC0001) or a trust account (e.g. T12345678). Leave it blank if the recipient has none.`);
-  return done({ name, fssn, rcpntTcd, cntry, incCd, crcy, xmptCd, cin, steCd });
+  cutName('rcpnt_name', name, name, rcpntTcd === '1' || rcpntTcd === '2');
+  cut('addr_l1', name, 'address line', str('addr_l1'), 30);
+  cut('city', name, 'city', str('city'), 28);
+  const amt = amounts(name);
+  return done({ name, fssn, rcpntTcd, cntry, incCd, crcy, xmptCd, cin, steCd, postal, amt });
 }
 
 // Every row problem for a return: what the editor marks live and what Generate blocks on (errors) or lists (warnings)
@@ -1016,7 +1194,7 @@ function checkRequiredColumns() {
   box.innerHTML = unmapped.length
     ? `<h4>Pick a column for ${unmapped.length === 1 ? 'this required field' : `these ${unmapped.length} required fields`} before you continue</h4>` +
       `<ul>${unmapped.map(f => `<li>${escapeXml(f.label)}</li>`).join('')}</ul>` +
-      `<p>Choose the field in the dropdown at the top of the column that holds it. If none fits, add that column to your spreadsheet and open it again, or check that ${getSelectedReturnType()} is the right return for this file.</p>`
+      `<p>Put the column of your file that holds it under that CRA column: drag it there, or pick the CRA column in its “Move to CRA column” dropdown (columns not used are under Ignored columns). If none fits, add that column to your spreadsheet and open it again, or check that ${getSelectedReturnType()} is the right return for this file.</p>`
     : '';
   box.classList.toggle('hidden', !unmapped.length);
   return !unmapped.length;
@@ -1034,7 +1212,7 @@ function generateXML() {
   const unmapped = unmappedRequired();
   if (unmapped.length) {
     clearFieldErrors();
-    showGenerateErrors(unmapped.map(f => `No column is set to "${f.label}". Pick it in a column's dropdown in Step 2, or check that ${getSelectedReturnType()} is the right return for this file.`));
+    showGenerateErrors(unmapped.map(f => `No column is set to "${f.label}". Move a column under it in Step 2, or check that ${getSelectedReturnType()} is the right return for this file.`));
     return;
   }
   config.generateXML();
@@ -1062,9 +1240,8 @@ function generateT1204XML() {
     if (!v) continue;
     issues.push(...v.issues);
     if (!v.ok) continue;
-    const { name: vendorName, rcpntTcd, idVal, get } = v;
-    const amount = parseFloat(get('amount')) || 0;
-    const svcOnly = String(get('svc_only')).trim().toLowerCase();
+    const { name: vendorName, rcpntTcd, idVal, svcOnly, amt, get } = v;
+    const amount = amt.amount;
     const address = String(get('address')).trim();
     const addr = parseAddress(address);
     const amtStr = amount.toFixed(2);
@@ -1092,7 +1269,7 @@ function generateT1204XML() {
     const l2Nm = nameStr.length > 30 ? nameStr.substring(30, 60) : '';
 
     let amtXml = '';
-    if (svcOnly === 'yes') {
+    if (svcOnly) {
       amtXml = xmlTag('srvc_pay_amt', amtStr);
       totalSrvc += amount;
     } else {
@@ -1169,7 +1346,7 @@ function generateT4XML() {
   // Validate required form fields — T4 uses py-* for employer
   if (!validateFilingDetails(['tx-name','tx-ref','tx-contact','tx-phone','tx-email',
                               'py-bn','py-name','py-contact','py-phone'],
-                             [PAYER_BN_CHECK])) return;
+                             [T4_PAYER_BN_CHECK])) return;
 
   const pyPhone = parsePhone(document.getElementById('py-phone').value);
   const taxYear = document.getElementById('tax-year').value;
@@ -1179,10 +1356,6 @@ function generateT4XML() {
 
   // Dental benefit code from form
   const dentalCode = document.getElementById('t4-dental-code')?.value || '1';
-  // Default CPP/EI exempt codes
-  const cppExemptDefault = '0';
-  const eiExemptDefault = '0';
-
   let slipCount = 0;
   let slipsXml = '';
 
@@ -1194,17 +1367,17 @@ function generateT4XML() {
     if (!v) continue;
     issues.push(...v.issues);
     if (!v.ok) continue;
-    const { lastName, firstName, sinVal, empProvCd, addressRaw, get } = v;
-    const emptyIncome = parseFloat(get('empt_incamt')) || 0;
-    const cppAmt = parseFloat(get('cpp_cntrb_amt')) || 0;
-    const cppeAmt = parseFloat(get('cppe_cntrb_amt')) || 0;
-    const qppAmt = parseFloat(get('qpp_cntrb_amt')) || 0;
-    const eiAmt = parseFloat(get('empe_eip_amt')) || 0;
-    const rppAmt = parseFloat(get('rpp_cntrb_amt')) || 0;
-    const itxAmt = parseFloat(get('itx_ddct_amt')) || 0;
-    const eiInsEarn = parseFloat(get('ei_insu_ern_amt')) || 0;
-    const cppQppEarn = parseFloat(get('cpp_qpp_ern_amt')) || 0;
-    const unnDues = parseFloat(get('unn_dues_amt')) || 0;
+    const { lastName, firstName, sinVal, empProvCd, addressRaw, xmpt, amt } = v;
+    const emptyIncome = amt.empt_incamt;
+    const cppAmt = amt.cpp_cntrb_amt;
+    const cppeAmt = amt.cppe_cntrb_amt;
+    const qppAmt = amt.qpp_cntrb_amt;
+    const eiAmt = amt.empe_eip_amt;
+    const rppAmt = amt.rpp_cntrb_amt;
+    const itxAmt = amt.itx_ddct_amt;
+    const eiInsEarn = amt.ei_insu_ern_amt;
+    const cppQppEarn = amt.cpp_qpp_ern_amt;
+    const unnDues = amt.unn_dues_amt;
 
     // Parse employee address
     const addr = parseAddress(addressRaw);
@@ -1237,8 +1410,8 @@ function generateT4XML() {
         </EMPE_ADDR>` : ''}
         ${xmlTag('sin', sinVal)}
         ${xmlTag('bn', employerBn)}
-        ${xmlTag('cpp_qpp_xmpt_cd', cppExemptDefault)}
-        ${xmlTag('ei_xmpt_cd', eiExemptDefault)}
+        ${xmlTag('cpp_qpp_xmpt_cd', xmpt.cpp_qpp_xmpt_cd)}
+        ${xmlTag('ei_xmpt_cd', xmpt.ei_xmpt_cd)}
         ${xmlTag('rpt_tcd', reportType)}
         ${xmlTag('empt_prov_cd', empProvCd)}
         ${xmlTag('empr_dntl_ben_rpt_cd', dentalCode)}
@@ -1326,7 +1499,7 @@ function generateT5018XML() {
   if (!validateFilingDetails(['tx-name','tx-ref','tx-contact','tx-phone','tx-email',
                               'py-bn','py-name','py-contact','py-phone',
                               't5018-fiscal-day','t5018-fiscal-month','t5018-fiscal-year'],
-                             [T5018_PAYER_BN_CHECK])) return;
+                             [T5018_PAYER_BN_CHECK, T5018_DATE_CHECK])) return;
 
   const fiscalDay = document.getElementById('t5018-fiscal-day').value;
   const fiscalMonth = document.getElementById('t5018-fiscal-month').value;
@@ -1344,8 +1517,8 @@ function generateT5018XML() {
     if (!v) continue;
     issues.push(...v.issues);
     if (!v.ok) continue;
-    const { name: recipientName, rcpntTcd, idVal, get } = v;
-    const subAmt = parseFloat(get('sbctrcr_amt')) || 0;
+    const { name: recipientName, rcpntTcd, idVal, amt, get } = v;
+    const subAmt = amt.sbctrcr_amt;
     const addressRaw = String(get('address')).trim();
     const addr = parseAddress(addressRaw);
 
@@ -1470,9 +1643,9 @@ function generateNR4XML() {
     if (!v) continue;
     issues.push(...v.issues);
     if (!v.ok) continue;
-    const { name, fssn, rcpntTcd, cntry, incCd, crcy, xmptCd, cin, steCd, get } = v;
-    const gross = parseFloat(get('gro_1_incamt')) || 0;
-    const tax = parseFloat(get('nr_tx_1_amt')) || 0;
+    const { name, fssn, rcpntTcd, cntry, incCd, crcy, xmptCd, cin, steCd, postal, amt, get } = v;
+    const gross = amt.gro_1_incamt;
+    const tax = amt.nr_tx_1_amt;
 
     // Individuals and joint accounts use RCPNT_NM; corporations, other and government use ENTPRS_NM
     let nameXml;
@@ -1490,8 +1663,8 @@ function generateNR4XML() {
     const addrInner = [
       xmlTag('addr_l1_txt', String(get('addr_l1')).trim().substring(0, 30)),
       xmlTag('cty_nm', String(get('city')).trim().substring(0, 28)),
-      /^[A-Z]{2}$/.test(steCd) ? xmlTag('ste_cd', steCd) : '',
-      xmlTag('fgn_pstl_cd', String(get('fgn_pstl_cd')).trim().replace(/\s/g, '').toUpperCase()),
+      xmlTag('ste_cd', steCd),
+      xmlTag('fgn_pstl_cd', postal),
     ].join('');
     const addrXml = addrInner ? `<RCPNT_ADDR>${addrInner}${xmlTag('cntry_cd', cntry)}</RCPNT_ADDR>` : '';
 
