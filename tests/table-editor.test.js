@@ -10,13 +10,13 @@ function app(returnType = 'T4', opts = {}) {
   const a = createApp({ returnType, gtag: (cmd, name, params) => events.push([name, JSON.parse(JSON.stringify(params))]), ...opts });
   a.events = events;
   a.named = n => events.filter(e => e[0] === n).map(e => e[1]);
-  a.thead = () => a.el('editor-thead').innerHTML;
+  a.thead = () => a.el('editor-thead').innerHTML + a.el('editor-ignored').innerHTML; // the whole mapping UI
   a.tbody = () => a.el('editor-tbody').innerHTML;
   a.status = () => a.el('editor-status').textContent;
   a.field = c => a.run(`columnField(${c})`);
-  a.cell = (r, c) => JSON.parse(JSON.stringify(a.run(`cellState(${r}, ${c})`)));
+  a.cell = (r, c) => JSON.parse(JSON.stringify(a.run(`cellState(${r}, columnField(${c}))`))); // by source column
   a.issues = () => JSON.parse(JSON.stringify(a.run('validateRows(getSelectedReturnType())')));
-  a.order = () => JSON.parse(JSON.stringify(a.run('editorColumns()'))); // a plain array, not the vm realm's
+  a.slots = () => JSON.parse(JSON.stringify(a.run('editorSlots()'))); // a plain array, not the vm realm's
   return a;
 }
 const shown = (a, id) => !a.el(id).classList.contains('hidden');
@@ -33,59 +33,82 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   assert.deepStrictEqual(a.named('file_parse_error'), [{ return_type: 'T4', error_category: 'no_data_rows' }]);
 }
 
-// ---- one row: a real table, CRA field per column, labelled selects, row numbers as in the spreadsheet ----
+// ---- one row: a real table under a fixed header of CRA columns; every source column appears exactly once ----
 {
   const a = app('T4');
   a.loadFile('t4.csv', csv([[...T4H, 'Notes'], ['Doe', 'John', '046454286', '100', 'hello']]));
   assert.strictEqual(a.run('currentStep'), 2);
-  const th = a.thead();
-  assert.strictEqual((th.match(/<th scope="col"/g) || []).length, 6, 'row-number column + 5 source columns: ' + th);
+  const th = a.el('editor-thead').innerHTML;
+  const slots = a.slots();
+  assert.strictEqual(slots.length, 17, 'T4 has 17 CRA columns');
+  assert.strictEqual((th.match(/<tr\b/g) || []).length, 2, 'two header rows: CRA columns, then your columns under them');
+  assert.strictEqual((th.match(/<th scope="col"/g) || []).length, 1 + 2 * slots.length, 'row-number column + a CRA header and a slot per CRA column: ' + th);
+  assert(/<th scope="col" class="ed-rownum" rowspan="2">Row<\/th>/.test(th));
   for (let c = 0; c < 5; c++) {
-    assert(new RegExp(`<label[^>]* for="ed-col-${c}"`).test(th), `select ${c} has a label`);
-    assert(new RegExp(`<select id="ed-col-${c}" data-col="${c}"`).test(th), `select ${c}`);
+    assert.strictEqual((a.thead().match(new RegExp(`<select id="ed-col-${c}" data-col="${c}"`, 'g')) || []).length, 1, `one move dropdown for column ${c}`);
+    assert(new RegExp(`<label[^>]* for="ed-col-${c}"[^>]*>Move column ${'ABCDE'[c]}`).test(a.thead()), `select ${c} has a label`);
   }
   assert.deepStrictEqual([0, 1, 2, 3, 4].map(a.field), ['empe_snm', 'empe_gvn_nm', 'sin', 'empt_incamt', 'ignore']);
-  assert(/Notes/.test(th) && /is-ignored/.test(th), 'extra column visible and marked ignored');
-  assert(/<option value="ignore" selected>Ignored<\/option>/.test(th), 'extra column shows Ignored');
-  assert.strictEqual((th.match(/class="req"/g) || []).length, 3, 'the 3 required T4 fields are starred');
+  // the unmatched column is in the Ignored area, not in the table
+  const ign = a.el('editor-ignored').innerHTML;
+  assert(/Ignored columns/.test(ign) && /E · Notes/.test(ign) && /<select id="ed-col-4"/.test(ign), ign);
+  assert(!/Notes/.test(th));
+  assert(/data-drop="ignore"/.test(ign), 'the area is a drop target');
   const tb = a.tbody();
   assert.strictEqual((tb.match(/<tr data-r=/g) || []).length, 1);
   assert(/<th scope="row"[^>]*>2\b/.test(tb), 'row header shows spreadsheet row 2: ' + tb);
-  assert(/>hello</.test(tb), 'ignored column data still shown');
+  assert.strictEqual((tb.match(/<td\b/g) || []).length, slots.length, 'one cell per CRA column');
+  assert(!/hello/.test(tb), 'ignored data is not in the table');
   assert(/No problems/i.test(a.status()), a.status());
   assert(!shown(a, 'editor-missing'), 'nothing required is missing');
 }
 
-// ---- display order follows the CRA field order; ignored columns last, in file order ----
+// ---- the fixed header is in CRA order (schema / box order) for every return, with Mandatory / Optional badges ----
 {
-  const a = app('T4');
-  a.loadFile('t.csv', csv([['Extra', 'SIN', 'Other', 'Last Name', 'Box 14 - Employment Income'], ['x', '046454286', 'y', 'Doe', '1']]));
-  assert.deepStrictEqual(a.order(), [3, 1, 4, 0, 2]);
+  const ORDER = {
+    T4: ['empe_snm', 'empe_gvn_nm', 'address', 'empt_prov_cd', 'sin', 'empt_incamt', 'cpp_cntrb_amt', 'cppe_cntrb_amt', 'qpp_cntrb_amt', 'empe_eip_amt',
+      'rpp_cntrb_amt', 'itx_ddct_amt', 'ei_insu_ern_amt', 'cpp_qpp_ern_amt', 'cpp_qpp_xmpt_cd', 'ei_xmpt_cd', 'unn_dues_amt'],
+    T1204: ['vendor_name', 'vendor_bn', 'biz_type', 'address', 'amount', 'svc_only'],
+    T5018: ['rcpnt_name', 'rcpnt_bn', 'rcpnt_type', 'address', 'sbctrcr_amt'],
+    NR4: ['rcpnt_name', 'addr_l1', 'city', 'ste_cd', 'fgn_pstl_cd', 'tx_cntry_cd', 'cin', 'fssn_nbr', 'rcpnt_type', 'inc_1_tcd', 'crcy_1_cd',
+      'gro_1_incamt', 'nr_tx_1_amt', 'tx_xmpt_1_cd'],
+  };
+  const MANDATORY = { T4: ['empe_snm', 'sin', 'empt_incamt'], T1204: ['vendor_name', 'vendor_bn'], T5018: ['rcpnt_name', 'rcpnt_bn', 'sbctrcr_amt'], NR4: ['rcpnt_name', 'fssn_nbr', 'gro_1_incamt'] };
+  for (const [rt, order] of Object.entries(ORDER)) {
+    const a = app(rt);
+    a.loadFile('x.csv', csv([['Unrelated'], ['x']])); // nothing matches: every slot is empty, the column is ignored
+    assert.deepStrictEqual(a.slots(), order, `${rt} CRA order`);
+    const th = a.el('editor-thead').innerHTML;
+    const [row1, row2] = th.split('</tr>');
+    assert.deepStrictEqual([...row1.matchAll(/data-slot="([^"]+)"/g)].map(m => m[1]), order, `${rt} header row`);
+    assert.deepStrictEqual([...row2.matchAll(/data-slot="([^"]+)"/g)].map(m => m[1]), order, `${rt} slot row`);
+    const labels = a.run(`getReturnConfig().fields.map(f => f.label)`);
+    for (const l of labels) assert(th.includes(esc(l)), `${rt} header shows ${l}`);
+    // badge = text + class (colour), never colour alone
+    const badges = [...row1.matchAll(/<th scope="col" class="ed-cra[^"]*" data-slot="([^"]+)"[^>]*>[\s\S]*?<span class="badge badge-(mandatory|optional)">(Mandatory|Optional)<\/span>/g)]
+      .map(m => [m[1], m[2], m[3]]);
+    assert.strictEqual(badges.length, order.length, `${rt}: a badge per CRA column: ${row1}`);
+    for (const [key, cls, text] of badges) {
+      const want = MANDATORY[rt].includes(key) ? 'mandatory' : 'optional';
+      assert.strictEqual(cls, want, `${rt}.${key}`);
+      assert.strictEqual(text.toLowerCase(), want);
+    }
+    // empty slots: mandatory ones warn, optional ones are neutral
+    for (const key of order) {
+      const slot = row2.match(new RegExp(`<th scope="col" class="([^"]*)" data-slot="${key}"[^>]*>([\\s\\S]*?)</th>`));
+      assert(slot, `${rt}.${key} slot`);
+      assert(/\bis-empty\b/.test(slot[1]), `${rt}.${key} empty`);
+      if (MANDATORY[rt].includes(key)) {
+        assert(/\bis-missing\b/.test(slot[1]) && /Mandatory: no column yet/.test(slot[2]), `${rt}.${key} mandatory warning: ${slot[0]}`);
+      } else {
+        assert(!/\bis-missing\b/.test(slot[1]) && /No column/.test(slot[2]) && !/Mandatory/.test(slot[2]), `${rt}.${key} neutral: ${slot[0]}`);
+      }
+    }
+    assert(/A · Unrelated/.test(a.el('editor-ignored').innerHTML));
+  }
 }
 
-// ---- missing required columns: listed, Continue blocked, fixed by the dropdown ----
-{
-  const a = app('T4');
-  a.loadFile('t4.csv', csv([['Nom', 'Prenom', 'NAS', 'Paye'], ['Doe', 'John', '046454286', '100']]));
-  assert(shown(a, 'editor-missing'));
-  for (const l of ['Last Name (Box 12)', 'SIN (Box 12)', 'Employment Income (Box 14)']) assert(a.el('editor-missing').innerHTML.includes(l), l);
-  a.run('continueFromEditor()');
-  assert.strictEqual(a.run('currentStep'), 2, 'blocked on Step 2');
-  assert(shown(a, 'editor-errors'));
-  assert(/dropdown at the top of the column/.test(a.el('editor-errors').innerHTML), a.el('editor-errors').innerHTML);
-  a.run(`remapColumn(0, 'empe_snm', 'dropdown'); remapColumn(2, 'sin', 'dropdown')`);
-  assert(a.el('editor-missing').innerHTML.includes('Employment Income') && !a.el('editor-missing').innerHTML.includes('SIN (Box 12)'));
-  a.run(`remapColumn(3, 'empt_incamt', 'dropdown')`);
-  assert(!shown(a, 'editor-missing'), 'all required set');
-  assert(!shown(a, 'editor-errors'), 'Continue error clears once fixed');
-  a.run('continueFromEditor()');
-  assert.strictEqual(a.run('currentStep'), 3);
-  assert.deepStrictEqual(a.named('column_remapped'), [
-    { return_type: 'T4', field: 'empe_snm', method: 'dropdown' }, { return_type: 'T4', field: 'sin', method: 'dropdown' },
-    { return_type: 'T4', field: 'empt_incamt', method: 'dropdown' }]);
-}
-
-// ---- one CRA field -> one column: picking it elsewhere unassigns the old column; 'ignore' unassigns ----
+// ---- one source column per CRA column: moving a column under a taken CRA column ignores the one that was there ----
 {
   const a = app('T4');
   a.loadFile('t.csv', csv([[...T4H, 'SIN copy'], ['Doe', 'John', '046454286', '1', '130692544']]));
@@ -93,16 +116,45 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   a.run(`remapColumn(4, 'sin', 'dropdown')`);
   assert.strictEqual(a.field(4), 'sin');
   assert.strictEqual(a.field(2), 'ignore', 'old SIN column is now ignored');
+  assert(/C · SIN/.test(a.el('editor-ignored').innerHTML), 'and listed in the Ignored area');
   assert.strictEqual(a.run('columnMap.sin'), 4);
   assert.strictEqual(Object.values(JSON.parse(JSON.stringify(a.run('columnMap')))).filter(c => c === 4).length, 1);
   a.run(`remapColumn(4, 'ignore', 'dropdown')`);
   assert.strictEqual(a.run('columnMap.sin'), -1);
   assert(a.el('editor-missing').innerHTML.includes('SIN (Box 12)'));
+  assert(/data-slot="sin"[^>]*>[\s\S]*?Mandatory: no column yet/.test(a.el('editor-thead').innerHTML.split('</tr>')[1]), 'empty mandatory slot warns');
   assert.deepStrictEqual(a.named('column_remapped').map(p => p.field), ['sin', 'ignore']);
   // a value that isn't a field of this return (tampered select) changes nothing and sends nothing
   a.run(`remapColumn(0, 'rcpnt_bn', 'dropdown'); remapColumn(0, '__proto__', 'dropdown')`);
   assert.strictEqual(a.field(0), 'empe_snm');
   assert.strictEqual(a.named('column_remapped').length, 2);
+  // the move dropdown says which CRA columns are taken, and by which column
+  assert(/<option value="sin"[^>]*>SIN \(Box 12\) \(mandatory\)<\/option>/.test(a.thead()), 'free mandatory slot');
+  assert(/<option value="empe_gvn_nm"[^>]*>First Name \(now column B\)<\/option>/.test(a.el('editor-ignored').innerHTML), a.el('editor-ignored').innerHTML);
+}
+
+// ---- invariant: after any sequence of moves, no CRA column has two source columns and no column is in two CRA columns ----
+{
+  const a = app('NR4');
+  const H = ['Recipient Name', 'Recipient Type', 'Foreign Tax ID', 'Country', 'Gross Income', 'Tax Withheld', 'City', 'Zip', 'Extra 1', 'Extra 2'];
+  a.loadFile('t.csv', csv([H, ['Al', 'Individual', 'X1', 'USA', '1', '0', 'Seattle', '98101', 'e1', 'e2']]));
+  const slots = a.slots();
+  let seed = 7;
+  const rnd = n => (seed = (seed * 1103515245 + 12345) % 2147483648) % n;
+  for (let i = 0; i < 400; i++) {
+    const c = rnd(H.length), f = slots[rnd(slots.length)];
+    const op = rnd(5);
+    if (op === 0) a.run(`remapColumn(${c}, '${f}', 'dropdown')`);
+    else if (op === 1) a.run(`dropOnSlot(${c}, '${f}', 'drag')`);
+    else if (op === 2) a.run(`moveColumn(${c}, ${rnd(2) ? 1 : -1})`);
+    else if (op === 3) a.run(`remapColumn(${c}, 'ignore', 'drag')`);
+    else a.run(`swapColumns(${c}, ${rnd(H.length)}, 'drag')`);
+    const map = JSON.parse(JSON.stringify(a.run('columnMap')));
+    const used = Object.values(map).filter(v => v >= 0);
+    assert.strictEqual(new Set(used).size, used.length, `step ${i}: ${JSON.stringify(map)}`);
+    const ignored = JSON.parse(JSON.stringify(a.run('ignoredColumns()')));
+    assert.deepStrictEqual([...used, ...ignored].sort((x, y) => x - y), H.map((_, k) => k), `step ${i}: every column is in one place`);
+  }
 }
 
 // ---- duplicate source headers are separate columns with their own ids ----
@@ -119,49 +171,79 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   assert(a.generate().includes('<sbctrcr_amt>2.00</sbctrcr_amt>'), 'the picked duplicate column is the one used');
 }
 
-// ---- drag (swap the CRA fields of two columns) and keyboard move left/right ----
+// ---- drag onto a CRA column, drag to Ignored, drag out of Ignored; keyboard moves to the next / previous CRA column ----
 {
   const a = app('T4');
   a.loadFile('t.csv', csv([[...T4H, 'Notes'], ['Doe', 'John', '046454286', '1', 'n']]));
-  a.run(`swapColumns(0, 1, 'drag')`);
+  a.run(`dropOnSlot(0, 'empe_gvn_nm', 'drag')`); // onto a taken CRA column, from a CRA column: the two trade places
   assert.deepStrictEqual([0, 1].map(a.field), ['empe_gvn_nm', 'empe_snm']);
-  assert.deepStrictEqual(a.order(), [1, 0, 2, 3, 4], 'columns re-order to follow the CRA fields');
-  a.run(`swapColumns(3, 4, 'drag')`); // onto an ignored column: that column takes the field, the dragged one is ignored
+  a.run(`dropOnSlot(4, 'empt_incamt', 'drag')`); // from Ignored onto a taken CRA column: the one there goes to Ignored
   assert.deepStrictEqual([3, 4].map(a.field), ['ignore', 'empt_incamt']);
-  a.run(`swapColumns(3, 3, 'drag')`); // onto itself: nothing
-  assert.deepStrictEqual(a.named('column_remapped'), [{ return_type: 'T4', field: 'empe_gvn_nm', method: 'drag' }, { return_type: 'T4', field: 'ignore', method: 'drag' }]);
-  // keyboard: move a column one place left/right in the display order = swap with that neighbour
-  const order = a.order;
-  assert.deepStrictEqual(order(), [1, 0, 2, 4, 3]);
-  a.run(`moveColumn(0, -1)`);
-  assert.deepStrictEqual(order(), [0, 1, 2, 4, 3]);
+  a.run(`dropOnSlot(3, 'unn_dues_amt', 'drag')`); // from Ignored onto an empty CRA column
+  assert.strictEqual(a.field(3), 'unn_dues_amt');
+  a.run(`dropOnSlot(3, 'unn_dues_amt', 'drag')`); // onto itself: nothing
+  a.run(`remapColumn(3, 'ignore', 'drag')`); // dragged to the Ignored area
+  assert.strictEqual(a.field(3), 'ignore');
+  assert.deepStrictEqual(a.named('column_remapped'), [
+    { return_type: 'T4', field: 'empe_gvn_nm', method: 'drag' }, { return_type: 'T4', field: 'empt_incamt', method: 'drag' },
+    { return_type: 'T4', field: 'unn_dues_amt', method: 'drag' }, { return_type: 'T4', field: 'ignore', method: 'drag' }]);
+  // keyboard: → / ← move a column to the next / previous CRA column (trading with the column there, if any)
+  a.run(`moveColumn(1, 1)`); // column B (Last Name, 1st slot) -> First Name slot, trades with column A
   assert.deepStrictEqual([0, 1].map(a.field), ['empe_snm', 'empe_gvn_nm']);
-  a.run(`moveColumn(0, -1)`); // already first: nothing
-  a.run(`moveColumn(3, 1)`);  // last: nothing
-  assert.deepStrictEqual(a.named('column_remapped').slice(2), [{ return_type: 'T4', field: 'empe_snm', method: 'keyboard' }]);
-  assert(/data-move="-1"/.test(a.thead()) && /aria-label="Move column/.test(a.thead()), 'move buttons rendered with labels');
-  assert(/draggable="true"/.test(a.thead()), 'drag handle rendered');
+  a.run(`moveColumn(0, -1)`); // already in the first CRA column: nothing
+  a.run(`moveColumn(4, 1)`); // Box 14 -> Box 16 (empty): Box 14 is left empty
+  assert.strictEqual(a.field(4), 'cpp_cntrb_amt');
+  assert.strictEqual(a.run('columnMap.empt_incamt'), -1);
+  a.run(`moveColumn(4, -1)`);
+  assert.strictEqual(a.field(4), 'empt_incamt');
+  a.run(`moveColumn(3, 1)`); // an ignored column has no CRA neighbour: nothing
+  assert.strictEqual(a.field(3), 'ignore');
+  assert.deepStrictEqual(a.named('column_remapped').slice(4).map(p => [p.field, p.method]),
+    [['empe_gvn_nm', 'keyboard'], ['cpp_cntrb_amt', 'keyboard'], ['empt_incamt', 'keyboard']]);
+  const th = a.el('editor-thead').innerHTML;
+  assert(/data-move="-1" data-col="1" aria-label="Move column B to the previous CRA column"/.test(th), th);
+  assert(/data-move="1" data-col="1" aria-label="Move column B to the next CRA column"/.test(th));
+  assert(/<span class="ed-chip" draggable="true" data-drag="1"/.test(th), 'drag handle on the column in its slot');
+  assert(/<li class="ed-chip" draggable="true" data-drag="3"/.test(a.el('editor-ignored').innerHTML), 'drag handle on ignored columns');
   a.setDetails();
   assert(a.generate().includes('<snm>Doe</snm>'), 'XML follows the remapped columns');
 }
 
-// ---- delegated DOM events: header select change, move buttons, drag-and-drop ----
+// ---- delegated DOM events: move dropdowns (in the header and in Ignored), move buttons, drag-and-drop in and out ----
 {
   const a = app('T4');
   a.loadFile('t.csv', csv([[...T4H, 'SIN2'], ['Doe', 'John', '046454286', '1', '130692544']]));
   const target = (dataset, value) => ({ dataset, value, closest: () => null });
-  a.el('editor-thead').dispatchEvent({ type: 'change', target: target({ col: '4' }, 'sin') });
-  assert.strictEqual(a.field(4), 'sin');
+  a.el('editor-ignored').dispatchEvent({ type: 'change', target: target({ col: '4' }, 'sin') });
+  assert.strictEqual(a.field(4), 'sin', 'dropdown in the Ignored area');
+  a.el('editor-thead').dispatchEvent({ type: 'change', target: target({ col: '4' }, 'qpp_cntrb_amt') });
+  assert.strictEqual(a.field(4), 'qpp_cntrb_amt', 'dropdown in the header');
   a.el('editor-thead').dispatchEvent({ type: 'click', target: { closest: s => (s === '[data-move]' ? { dataset: { move: '-1', col: '4' } } : null) } });
-  assert.deepStrictEqual(a.named('column_remapped').map(p => p.method), ['dropdown', 'keyboard']);
-  const before = [0, 1].map(a.field);
+  assert.strictEqual(a.field(4), 'cppe_cntrb_amt');
+  assert.deepStrictEqual(a.named('column_remapped').map(p => p.method), ['dropdown', 'dropdown', 'keyboard']);
   const store = {};
   const dt = { setData: (k, v) => { store[k] = v; }, getData: k => store[k], effectAllowed: '', dropEffect: '' };
-  a.el('editor-thead').dispatchEvent({ type: 'dragstart', dataTransfer: dt, target: { closest: s => (s === '[data-drag]' ? { dataset: { drag: '0' } } : null) } });
-  a.el('editor-thead').dispatchEvent({ type: 'drop', dataTransfer: dt, preventDefault: () => {}, target: { closest: s => (s === 'th[data-c]' ? { dataset: { c: '1' } } : null) } });
-  assert.notDeepStrictEqual(before[0], before[1]);
-  assert.deepStrictEqual([0, 1].map(a.field), before.reverse(), 'dropping column A on column B swaps their fields');
-  assert.strictEqual(a.named('column_remapped').pop().method, 'drag');
+  const drag = (el, c) => a.el(el).dispatchEvent({ type: 'dragstart', dataTransfer: dt, target: { closest: s => (s === '[data-drag]' ? { dataset: { drag: String(c) } } : null) } });
+  const drop = (el, sel, data) => {
+    let prevented = 0;
+    const ev = type => ({ type, dataTransfer: dt, preventDefault: () => { prevented++; }, target: { closest: s => (s === sel ? { dataset: data } : null) } });
+    a.el(el).dispatchEvent(ev('dragover'));
+    a.el(el).dispatchEvent(ev('drop'));
+    return prevented;
+  };
+  drag('editor-thead', 0);
+  assert.strictEqual(drop('editor-thead', '[data-slot]', { slot: 'empe_gvn_nm' }), 2, 'slots accept the drop');
+  assert.deepStrictEqual([0, 1].map(a.field), ['empe_gvn_nm', 'empe_snm'], 'dropping column A on the First Name slot trades with B');
+  drag('editor-thead', 4);
+  assert.strictEqual(drop('editor-ignored', '[data-drop]', { drop: 'ignore' }), 2);
+  assert.strictEqual(a.field(4), 'ignore', 'dropped on the Ignored area');
+  drag('editor-ignored', 4);
+  drop('editor-thead', '[data-slot]', { slot: 'cpp_cntrb_amt' });
+  assert.strictEqual(a.field(4), 'cpp_cntrb_amt', 'dragged out of the Ignored area');
+  assert.deepStrictEqual(a.named('column_remapped').slice(3).map(p => p.method), ['drag', 'drag', 'drag']);
+  store['text/plain'] = 'evil';
+  drop('editor-thead', '[data-slot]', { slot: 'sin' }); // not a column number: nothing
+  assert.strictEqual(a.named('column_remapped').length, 6);
 }
 
 // ---- live validation: edits that fix and break a cell; warnings styled apart; count summary; accessible message ----
@@ -336,7 +418,7 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   assert.strictEqual(a.run('parsedData.length'), N);
   assert(loadMs < 3000, `load + map + validate + render 5000 rows took ${loadMs}ms`);
   const rendered = (a.tbody().match(/<tr data-r=/g) || []).length;
-  assert(rendered > 0 && rendered <= 100, `only one page rendered (${rendered})`);
+  assert(rendered > 100 && rendered <= 200, `only one page rendered (${rendered})`);
   assert(/5,000/.test(a.el('editor-pager').innerHTML), a.el('editor-pager').innerHTML);
   assert(/1 error\b/.test(a.status()), a.status());
   t = Date.now();
@@ -350,8 +432,8 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   assert.strictEqual((a.tbody().match(/<tr data-r=/g) || []).length, 1);
   a.el('editor-only-problems').checked = false;
   a.el('editor-only-problems').dispatchEvent({ type: 'change', target: a.el('editor-only-problems') });
-  a.run('setEditorPage(39)');
-  assert(/data-r="3998"/.test(a.tbody()), 'page 40 holds rows 3901-4000');
+  a.run('setEditorPage(19)');
+  assert(/data-r="3998"/.test(a.tbody()), 'page 20 holds rows 3801-4000 (200 a page)');
   a.run('setEditorPage(999)');
   assert(/data-r="4999"/.test(a.tbody()), 'page is clamped to the last one');
   a.run('addRow()');
@@ -373,7 +455,7 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
     const bytes = fs.readFileSync(path.join(DIR, input));
     const a = app(rt, { now: '2026-11-15T10:00' });
     a.loadFile(input, bytes);
-    const cols = a.run('editorColumns()');
+    const cols = a.run('editorSlots().map(f => columnMap[f]).filter(c => c >= 0)');
     const [c0, c1] = cols;
     const f0 = a.field(c0);
     a.run(`remapColumn(${c0}, 'ignore', 'dropdown'); remapColumn(${c0}, '${f0}', 'dropdown')`);
@@ -434,7 +516,26 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   assert(/onclick="continueFromEditor\(\)"/.test(html));
   assert(/never sent anywhere|stay[s]? (on|in) this (device|browser)/i.test(html.slice(html.indexOf('id="step-2"'), html.indexOf('id="step-3"'))), 'Step 2 keeps the privacy promise');
   assert(/\.ed-wrap[^{]*\{[^}]*overflow-x: auto/.test(css), 'table scrolls sideways in its box');
-  assert(/position: sticky/.test(css), 'sticky header / row numbers');
+  // v1 code this replaces is gone
+  for (const gone of ['editorColumns', 'rowHeaderState', 'editorFieldOptions', 'more warning', 'ed-head-name', 'ed-src', 'is-ignored', 'class="req"'])
+    assert(!js.includes(gone), `app.js still has ${gone}`);
+  for (const gone of ['.ed-head-name', '.ed-src', 'is-ignored', '.ed-pick'])
+    assert(!css.includes(gone), `styles.css still has ${gone}`);
+  // fixed CRA header + Ignored area markup
+  assert(/<div id="editor-ignored"[^>]*class="ed-ignored"/.test(html), 'Ignored columns area');
+  assert(/aria-live="polite"/.test(html.slice(html.indexOf('id="step-2"'), html.indexOf('id="step-3"'))));
+  // density: full width, compact cells, sticky header row and row-number column, more rows a page, still touch-friendly
+  const rule = sel => (css.match(new RegExp(`(^|\\n)${sel.replace(/[.#()]/g, '\\$&')} \\{([^}]*)\\}`)) || [])[2] || '';
+  assert(/width: min\(1800px, calc\(100vw - 2rem\)\)/.test(rule('#step-2')), 'Step 2 breaks out of the narrow card: ' + rule('#step-2'));
+  assert(/position: sticky/.test(rule('.ed-table thead')) && /top: 0/.test(rule('.ed-table thead')), 'sticky header rows');
+  assert(/position: sticky/.test(rule('.ed-table tbody th')) && /left: 0/.test(rule('.ed-table tbody th')), 'sticky row numbers');
+  assert(/position: sticky/.test(rule('.ed-table thead th.ed-rownum')) && /left: 0/.test(rule('.ed-table thead th.ed-rownum')), 'sticky corner');
+  assert(/padding: 0\.2rem 0\.4rem/.test(rule('.ed-table td')), 'compact cells: ' + rule('.ed-table td'));
+  assert(/max-height: calc\(100vh - /.test(rule('.ed-wrap')), 'the table fills the screen height: ' + rule('.ed-wrap'));
+  assert(/@media \(pointer: coarse\)[^{]*\{[^@]*min-height: 44px/.test(css), 'touch targets grow on touch screens');
+  assert(a0.run('EDITOR_PAGE') >= 200, 'more rows a page');
+  assert(/\.badge-mandatory \{/.test(css) && /\.badge-optional \{/.test(css) && /\.is-missing/.test(css));
+  assert(/class="ed-rownum"/.test(a0.el('editor-tbody').innerHTML), 'row-number cells carry the sticky class');
   assert(/\.cell-error/.test(css) && /\.cell-warning/.test(css));
   assert.strictEqual((js.match(/\bfetch\(/g) || []).length, 1, 'the only fetch is the sample template');
   assert(!/XMLHttpRequest|sendBeacon|WebSocket/.test(js));
