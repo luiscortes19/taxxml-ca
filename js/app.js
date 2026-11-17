@@ -10,7 +10,6 @@ let headers = [];
 let xmlOutput = '';
 let currentStep = 1;
 let columnMap = {};
-let badCells = new Set(); // "rowNum:fieldKey" cells that blocked the last Generate, marked in the Step 2 preview
 
 // ============================================================
 // RETURN TYPE REGISTRY
@@ -182,10 +181,10 @@ function onReturnTypeChange(source) {
   document.getElementById('py-bn-group').classList.toggle('hidden', rt === 'NR4');
   clearFieldErrors();
 
-  // If data is already loaded, re-map
-  if (parsedData.length > 0) {
+  // If a file is already open (even with every row deleted), re-map
+  if (headers.length > 0) {
     autoMapColumns();
-    buildPreview();
+    openEditor();
     goToStep(2); // Jump back to step 2 automatically if they change type mid-flow
   }
 }
@@ -268,11 +267,11 @@ function openWorkbook(buffer, name, ext, isSample) {
       Object.keys(ws).forEach(k => { if (k[0] !== '!') keepDigitText(ws[k], ext === 'csv'); }); // keep SIN/BN/ZIP leading zeros
       const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-      if (raw.length < 2) { showFileError('File has no data rows.', 'no_data_rows'); return; }
+      const rows = raw.slice(1).filter(row => row.some(cell => cell !== ''));
+      if (!rows.length) { showFileError('File has no data rows.', 'no_data_rows'); return; }
 
       headers = raw[0].map(h => String(h || '').trim());
-      parsedData = raw.slice(1).filter(row => row.some(cell => cell !== ''));
-      badCells.clear();
+      parsedData = rows;
 
       const info = document.getElementById('file-info');
       info.innerHTML = `<i data-lucide="check-circle" class="icon-sm"></i> ${escapeXml(name)} &mdash; ${parsedData.length} rows, ${headers.length} columns`;
@@ -282,7 +281,7 @@ function openWorkbook(buffer, name, ext, isSample) {
       if (window.lucide) window.lucide.createIcons();
 
       autoMapColumns();
-      buildPreview();
+      openEditor();
       goToStep(2);
       if (!returnChosen) { returnChosen = true; track('return_selected', { return_type: getSelectedReturnType(), source: 'default' }); }
       const n = parsedData.length;
@@ -295,8 +294,14 @@ function openWorkbook(buffer, name, ext, isSample) {
 }
 
 // ============================================================
-// STEP 2: COLUMN MAPPING & PREVIEW
+// STEP 2: TABLE EDITOR — the user's rows, a CRA-field dropdown on every column, live validation.
+// columnMap (field key -> column index, -1 = none) stays the one source of truth that generate*XML reads.
 // ============================================================
+const EDITOR_PAGE = 100; // rows rendered at once, so thousands of rows stay fast
+let editorPage = 0;
+let onlyProblems = false;
+let rowIssues = new Map(); // parsedData index -> its issues, from the last validateRows()
+
 function autoMapColumns() {
   const config = getReturnConfig();
   columnMap = {};
@@ -334,101 +339,344 @@ function autoMapColumns() {
   });
 }
 
-function buildPreview() {
-  const config = getReturnConfig();
-  const tbody = document.getElementById('mapping-tbody');
-  tbody.innerHTML = '';
-  document.getElementById('mapping-errors').classList.add('hidden'); // a new file or return starts with a clean slate
-
-  config.fields.forEach(field => {
-    const tr = document.createElement('tr');
-    const mappedIdx = columnMap[field.key];
-    const isMapped = mappedIdx !== undefined && mappedIdx >= 0;
-
-    // Column 1: CRA field name
-    // Display only: "Employment Income (Box 14)" renders as [14] Employment Income
-    const tdField = document.createElement('td');
-    const box = field.label.match(/^(.*?)\s*\(Box (\w+)\)$/);
-    if (box) {
-      const tag = document.createElement('span');
-      tag.className = 'box-tag';
-      tag.title = `Box ${box[2]}`;
-      tag.textContent = box[2];
-      tdField.append(tag, box[1]);
-    } else {
-      tdField.textContent = field.label;
-    }
-    if (field.required) {
-      const star = document.createElement('span');
-      star.className = 'req';
-      star.title = 'Required';
-      star.textContent = '*';
-      tdField.appendChild(star);
-    }
-    tr.appendChild(tdField);
-
-    // Column 2: Status icon
-    const tdStatus = document.createElement('td');
-    const icon = document.createElement('span');
-    icon.className = 'mapping-status-icon ' + (isMapped ? 'matched' : 'unmatched');
-    icon.textContent = isMapped ? '✓' : '○';
-    icon.id = `status-${field.key}`;
-    tdStatus.appendChild(icon);
-    tr.appendChild(tdStatus);
-
-    // Column 3: Excel column dropdown
-    const tdSelect = document.createElement('td');
-    const select = document.createElement('select');
-    select.className = 'mapping-select' + (isMapped ? ' is-mapped' : '');
-    select.id = `map-${field.key}`;
-    select.innerHTML = '<option value="-1">— Not mapped —</option>' +
-      headers.map((h, i) => `<option value="${i}" ${columnMap[field.key] === i ? 'selected' : ''}>${h}</option>`).join('');
-    select.addEventListener('change', () => {
-      columnMap[field.key] = parseInt(select.value);
-      const mapped = select.value !== '-1';
-      select.className = 'mapping-select' + (mapped ? ' is-mapped' : '');
-      const statusIcon = document.getElementById(`status-${field.key}`);
-      statusIcon.className = 'mapping-status-icon ' + (mapped ? 'matched' : 'unmatched');
-      statusIcon.textContent = mapped ? '✓' : '○';
-      updateMappingSummary();
-      renderPreviewTable();
-    });
-    tdSelect.appendChild(select);
-    tr.appendChild(tdSelect);
-
-    tbody.appendChild(tr);
-  });
-
-  updateMappingSummary();
-  renderPreviewTable();
+// A new file or return: first page, all rows, no stale Continue error
+function openEditor() {
+  editorPage = 0;
+  onlyProblems = document.getElementById('editor-only-problems').checked = false;
+  document.getElementById('editor-errors').classList.add('hidden');
+  refreshEditor();
 }
 
-function updateMappingSummary() {
-  const config = getReturnConfig();
-  let matched = 0, unmatched = 0;
-  config.fields.forEach(f => {
-    if (columnMap[f.key] !== undefined && columnMap[f.key] >= 0) matched++;
-    else unmatched++;
-  });
-  document.getElementById('count-matched').textContent = matched;
-  document.getElementById('count-unmatched').textContent = unmatched;
+// Spreadsheet column letter: 0 -> A, 25 -> Z, 26 -> AA. Tells duplicate headers apart.
+function colLetter(c) {
+  let s = '';
+  for (c++; c > 0; c = Math.floor((c - 1) / 26)) s = String.fromCharCode(65 + (c - 1) % 26) + s;
+  return s;
 }
 
-function renderPreviewTable() {
-  const config = getReturnConfig();
-  const thead = document.getElementById('preview-thead');
-  const tbody = document.getElementById('preview-tbody');
-  document.getElementById('row-count-badge').textContent = `${parsedData.length} rows`;
+// Dropdown choices: Ignored, then (T4 only) one column holding the whole name, then the return's CRA fields
+function editorFieldOptions() {
+  const rt = getSelectedReturnType();
+  return [{ key: 'ignore', label: 'Ignored' },
+    ...(rt === 'T4' ? [{ key: 'full_name', label: 'Full name (first and last name in one column)' }] : []),
+    ...RETURN_TYPES[rt].fields];
+}
 
-  const mappedFields = config.fields.filter(f => columnMap[f.key] >= 0);
-  thead.innerHTML = '<tr>' + mappedFields.map(f => `<th>${f.label}</th>`).join('') + '</tr>';
+// The CRA field a source column feeds: a field key, 'full_name' (T4: both name fields) or 'ignore'
+function columnField(c) {
+  if (getSelectedReturnType() === 'T4' && columnMap.empe_snm === c && columnMap.empe_gvn_nm === c) return 'full_name';
+  return getReturnConfig().fields.find(f => columnMap[f.key] === c)?.key || 'ignore';
+}
 
-  const preview = parsedData.slice(0, 10);
-  tbody.innerHTML = preview.map((row, r) =>
-    '<tr>' + mappedFields.map(f =>
-      `<td${badCells.has(`${r + 2}:${f.key}`) ? ' class="cell-error"' : ''}>${escapeXml(String(row[columnMap[f.key]] ?? ''))}</td>`
-    ).join('') + '</tr>'
-  ).join('');
+// Display order: columns in CRA field order, then the ignored ones in file order
+function editorColumns() {
+  const order = [...new Set(getReturnConfig().fields.map(f => columnMap[f.key]).filter(c => c >= 0 && c < headers.length))];
+  return order.concat(headers.map((_, c) => c).filter(c => !order.includes(c)));
+}
+
+const isColumn = c => Number.isInteger(c) && c >= 0 && c < headers.length;
+
+// Points column c at a CRA field. One field, one column: the column that had it is left ignored.
+// method ('dropdown' | 'drag' | 'keyboard') is for GA4 only.
+function remapColumn(c, field, method) {
+  if (!isColumn(c) || !editorFieldOptions().some(o => o.key === field) || columnField(c) === field) return;
+  getReturnConfig().fields.forEach(f => { if (columnMap[f.key] === c) columnMap[f.key] = -1; });
+  if (field === 'full_name') columnMap.empe_snm = columnMap.empe_gvn_nm = c;
+  else if (field !== 'ignore') columnMap[field] = c;
+  track('column_remapped', { return_type: getSelectedReturnType(), field, method });
+  refreshEditor();
+}
+
+// Columns a and b trade CRA fields (drag one onto the other, or move left/right)
+function swapColumns(a, b, method) {
+  if (!isColumn(a) || !isColumn(b) || columnField(a) === columnField(b)) return;
+  const keys = c => getReturnConfig().fields.filter(f => columnMap[f.key] === c).map(f => f.key);
+  const [ka, kb] = [keys(a), keys(b)];
+  ka.forEach(k => { columnMap[k] = b; });
+  kb.forEach(k => { columnMap[k] = a; });
+  track('column_remapped', { return_type: getSelectedReturnType(), field: columnField(a), method });
+  refreshEditor();
+}
+
+// Keyboard alternative to dragging: column c trades fields with its left (-1) or right (+1) neighbour
+function moveColumn(c, dir) {
+  const order = editorColumns();
+  const i = order.indexOf(c);
+  if (i < 0 || order[i + dir] === undefined) return;
+  swapColumns(c, order[i + dir], 'keyboard');
+  document.querySelector(`#editor-thead [data-move="${dir}"][data-col="${c}"]`)?.focus();
+}
+
+// Inline edit of one cell. Returns false (and does nothing) when the value didn't change.
+function editCell(r, c, value) {
+  const row = parsedData[r];
+  value = String(value);
+  if (!row || !isColumn(c) || String(row[c] ?? '') === value) return false;
+  row[c] = value;
+  track('cell_edited', { return_type: getSelectedReturnType(), field: columnField(c) });
+  revalidate();
+  patchEditorRow(r); // in place, so the cell being clicked next isn't replaced under the pointer
+  renderEditorStatus();
+  return true;
+}
+
+function addRow() {
+  parsedData.push(headers.map(() => ''));
+  onlyProblems = document.getElementById('editor-only-problems').checked = false;
+  editorPage = Infinity; // clamped to the last page
+  refreshEditor();
+  focusCell(parsedData.length - 1, editorColumns()[0]);
+}
+
+function deleteRow(r) {
+  if (!Number.isInteger(r) || r < 0 || r >= parsedData.length) return;
+  parsedData.splice(r, 1);
+  refreshEditor();
+}
+
+function setEditorPage(p) {
+  editorPage = p;
+  renderEditorBody();
+}
+
+function revalidate() {
+  rowIssues = new Map();
+  for (const x of validateRows()) {
+    if (!rowIssues.has(x.row)) rowIssues.set(x.row, []);
+    rowIssues.get(x.row).push(x);
+  }
+}
+
+function refreshEditor() {
+  revalidate();
+  renderEditor();
+  if (!document.getElementById('editor-errors').classList.contains('hidden')) checkRequiredColumns();
+}
+
+function renderEditor() {
+  renderEditorHead();
+  renderEditorBody();
+  renderEditorStatus();
+}
+
+// A warning about a field with no column (e.g. T4 province defaulting to ON) has no cell to mark:
+// it's summed up in the status line and listed in Step 4. Errors always count.
+const placed = x => columnMap[x.field] >= 0;
+const counted = x => x.severity === 'error' || placed(x);
+
+function issueState(list) {
+  return { cls: list.some(x => x.severity === 'error') ? 'cell-error' : list.length ? 'cell-warning' : '', msg: list.map(x => x.message).join(' ') };
+}
+
+// How the editor shows cell (r, c): { cls: 'cell-error' | 'cell-warning' | '', msg }
+function cellState(r, c) {
+  return issueState((rowIssues.get(r) || []).filter(x => columnMap[x.field] === c));
+}
+
+// Errors on a field with no column are shown on the row number instead
+function rowHeaderState(r) {
+  return issueState((rowIssues.get(r) || []).filter(x => x.severity === 'error' && !placed(x)));
+}
+
+function renderEditorHead() {
+  const options = editorFieldOptions();
+  const fields = getReturnConfig().fields;
+  document.getElementById('editor-thead').innerHTML = '<tr><th scope="col" class="ed-rownum">Row</th>' + editorColumns().map(c => {
+    const field = columnField(c);
+    const L = colLetter(c);
+    const required = fields.find(f => f.key === (field === 'full_name' ? 'empe_snm' : field))?.required;
+    const opts = options.map(o => {
+      const elsewhere = columnMap[o.key] >= 0 && columnMap[o.key] !== c ? ` (column ${colLetter(columnMap[o.key])})` : '';
+      return `<option value="${o.key}"${o.key === field ? ' selected' : ''}>${escapeXml(o.label)}${o.required ? ' *' : ''}${elsewhere}</option>`;
+    }).join('');
+    return `<th scope="col" data-c="${c}" class="${field === 'ignore' ? 'is-ignored' : 'is-mapped'}">` +
+      `<div class="ed-src"><span class="ed-drag" draggable="true" data-drag="${c}" title="Drag onto another column to swap their CRA fields" aria-hidden="true">⠿</span>` +
+      `<span class="ed-head-name">${L} · ${escapeXml(headers[c] || '(no header)')}</span></div>` +
+      `<label class="sr-only" for="ed-col-${c}">CRA field for column ${L}</label>` +
+      `<div class="ed-pick"><select id="ed-col-${c}" data-col="${c}">${opts}</select>${required ? '<span class="req" title="Required">*</span>' : ''}</div>` +
+      `<div class="ed-move"><button type="button" data-move="-1" data-col="${c}" aria-label="Move column ${L} left">←</button>` +
+      `<button type="button" data-move="1" data-col="${c}" aria-label="Move column ${L} right">→</button></div></th>`;
+  }).join('') + '</tr>';
+}
+
+let editorVisibleRows = [];
+
+function renderEditorBody() {
+  const cols = editorColumns();
+  const list = onlyProblems ? [...rowIssues.keys()].filter(r => rowIssues.get(r).some(counted)) : null;
+  const total = list ? list.length : parsedData.length;
+  const pages = Math.max(1, Math.ceil(total / EDITOR_PAGE));
+  editorPage = Math.min(Math.max(0, editorPage), pages - 1);
+  const start = editorPage * EDITOR_PAGE;
+  const end = Math.min(total, start + EDITOR_PAGE);
+  editorVisibleRows = list ? list.slice(start, end) : Array.from({ length: end - start }, (_, k) => start + k);
+
+  document.getElementById('editor-tbody').innerHTML = editorVisibleRows.length
+    ? editorVisibleRows.map(r => editorRowHtml(r, cols)).join('')
+    : `<tr><td colspan="${cols.length + 1}" class="ed-empty">${list ? 'No rows with problems.' : 'No rows. Add one, or open another file in Step 1.'}</td></tr>`;
+  renderEditorMsgs();
+
+  const n = v => v.toLocaleString('en-CA');
+  document.getElementById('editor-pager').innerHTML = total > EDITOR_PAGE
+    ? `<button type="button" class="btn btn-ghost" onclick="setEditorPage(${editorPage - 1})"${editorPage ? '' : ' disabled'}>← Previous</button>` +
+      `<span>Rows ${n(start + 1)}–${n(end)} of ${n(total)}${list ? ' with problems' : ''}</span>` +
+      `<button type="button" class="btn btn-ghost" onclick="setEditorPage(${editorPage + 1})"${editorPage < pages - 1 ? '' : ' disabled'}>Next →</button>`
+    : '';
+}
+
+function editorRowHtml(r, cols) {
+  const row = parsedData[r];
+  const head = rowHeaderState(r);
+  return `<tr data-r="${r}"><th scope="row"${head.cls ? ` class="${head.cls}" title="${escapeXml(head.msg)}" aria-describedby="ed-msg-${r}-row"` : ''}>${r + 2}` +
+    `<button type="button" class="ed-del" onclick="deleteRow(${r})" aria-label="Delete row ${r + 2}" title="Delete row">×</button></th>` +
+    cols.map(c => {
+      const s = cellState(r, c);
+      return `<td tabindex="-1" data-r="${r}" data-c="${c}"${s.cls ? ` class="${s.cls}" title="${escapeXml(s.msg)}" aria-describedby="ed-msg-${r}-${c}"` : ''}>` +
+        `${escapeXml(String(row[c] ?? ''))}</td>`;
+    }).join('') + '</tr>';
+}
+
+// Hidden text the marked cells point to with aria-describedby (screen readers read the message with the cell)
+function renderEditorMsgs() {
+  const cols = editorColumns();
+  document.getElementById('editor-msgs').innerHTML = editorVisibleRows.flatMap(r => [
+    ...cols.map(c => [c, cellState(r, c)]), ['row', rowHeaderState(r)],
+  ].filter(([, s]) => s.msg).map(([c, s]) => `<span id="ed-msg-${r}-${c}">${escapeXml(s.msg)}</span>`)).join('');
+}
+
+// After an edit: new marks on that row's cells without re-rendering them
+function patchEditorRow(r) {
+  const tr = document.querySelector(`#editor-tbody tr[data-r="${r}"]`);
+  if (!tr) return;
+  const mark = (el, s, id) => {
+    el.className = s.cls;
+    if (s.msg) { el.title = s.msg; el.setAttribute('aria-describedby', id); }
+    else { el.removeAttribute('title'); el.removeAttribute('aria-describedby'); }
+  };
+  tr.querySelectorAll('td[data-c]').forEach(td => mark(td, cellState(r, +td.dataset.c), `ed-msg-${r}-${td.dataset.c}`));
+  const th = tr.querySelector('th');
+  if (th) mark(th, rowHeaderState(r), `ed-msg-${r}-row`);
+  renderEditorMsgs();
+}
+
+function renderEditorStatus() {
+  let errors = 0, warnings = 0, notes = 0;
+  const noteFields = new Set();
+  for (const list of rowIssues.values()) for (const x of list) {
+    if (x.severity === 'error') errors++;
+    else if (placed(x)) warnings++;
+    else { notes++; noteFields.add(x.field); }
+  }
+  const count = (k, word) => `${k.toLocaleString('en-CA')} ${word}${k === 1 ? '' : 's'}`;
+  const labels = getReturnConfig().fields.filter(f => noteFields.has(f.key)).map(f => f.label);
+  document.getElementById('editor-status').textContent =
+    (errors || warnings ? `${count(errors, 'error')}, ${count(warnings, 'warning')} in the table.` : 'No problems found in the table.') +
+    (errors ? ' Errors are marked in red and stop the file from being made; warnings are marked in amber.' : '') +
+    (notes ? ` ${count(notes, 'more warning')} for ${labels.join(', ')}, which ${labels.length === 1 ? 'has' : 'have'} no column; you'll see them with the file.` : '');
+
+  const unmapped = unmappedRequired();
+  const missing = document.getElementById('editor-missing');
+  missing.innerHTML = unmapped.length
+    ? `<h4>Required, with no column yet</h4><ul>${unmapped.map(f => `<li>${escapeXml(f.label)}</li>`).join('')}</ul>`
+    : '';
+  missing.classList.toggle('hidden', !unmapped.length);
+}
+
+// ---- Editor events: header dropdowns, move buttons and drag-and-drop; cell editing and arrow-key navigation ----
+const edHead = document.getElementById('editor-thead');
+edHead.addEventListener('change', e => {
+  if (e.target.dataset && e.target.dataset.col !== undefined) remapColumn(+e.target.dataset.col, e.target.value, 'dropdown');
+});
+edHead.addEventListener('click', e => {
+  const btn = e.target.closest && e.target.closest('[data-move]');
+  if (btn) moveColumn(+btn.dataset.col, +btn.dataset.move);
+});
+edHead.addEventListener('dragstart', e => {
+  const handle = e.target.closest && e.target.closest('[data-drag]');
+  if (!handle) return;
+  e.dataTransfer.setData('text/plain', handle.dataset.drag);
+  e.dataTransfer.effectAllowed = 'move';
+});
+edHead.addEventListener('dragover', e => { if (e.target.closest && e.target.closest('th[data-c]')) e.preventDefault(); });
+edHead.addEventListener('drop', e => {
+  const th = e.target.closest && e.target.closest('th[data-c]');
+  if (!th) return;
+  e.preventDefault();
+  const from = e.dataTransfer.getData('text/plain');
+  if (/^\d+$/.test(from)) swapColumns(+from, +th.dataset.c, 'drag');
+});
+document.getElementById('editor-only-problems').addEventListener('change', e => {
+  onlyProblems = e.target.checked;
+  editorPage = 0;
+  renderEditorBody();
+});
+
+// Arrow keys / Tab between cells -> [row, col] of the next cell, or null to stay put (Tab: leave the table)
+function gridStep(key, shift, r, c, rows, cols) {
+  if (key === 'Tab') {
+    const n = r * cols + c + (shift ? -1 : 1);
+    return n < 0 || n >= rows * cols ? null : [Math.floor(n / cols), n % cols];
+  }
+  const d = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+  if (!Object.hasOwn(d, key)) return null;
+  const [nr, nc] = [r + d[key][0], c + d[key][1]];
+  return nr < 0 || nc < 0 || nr >= rows || nc >= cols ? null : [nr, nc];
+}
+
+function focusCell(r, c) {
+  document.querySelector(`#editor-tbody td[data-r="${r}"][data-c="${c}"]`)?.focus();
+}
+
+let editing = null; // { td, before } while a cell is being typed in
+
+function startEdit(td) {
+  if (editing) return;
+  editing = { td, before: td.textContent };
+  try { td.contentEditable = 'plaintext-only'; } catch { td.contentEditable = 'true'; } // pasted formatting stays out
+  td.focus();
+  const range = document.createRange(); // caret at the end
+  range.selectNodeContents(td);
+  range.collapse(false);
+  getSelection().removeAllRanges();
+  getSelection().addRange(range);
+}
+
+function stopEdit(commit) {
+  if (!editing) return;
+  const { td, before } = editing;
+  editing = null;
+  td.removeAttribute('contenteditable');
+  if (commit) editCell(+td.dataset.r, +td.dataset.c, td.textContent);
+  else td.textContent = before;
+}
+
+const edBody = document.getElementById('editor-tbody');
+edBody.addEventListener('click', e => {
+  const td = e.target.closest && e.target.closest('td[data-c]');
+  if (td && (!editing || editing.td !== td)) startEdit(td);
+});
+edBody.addEventListener('focusout', e => { if (editing && e.target === editing.td) stopEdit(true); });
+edBody.addEventListener('keydown', e => {
+  const td = e.target.closest && e.target.closest('td[data-c]');
+  if (!td) return;
+  if (editing) {
+    if (e.key === 'Escape') { e.preventDefault(); stopEdit(false); }
+    else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); stopEdit(true); }
+    else if (e.key === 'Tab') { stopEdit(true); moveFocus(e, td); }
+    return;
+  }
+  if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); startEdit(td); return; }
+  moveFocus(e, td);
+});
+
+function moveFocus(e, td) {
+  const rows = [...edBody.querySelectorAll('tr[data-r]')];
+  const cells = tr => [...tr.querySelectorAll('td[data-c]')];
+  const here = cells(td.parentElement);
+  const to = gridStep(e.key, e.shiftKey, rows.indexOf(td.parentElement), here.indexOf(td), rows.length, here.length);
+  if (!to) return;
+  e.preventDefault();
+  cells(rows[to[0]])[to[1]].focus();
 }
 
 // ============================================================
@@ -513,7 +761,7 @@ function xmlTag(tag, value) {
   return `<${tag}>${escapeXml(value)}</${tag}>`;
 }
 
-function getVal(row, key) {
+function get(key) {
   const idx = columnMap[key];
   if (idx === undefined || idx < 0) return '';
   return row[idx] ?? '';
@@ -533,7 +781,6 @@ function parsePhone(phone) {
 function clearFieldErrors() {
   document.querySelectorAll('#step-3 .field-error').forEach(el => el.remove());
   document.querySelectorAll('#step-3 .has-error').forEach(el => el.classList.remove('has-error'));
-  badCells.clear();
   showGenerateErrors([]);
 }
 
@@ -547,16 +794,16 @@ function fieldError(id, msg) {
 }
 
 // Row-level / data errors shown above the Generate button. Empty list hides the box.
-function showGenerateErrors(errors) {
+// firstField: column key of the first bad cell (GA4); inTable: the errors are cells marked in the Step 2 table.
+function showGenerateErrors(errors, firstField, inTable) {
   const box = document.getElementById('generate-errors');
   box.innerHTML = errors.length
     ? `<h4>Fix ${errors.length} problem(s) before generating</h4><ul>${errors.map(e => `<li>${escapeXml(e)}</li>`).join('')}</ul>` +
-      (badCells.size ? '<p>Go back to Step 2 to see these cells marked in the data preview (first 10 rows).</p>' : '')
+      (inTable ? '<p>Go back to Step 2 to fix them in the table, where these cells are marked in red.</p>' : '')
     : '';
   box.classList.toggle('hidden', !errors.length);
   if (errors.length) track('validation_failed', { return_type: getSelectedReturnType(), error_count: errors.length, error_category: 'row_data',
-                                                  first_error_field: analyticsField([...badCells][0]?.split(':')[1]) });
-  if (parsedData.length) renderPreviewTable(); // add / clear the cell marks
+                                                  first_error_field: analyticsField(firstField) });
 }
 
 // Validates Step 3. extraChecks: [{ id, test: value => bool, msg }] for return-specific rules.
@@ -594,51 +841,164 @@ const PAYER_BN_CHECK = { id: 'py-bn', test: v => BN_PATTERN.test(cleanBN(v)), ms
 const T5018_PAYER_BN_CHECK = { id: 'py-bn', test: v => /^\d{9}RZ\d{4}$/.test(cleanBN(v)),
   msg: v => `T5018 payer account must use the RZ program, e.g. 123456789RZ0001; you entered ${cleanBN(v)}.` };
 
-// Records `Row 2, column "SIN" (John Doe): <problem and fix>` and remembers the cell for the Step 2 preview.
-function rowError(errors, rowNum, key, who, msg) {
-  const col = headers[columnMap[key]];
-  badCells.add(`${rowNum}:${key}`);
-  errors.push(`Row ${rowNum}${col ? `, column "${col}"` : ''} (${who || 'no name'}): ${msg}`);
-}
-
+// ============================================================
+// ROW CHECKS: one pure function per row, shared by the Step 2 editor (live) and generate*XML (on Generate),
+// so both show the same messages word for word
+// ============================================================
 const LEADING_ZERO_FIX = 'If your spreadsheet dropped a leading zero, format the column as Text and re-open the file.';
 
 // Returns the 9-digit SIN to put on the slip, or null after recording a hard-stop error.
 // raw is the cell as parsed (a number if Excel stored it as one). Blank → CRA's 000000000 placeholder with a warning.
-function checkSIN(raw, who, rowNum, warnings, errors, key) {
+function checkSIN(raw, who, key, { warn, err }) {
   who = who || '(no name)';
   const sin = sinDigits(raw);
   if (!sin) {
-    warnings.push(`Row ${rowNum}: "${who}" has no SIN — using 000000000`);
+    warn(key, `"${who}" has no SIN — using 000000000`);
     return '000000000';
   }
   if (!isValidSIN(sin)) {
-    rowError(errors, rowNum, key, who,
+    err(key, who,
       !/^\d+$/.test(sin) ? `SIN "${raw}" is not a whole number. Format the column as Text, type the 9 digits, and re-open the file.`
       : sin.length !== 9 ? `SIN "${raw}" has ${sin.length} digits; a SIN must be 9 digits. ${LEADING_ZERO_FIX}`
       : `SIN "${raw}" fails the SIN checksum. Check it for a typo.`);
     return null;
   }
-  if (padIdNumber(raw) !== raw) warnings.push(`Row ${rowNum}: "${who}" SIN ${raw} was stored as a number, so the leading zero was restored: ${sin}. Check it.`);
+  if (padIdNumber(raw) !== raw) warn(key, `"${who}" SIN ${raw} was stored as a number, so the leading zero was restored: ${sin}. Check it.`);
   return sin;
 }
 
 // Returns a valid 15-char recipient BN, or null after recording a hard-stop error.
 // Blank → the given CRA placeholder with a warning; a bare 9-digit root is expanded with a warning.
-function checkRecipientBN(raw, program, placeholder, who, rowNum, warnings, errors, key) {
+function checkRecipientBN(raw, program, placeholder, who, key, { warn, err }) {
   who = who || '(no name)';
   const cleaned = cleanBN(padIdNumber(raw));
   if (!cleaned || cleaned === '(BLANK)') {
-    warnings.push(`Row ${rowNum}: "${who}" has no BN — using ${placeholder}`);
+    warn(key, `"${who}" has no BN — using ${placeholder}`);
     return placeholder;
   }
   const bn = sanitizeBN(cleaned, program);
   if (!BN_PATTERN.test(bn)) {
-    rowError(errors, rowNum, key, who, `BN "${raw}" is invalid: use the 15-character BN (9 digits + 2 letters + 4 digits, e.g. 123456789${program}0001) or its 9-digit root. Got ${cleaned.length} characters.${/^\d+$/.test(cleaned) ? ' ' + LEADING_ZERO_FIX : ''}`);
+    err(key, who, `BN "${raw}" is invalid: use the 15-character BN (9 digits + 2 letters + 4 digits, e.g. 123456789${program}0001) or its 9-digit root. Got ${cleaned.length} characters.${/^\d+$/.test(cleaned) ? ' ' + LEADING_ZERO_FIX : ''}`);
     return null;
   }
-  if (bn !== cleaned) warnings.push(`Row ${rowNum}: "${who}" BN root ${cleaned} expanded to ${bn} — confirm the program account`);
+  if (bn !== cleaned) warn(key, `"${who}" BN root ${cleaned} expanded to ${bn} — confirm the program account`);
   return bn;
+}
+
+// T5018 recipient type: anything unrecognized is a corporation
+function t5018RecipientType(raw) {
+  const typeStr = raw.toLowerCase();
+  if (BIZ_TYPE_MAP[typeStr]) return BIZ_TYPE_MAP[typeStr];
+  if (typeStr.includes('individual') || typeStr === '1') return '1';
+  if (typeStr.includes('partnership') || typeStr === '4') return '4';
+  return '3';
+}
+
+// One data row (index i in parsedData) -> null when it's blank for this return (skipped like a blank spreadsheet
+// row), else { ok, issues, get, ...the cleaned values generate*XML needs }. ok is false after a hard-stop error.
+// issues: [{ row: i, field: our column key, severity: 'error' | 'warning', message }].
+function checkRow(rt, row, i, map = columnMap, hdrs = headers) {
+  const get = key => (map[key] >= 0 ? row[map[key]] ?? '' : '');
+  const str = key => String(get(key)).trim();
+  const issues = [];
+  const ck = {
+    warn: (field, msg) => issues.push({ row: i, field, severity: 'warning', message: `Row ${i + 2}: ${msg}` }),
+    // `Row 2, column "SIN" (John Doe): <problem and fix>`
+    err: (field, who, msg) => {
+      const col = hdrs[map[field]];
+      issues.push({ row: i, field, severity: 'error', message: `Row ${i + 2}${col ? `, column "${col}"` : ''} (${who || 'no name'}): ${msg}` });
+    },
+  };
+  const done = values => ({ ok: !issues.some(x => x.severity === 'error'), issues, get, ...values });
+
+  if (rt === 'T4') {
+    let lastName = str('empe_snm');
+    let firstName = str('empe_gvn_nm');
+    // One full-name column mapped to both name fields: last word is the surname, the rest the given name(s)
+    if (map.empe_snm >= 0 && map.empe_snm === map.empe_gvn_nm) {
+      const parts = lastName.split(/\s+/);
+      lastName = parts.pop();
+      firstName = parts.join(' ');
+    }
+    const provCdRaw = str('empt_prov_cd').toUpperCase();
+    const addressRaw = str('address');
+    if (!lastName && !str('sin')) return null;
+    // SIN validation — invalid SIN is a hard stop
+    const sinVal = checkSIN(get('sin'), `${firstName} ${lastName}`.trim(), 'sin', ck);
+    if (!sinVal) return done();
+    let empProvCd = provCdRaw;
+    if (!ALL_PROV_CODES.has(empProvCd)) {
+      empProvCd = parseAddress(addressRaw).prov || 'ON'; // derive from the address, default ON if unknown
+      if (!provCdRaw) ck.warn('empt_prov_cd', `"${firstName} ${lastName}" province of employment not specified, defaulting to ${empProvCd}`);
+    }
+    return done({ lastName, firstName, sinVal, empProvCd, addressRaw });
+  }
+
+  if (rt === 'T1204' || rt === 'T5018') {
+    const [nameKey, idKey] = rt === 'T1204' ? ['vendor_name', 'vendor_bn'] : ['rcpnt_name', 'rcpnt_bn'];
+    const name = str(nameKey);
+    if (!name && !str(idKey)) return null;
+    let rcpntTcd;
+    if (rt === 'T1204') {
+      const bizType = str('biz_type');
+      rcpntTcd = BIZ_TYPE_MAP[bizType.toLowerCase()];
+      if (!rcpntTcd) {
+        ck.err('biz_type', name, `business type "${bizType}" isn't recognized. Use Individual (or Sole proprietor), Corporation, Partnership, or the CRA code 1, 3 or 4.`);
+        return done();
+      }
+    } else {
+      rcpntTcd = t5018RecipientType(str('rcpnt_type'));
+    }
+    const idVal = rcpntTcd === '1'
+      ? checkSIN(get(idKey), name, idKey, ck)
+      : checkRecipientBN(get(idKey), rt === 'T1204' ? 'RT' : 'RZ', rt === 'T1204' ? '000000000RC0000' : '000000000RZ0000', name, idKey, ck);
+    return done({ name, rcpntTcd, idVal });
+  }
+
+  // NR4: every problem in the row is reported, then the row is skipped
+  const name = str('rcpnt_name');
+  const fssn = str('fssn_nbr');
+  if (!name && !fssn) return null;
+  const rowErr = (key, msg) => ck.err(key, name, msg);
+  const typeRaw = str('rcpnt_type').toLowerCase();
+  const rcpntTcd = /^[1-5]$/.test(typeRaw) ? typeRaw : NR4_RCPNT_TYPE_MAP[typeRaw];
+  const cntryRaw = str('tx_cntry_cd').toUpperCase();
+  const cntry = COUNTRY_MAP[cntryRaw] || cntryRaw;
+  const incRaw = str('inc_1_tcd');
+  const incCd = incRaw ? incRaw.padStart(2, '0') : '';
+  const crcy = str('crcy_1_cd').toUpperCase();
+  const xmptCd = str('tx_xmpt_1_cd').toUpperCase();
+  const steCd = str('ste_cd').toUpperCase();
+  const fssnCell = get('fssn_nbr');
+  if (!name) rowErr('rcpnt_name', 'the recipient name is missing.');
+  if (!rcpntTcd) rowErr('rcpnt_type', `recipient type "${typeRaw}" isn't recognized. Use Individual, Joint account, Corporation, Other, Government, or 1–5.`);
+  if (!fssn) rowErr('fssn_nbr', 'the foreign tax ID is missing (CRA requires it).');
+  else if (typeof fssnCell === 'number' && !Number.isSafeInteger(fssnCell)) rowErr('fssn_nbr', `foreign tax ID "${fssn}" was stored as a number and may have been rounded. Format the column as Text, retype it, and re-open the file.`);
+  else if (fssn.length > 20) rowErr('fssn_nbr', 'the foreign tax ID is longer than 20 characters.');
+  if (!/^[A-Z]{3}$/.test(cntry)) rowErr('tx_cntry_cd', `country of residence "${cntryRaw}" must be a 3-letter code (e.g. USA, GBR).`);
+  if (incCd && !/^\d{2}$/.test(incCd)) rowErr('inc_1_tcd', `income code "${incRaw}" must be 2 digits.`);
+  if (crcy && !/^[A-Z]{3}$/.test(crcy)) rowErr('crcy_1_cd', `currency "${crcy}" must be a 3-letter code (e.g. CAD, USD).`);
+  if (xmptCd.length > 1) rowErr('tx_xmpt_1_cd', `exemption code "${xmptCd}" must be 1 character.`);
+  const withCIN = targetSchema(new Date()) === '1-27-1';
+  const cin = withCIN && nr4CIN(get('cin'));
+  if (withCIN && !cin) rowErr('cin', `Canadian tax ID "${get('cin')}" must be a 9-digit SIN/TTN/ITN, a 15-character BN (e.g. 123456789RC0001) or a trust account (e.g. T12345678). Leave it blank if the recipient has none.`);
+  return done({ name, fssn, rcpntTcd, cntry, incCd, crcy, xmptCd, cin, steCd });
+}
+
+// Every row problem for a return: what the editor marks live and what Generate blocks on (errors) or lists (warnings)
+function validateRows(rt = getSelectedReturnType(), rows = parsedData, map = columnMap, hdrs = headers) {
+  return rows.flatMap((row, i) => checkRow(rt, row, i, map, hdrs)?.issues || []);
+}
+
+// After a generate*XML row loop: shows the row errors (or "no valid rows") and returns null, else the Step 4 warnings
+function finishRows(issues, slipCount, noun) {
+  const errors = issues.filter(x => x.severity === 'error');
+  if (errors.length || !slipCount) {
+    showGenerateErrors(errors.length ? errors.map(x => x.message) : [`No valid ${noun} rows found. Please check the columns in Step 2.`],
+                       errors[0]?.field, errors.length > 0);
+    return null;
+  }
+  return issues.filter(x => x.severity === 'warning').map(x => x.message);
 }
 
 // ============================================================
@@ -649,17 +1009,23 @@ function unmappedRequired() {
   return getReturnConfig().fields.filter(f => f.required && !(columnMap[f.key] >= 0));
 }
 
-// Step 2 "Continue": stop here, not after the user has filled in Step 3, when a required column is unmapped
-function continueFromMapping() {
+// Shows (or clears) the Step 2 error for required fields with no column. True when none are missing.
+function checkRequiredColumns() {
   const unmapped = unmappedRequired();
-  const box = document.getElementById('mapping-errors');
+  const box = document.getElementById('editor-errors');
   box.innerHTML = unmapped.length
-    ? `<h4>Map ${unmapped.length === 1 ? 'this required field' : `these ${unmapped.length} required fields`} before you continue</h4>` +
+    ? `<h4>Pick a column for ${unmapped.length === 1 ? 'this required field' : `these ${unmapped.length} required fields`} before you continue</h4>` +
       `<ul>${unmapped.map(f => `<li>${escapeXml(f.label)}</li>`).join('')}</ul>` +
-      `<p>Pick the matching column in the "Your Excel Column" dropdown above. If none fits, add that column to your spreadsheet and open it again, or check that ${getSelectedReturnType()} is the right return for this file.</p>`
+      `<p>Choose the field in the dropdown at the top of the column that holds it. If none fits, add that column to your spreadsheet and open it again, or check that ${getSelectedReturnType()} is the right return for this file.</p>`
     : '';
   box.classList.toggle('hidden', !unmapped.length);
-  if (!unmapped.length) goToStep(3);
+  return !unmapped.length;
+}
+
+// Step 2 "Continue": stop here, not after the user has filled in Step 3, when a required field has no column.
+// Row errors don't block here; Generate blocks on them.
+function continueFromEditor() {
+  if (checkRequiredColumns()) goToStep(3);
 }
 
 function generateXML() {
@@ -668,7 +1034,7 @@ function generateXML() {
   const unmapped = unmappedRequired();
   if (unmapped.length) {
     clearFieldErrors();
-    showGenerateErrors(unmapped.map(f => `No column is mapped to "${f.label}". Map it in Step 2, or check that ${getSelectedReturnType()} is the right return for this file.`));
+    showGenerateErrors(unmapped.map(f => `No column is set to "${f.label}". Pick it in a column's dropdown in Step 2, or check that ${getSelectedReturnType()} is the right return for this file.`));
     return;
   }
   config.generateXML();
@@ -686,28 +1052,20 @@ function generateT1204XML() {
   const taxYear = document.getElementById('tax-year').value;
   const reportType = document.getElementById('report-type').value;
   const payerBn = cleanBN(document.getElementById('py-bn').value);
-  const warnings = [];
-  const errors = [];
+  const issues = [];
 
   let totalSrvc = 0, totalMxd = 0, slipCount = 0;
   let slipsXml = '';
 
   for (let i = 0; i < parsedData.length; i++) {
-    const row = parsedData[i];
-    const vendorName = String(getVal(row, 'vendor_name')).trim();
-    const vendorBn = String(getVal(row, 'vendor_bn')).trim();
-    const amount = parseFloat(getVal(row, 'amount')) || 0;
-    const bizType = String(getVal(row, 'biz_type')).trim();
-    const svcOnly = String(getVal(row, 'svc_only')).trim().toLowerCase();
-    const address = String(getVal(row, 'address')).trim();
-
-    if (!vendorName && !vendorBn) continue;
-
-    const rcpntTcd = BIZ_TYPE_MAP[bizType.toLowerCase()];
-    if (!rcpntTcd) {
-      rowError(errors, i + 2, 'biz_type', vendorName, `business type "${bizType}" isn't recognized. Use Individual (or Sole proprietor), Corporation, Partnership, or the CRA code 1, 3 or 4.`);
-      continue;
-    }
+    const v = checkRow('T1204', parsedData[i], i);
+    if (!v) continue;
+    issues.push(...v.issues);
+    if (!v.ok) continue;
+    const { name: vendorName, rcpntTcd, idVal, get } = v;
+    const amount = parseFloat(get('amount')) || 0;
+    const svcOnly = String(get('svc_only')).trim().toLowerCase();
+    const address = String(get('address')).trim();
     const addr = parseAddress(address);
     const amtStr = amount.toFixed(2);
 
@@ -722,16 +1080,11 @@ function generateT1204XML() {
       const init = nameParts.length > 2 ? nameParts[1][0] || '' : '';
 
       rcpntNmXml = `<RCPNT_NM>${xmlTag('snm', snm)}${gvnNm ? xmlTag('gvn_nm', gvnNm) : ''}${init ? xmlTag('init', init) : ''}</RCPNT_NM>`;
-
-      const sinVal = checkSIN(getVal(row, 'vendor_bn'), vendorName, i + 2, warnings, errors, 'vendor_bn');
-      if (!sinVal) continue;
-      sinXml = xmlTag('sin', sinVal);
+      sinXml = xmlTag('sin', idVal);
       bnXml = xmlTag('rcpnt_bn', '000000000RT0000');
     } else {
       sinXml = xmlTag('sin', '000000000');
-      const bnVal = checkRecipientBN(getVal(row, 'vendor_bn'), 'RT', '000000000RC0000', vendorName, i + 2, warnings, errors, 'vendor_bn');
-      if (!bnVal) continue;
-      bnXml = xmlTag('rcpnt_bn', bnVal);
+      bnXml = xmlTag('rcpnt_bn', idVal);
     }
 
     const nameStr = vendorName.substring(0, 60);
@@ -769,8 +1122,8 @@ function generateT1204XML() {
     slipCount++;
   }
 
-  if (!errors.length && slipCount === 0) errors.push('No valid vendor rows found. Please check your column mapping.');
-  if (errors.length) { showGenerateErrors(errors); return; }
+  const warnings = finishRows(issues, slipCount, 'vendor');
+  if (!warnings) return;
 
   const postalClean = document.getElementById('py-postal').value.trim().replace(/\s/g, '');
   const summaryXml = `
@@ -822,8 +1175,7 @@ function generateT4XML() {
   const taxYear = document.getElementById('tax-year').value;
   const reportType = document.getElementById('report-type').value;
   const employerBn = cleanBN(document.getElementById('py-bn').value);
-  const warnings = [];
-  const errors = [];
+  const issues = [];
 
   // Dental benefit code from form
   const dentalCode = document.getElementById('t4-dental-code')?.value || '1';
@@ -838,46 +1190,21 @@ function generateT4XML() {
   let totEmptInc = 0, totCpp = 0, totCppe = 0, totEi = 0, totRpp = 0, totItx = 0, totPadj = 0;
 
   for (let i = 0; i < parsedData.length; i++) {
-    const row = parsedData[i];
-    let lastName = String(getVal(row, 'empe_snm')).trim();
-    let firstName = String(getVal(row, 'empe_gvn_nm')).trim();
-    // One full-name column mapped to both name fields: last word is the surname, the rest the given name(s)
-    if (columnMap.empe_snm >= 0 && columnMap.empe_snm === columnMap.empe_gvn_nm) {
-      const parts = lastName.split(/\s+/);
-      lastName = parts.pop();
-      firstName = parts.join(' ');
-    }
-    const sinRaw = String(getVal(row, 'sin')).trim();
-    const emptyIncome = parseFloat(getVal(row, 'empt_incamt')) || 0;
-    const cppAmt = parseFloat(getVal(row, 'cpp_cntrb_amt')) || 0;
-    const cppeAmt = parseFloat(getVal(row, 'cppe_cntrb_amt')) || 0;
-    const qppAmt = parseFloat(getVal(row, 'qpp_cntrb_amt')) || 0;
-    const eiAmt = parseFloat(getVal(row, 'empe_eip_amt')) || 0;
-    const rppAmt = parseFloat(getVal(row, 'rpp_cntrb_amt')) || 0;
-    const itxAmt = parseFloat(getVal(row, 'itx_ddct_amt')) || 0;
-    const eiInsEarn = parseFloat(getVal(row, 'ei_insu_ern_amt')) || 0;
-    const cppQppEarn = parseFloat(getVal(row, 'cpp_qpp_ern_amt')) || 0;
-    const unnDues = parseFloat(getVal(row, 'unn_dues_amt')) || 0;
-    const provCdRaw = String(getVal(row, 'empt_prov_cd')).trim().toUpperCase();
-    const addressRaw = String(getVal(row, 'address')).trim();
-
-    // Skip empty rows
-    if (!lastName && !sinRaw) continue;
-
-    // SIN validation — invalid SIN is a hard stop
-    const sinVal = checkSIN(getVal(row, 'sin'), `${firstName} ${lastName}`.trim(), i + 2, warnings, errors, 'sin');
-    if (!sinVal) continue;
-
-    // Province of employment
-    let empProvCd = provCdRaw;
-    if (!ALL_PROV_CODES.has(empProvCd)) {
-      // Try to derive from address
-      const addr = parseAddress(addressRaw);
-      empProvCd = addr.prov || 'ON'; // default ON if unknown
-      if (!provCdRaw) {
-        warnings.push(`Row ${i+2}: "${firstName} ${lastName}" province of employment not specified, defaulting to ${empProvCd}`);
-      }
-    }
+    const v = checkRow('T4', parsedData[i], i);
+    if (!v) continue;
+    issues.push(...v.issues);
+    if (!v.ok) continue;
+    const { lastName, firstName, sinVal, empProvCd, addressRaw, get } = v;
+    const emptyIncome = parseFloat(get('empt_incamt')) || 0;
+    const cppAmt = parseFloat(get('cpp_cntrb_amt')) || 0;
+    const cppeAmt = parseFloat(get('cppe_cntrb_amt')) || 0;
+    const qppAmt = parseFloat(get('qpp_cntrb_amt')) || 0;
+    const eiAmt = parseFloat(get('empe_eip_amt')) || 0;
+    const rppAmt = parseFloat(get('rpp_cntrb_amt')) || 0;
+    const itxAmt = parseFloat(get('itx_ddct_amt')) || 0;
+    const eiInsEarn = parseFloat(get('ei_insu_ern_amt')) || 0;
+    const cppQppEarn = parseFloat(get('cpp_qpp_ern_amt')) || 0;
+    const unnDues = parseFloat(get('unn_dues_amt')) || 0;
 
     // Parse employee address
     const addr = parseAddress(addressRaw);
@@ -932,8 +1259,8 @@ function generateT4XML() {
     slipCount++;
   }
 
-  if (!errors.length && slipCount === 0) errors.push('No valid employee rows found. Please check your column mapping.');
-  if (errors.length) { showGenerateErrors(errors); return; }
+  const warnings = finishRows(issues, slipCount, 'employee');
+  if (!warnings) return;
 
   // Build T4 Summary
   const pyAddr = document.getElementById('py-addr')?.value?.trim() || '';
@@ -1007,35 +1334,19 @@ function generateT5018XML() {
   const pyPhone = parsePhone(document.getElementById('py-phone').value);
   const reportType = document.getElementById('report-type').value;
   const payerBn = cleanBN(document.getElementById('py-bn').value);
-  const warnings = [];
-  const errors = [];
+  const issues = [];
 
   let totalSubcontractor = 0, slipCount = 0;
   let slipsXml = '';
 
   for (let i = 0; i < parsedData.length; i++) {
-    const row = parsedData[i];
-    const recipientName = String(getVal(row, 'rcpnt_name')).trim();
-    const recipientBnRaw = String(getVal(row, 'rcpnt_bn')).trim();
-    const subAmt = parseFloat(getVal(row, 'sbctrcr_amt')) || 0;
-    const rcpntTypeRaw = String(getVal(row, 'rcpnt_type')).trim();
-    const addressRaw = String(getVal(row, 'address')).trim();
-
-    if (!recipientName && !recipientBnRaw) continue;
-
-    // Determine recipient type code
-    let rcpntTcd = '3'; // default corporation
-    const typeStr = rcpntTypeRaw.toLowerCase();
-    if (BIZ_TYPE_MAP[typeStr]) {
-      rcpntTcd = BIZ_TYPE_MAP[typeStr];
-    } else if (typeStr.includes('individual') || typeStr === '1') {
-      rcpntTcd = '1';
-    } else if (typeStr.includes('partnership') || typeStr === '4') {
-      rcpntTcd = '4';
-    } else if (typeStr.includes('corp') || typeStr === '3') {
-      rcpntTcd = '3';
-    }
-
+    const v = checkRow('T5018', parsedData[i], i);
+    if (!v) continue;
+    issues.push(...v.issues);
+    if (!v.ok) continue;
+    const { name: recipientName, rcpntTcd, idVal, get } = v;
+    const subAmt = parseFloat(get('sbctrcr_amt')) || 0;
+    const addressRaw = String(get('address')).trim();
     const addr = parseAddress(addressRaw);
 
     // Build name XML
@@ -1051,17 +1362,12 @@ function generateT5018XML() {
       const init = nameParts.length > 2 ? nameParts[1][0] || '' : '';
 
       rcpntNmXml = `<RCPNT_NM>${xmlTag('snm', snm)}${gvnNm ? xmlTag('gvn_nm', gvnNm) : ''}${init ? xmlTag('init', init) : ''}</RCPNT_NM>`;
-
-      const sinVal = checkSIN(getVal(row, 'rcpnt_bn'), recipientName, i + 2, warnings, errors, 'rcpnt_bn');
-      if (!sinVal) continue;
-      sinXml = xmlTag('sin', sinVal);
+      sinXml = xmlTag('sin', idVal);
       bnXml = xmlTag('rcpnt_bn', '000000000RC0000');
     } else {
       // Corporation or Partnership
       sinXml = xmlTag('sin', '000000000');
-      const bnVal = checkRecipientBN(getVal(row, 'rcpnt_bn'), 'RZ', '000000000RZ0000', recipientName, i + 2, warnings, errors, 'rcpnt_bn');
-      if (!bnVal) continue;
-      bnXml = xmlTag('rcpnt_bn', bnVal);
+      bnXml = xmlTag('rcpnt_bn', idVal);
     }
 
     // Corp/Partnership name
@@ -1093,8 +1399,8 @@ function generateT5018XML() {
     slipCount++;
   }
 
-  if (!errors.length && slipCount === 0) errors.push('No valid contractor rows found. Please check your column mapping.');
-  if (errors.length) { showGenerateErrors(errors); return; }
+  const warnings = finishRows(issues, slipCount, 'contractor');
+  if (!warnings) return;
 
   // Build T5018 Summary
   const pyAddr = document.getElementById('py-addr')?.value?.trim() || '';
@@ -1153,46 +1459,20 @@ function generateNR4XML() {
   const pyPhone = parsePhone(document.getElementById('py-phone').value);
   const taxYear = document.getElementById('tax-year').value;
   const reportType = document.getElementById('report-type').value;
-  const warnings = [];
-  const errors = [];
+  const issues = [];
 
   let totGross = 0, totTax = 0, slipCount = 0;
   let slipsXml = '';
   const currencies = new Set();
 
   for (let i = 0; i < parsedData.length; i++) {
-    const row = parsedData[i];
-    const name = String(getVal(row, 'rcpnt_name')).trim();
-    const fssn = String(getVal(row, 'fssn_nbr')).trim();
-    if (!name && !fssn) continue;
-
-    const rowErr = (key, msg) => rowError(errors, i + 2, key, name, msg);
-    const typeRaw = String(getVal(row, 'rcpnt_type')).trim().toLowerCase();
-    const rcpntTcd = /^[1-5]$/.test(typeRaw) ? typeRaw : NR4_RCPNT_TYPE_MAP[typeRaw];
-    const cntryRaw = String(getVal(row, 'tx_cntry_cd')).trim().toUpperCase();
-    const cntry = COUNTRY_MAP[cntryRaw] || cntryRaw;
-    const incRaw = String(getVal(row, 'inc_1_tcd')).trim();
-    const incCd = incRaw ? incRaw.padStart(2, '0') : '';
-    const crcy = String(getVal(row, 'crcy_1_cd')).trim().toUpperCase();
-    const xmptCd = String(getVal(row, 'tx_xmpt_1_cd')).trim().toUpperCase();
-    const gross = parseFloat(getVal(row, 'gro_1_incamt')) || 0;
-    const tax = parseFloat(getVal(row, 'nr_tx_1_amt')) || 0;
-    const steCd = String(getVal(row, 'ste_cd')).trim().toUpperCase();
-
-    const before = errors.length;
-    const fssnCell = getVal(row, 'fssn_nbr');
-    if (!name) rowErr('rcpnt_name', 'the recipient name is missing.');
-    if (!rcpntTcd) rowErr('rcpnt_type', `recipient type "${typeRaw}" isn't recognized. Use Individual, Joint account, Corporation, Other, Government, or 1–5.`);
-    if (!fssn) rowErr('fssn_nbr', 'the foreign tax ID is missing (CRA requires it).');
-    else if (typeof fssnCell === 'number' && !Number.isSafeInteger(fssnCell)) rowErr('fssn_nbr', `foreign tax ID "${fssn}" was stored as a number and may have been rounded. Format the column as Text, retype it, and re-open the file.`);
-    else if (fssn.length > 20) rowErr('fssn_nbr', 'the foreign tax ID is longer than 20 characters.');
-    if (!/^[A-Z]{3}$/.test(cntry)) rowErr('tx_cntry_cd', `country of residence "${cntryRaw}" must be a 3-letter code (e.g. USA, GBR).`);
-    if (incCd && !/^\d{2}$/.test(incCd)) rowErr('inc_1_tcd', `income code "${incRaw}" must be 2 digits.`);
-    if (crcy && !/^[A-Z]{3}$/.test(crcy)) rowErr('crcy_1_cd', `currency "${crcy}" must be a 3-letter code (e.g. CAD, USD).`);
-    if (xmptCd.length > 1) rowErr('tx_xmpt_1_cd', `exemption code "${xmptCd}" must be 1 character.`);
-    const cin = withCIN && nr4CIN(getVal(row, 'cin'));
-    if (withCIN && !cin) rowErr('cin', `Canadian tax ID "${getVal(row, 'cin')}" must be a 9-digit SIN/TTN/ITN, a 15-character BN (e.g. 123456789RC0001) or a trust account (e.g. T12345678). Leave it blank if the recipient has none.`);
-    if (errors.length > before) continue;
+    const v = checkRow('NR4', parsedData[i], i);
+    if (!v) continue;
+    issues.push(...v.issues);
+    if (!v.ok) continue;
+    const { name, fssn, rcpntTcd, cntry, incCd, crcy, xmptCd, cin, steCd, get } = v;
+    const gross = parseFloat(get('gro_1_incamt')) || 0;
+    const tax = parseFloat(get('nr_tx_1_amt')) || 0;
 
     // Individuals and joint accounts use RCPNT_NM; corporations, other and government use ENTPRS_NM
     let nameXml;
@@ -1208,10 +1488,10 @@ function generateNR4XML() {
 
     // ponytail: address country = tax-residence country; add an address-country column if they ever differ
     const addrInner = [
-      xmlTag('addr_l1_txt', String(getVal(row, 'addr_l1')).trim().substring(0, 30)),
-      xmlTag('cty_nm', String(getVal(row, 'city')).trim().substring(0, 28)),
+      xmlTag('addr_l1_txt', String(get('addr_l1')).trim().substring(0, 30)),
+      xmlTag('cty_nm', String(get('city')).trim().substring(0, 28)),
       /^[A-Z]{2}$/.test(steCd) ? xmlTag('ste_cd', steCd) : '',
-      xmlTag('fgn_pstl_cd', String(getVal(row, 'fgn_pstl_cd')).trim().replace(/\s/g, '').toUpperCase()),
+      xmlTag('fgn_pstl_cd', String(get('fgn_pstl_cd')).trim().replace(/\s/g, '').toUpperCase()),
     ].join('');
     const addrXml = addrInner ? `<RCPNT_ADDR>${addrInner}${xmlTag('cntry_cd', cntry)}</RCPNT_ADDR>` : '';
 
@@ -1241,8 +1521,8 @@ function generateNR4XML() {
     slipCount++;
   }
 
-  if (!errors.length && slipCount === 0) errors.push('No valid recipient rows found. Please check your column mapping.');
-  if (errors.length) { showGenerateErrors(errors); return; }
+  const warnings = finishRows(issues, slipCount, 'recipient');
+  if (!warnings) return;
   if (!withCIN && columnMap.cin >= 0) warnings.push('The Canadian Tax ID column is left out: CRA only takes it in files built to the 2027 schema (1-27-1), which this tool makes from December 22, 2026.');
   if (currencies.size > 1) warnings.push(`Slips use more than one currency (${[...currencies].join(', ')}) — the summary totals add them together as-is. Check them before filing.`);
 
@@ -1374,6 +1654,7 @@ function analyticsFieldAllowlist() {
   return new Set([
     ...Object.values(RETURN_TYPES).flatMap(rt => rt.fields.map(f => f.key)),
     ...SAVED_FIELDS, 't5018-fiscal-day', 't5018-fiscal-month', 't5018-fiscal-year',
+    'ignore', 'full_name', // Step 2 editor choices that aren't a single column key
   ]);
 }
 

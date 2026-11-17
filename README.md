@@ -22,7 +22,7 @@ All processing happens **entirely in your browser**. Your data is never uploaded
 ## How It Works
 
 1. **Upload** your `.xlsx` or `.csv` spreadsheet.
-2. **Map** your columns to the required CRA fields (auto-detected with smart column matching).
+2. **Review and edit** your rows in a table: each column is auto-matched to a CRA field (change it with the column's dropdown or by dragging), cells are editable, and problems are marked live.
 3. **Fill in** your Transmitter and Payer details — saved automatically for future corrections.
 4. **Download** your CRA-compliant XML file and submit it via the [CRA Internet File Transfer (IFT)](https://www.canada.ca/en/revenue-agency/services/e-services/cra-login-services.html) portal.
 
@@ -53,6 +53,8 @@ See [ROADMAP.md](ROADMAP.md) for what's planned next.
   - `xsd.test.js` — every sample and golden input, made in both schema modes, validated against CRA's own XSDs (needs `python3` + `lxml`; skips loudly without them)
   - `seasonal.test.js` — default tax year, target schema by date, T619 account / RepID / submission ref ID, NR4 Canadian tax ID, landing-page deep links
   - `analytics.test.js`, `ux.test.js`, `validate.test.js` — GA4 funnel events (no-PII scan), Step 2/3 UX, SIN/BN helpers
+  - `table-editor.test.js` — Step 2 table editor: remapping (dropdown / drag / keyboard), inline edits, add/delete rows, live validation, paging at 5,000 rows, GA4 `column_remapped` / `cell_edited`, XML through the editor byte-identical to the goldens
+  - `row-messages.test.js` — every row error/warning message word for word against `tests/fixtures/row-messages.golden.json`
   - `ga.test.js` — `js/ga.js` gating (hostname/protocol matrix, internal flag), `cta_click` / `sample_downloaded`
   - `tests/harness.js` loads the browser code into a Node `vm` with a minimal DOM stub; no browser needed
 - Hosted on GitHub Pages
