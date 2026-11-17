@@ -16,6 +16,7 @@ function app(returnType = 'T4', opts = {}) {
   a.field = c => a.run(`columnField(${c})`);
   a.cell = (r, c) => JSON.parse(JSON.stringify(a.run(`cellState(${r}, ${c})`)));
   a.issues = () => JSON.parse(JSON.stringify(a.run('validateRows(getSelectedReturnType())')));
+  a.order = () => JSON.parse(JSON.stringify(a.run('editorColumns()'))); // a plain array, not the vm realm's
   return a;
 }
 const shown = (a, id) => !a.el(id).classList.contains('hidden');
@@ -59,7 +60,7 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
 {
   const a = app('T4');
   a.loadFile('t.csv', csv([['Extra', 'SIN', 'Other', 'Last Name', 'Box 14 - Employment Income'], ['x', '046454286', 'y', 'Doe', '1']]));
-  assert.deepStrictEqual(a.run('editorColumns()'), [3, 1, 4, 0, 2]);
+  assert.deepStrictEqual(a.order(), [3, 1, 4, 0, 2]);
 }
 
 // ---- missing required columns: listed, Continue blocked, fixed by the dropdown ----
@@ -124,13 +125,13 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   a.loadFile('t.csv', csv([[...T4H, 'Notes'], ['Doe', 'John', '046454286', '1', 'n']]));
   a.run(`swapColumns(0, 1, 'drag')`);
   assert.deepStrictEqual([0, 1].map(a.field), ['empe_gvn_nm', 'empe_snm']);
-  assert.deepStrictEqual(a.run('editorColumns()'), [1, 0, 2, 3, 4], 'columns re-order to follow the CRA fields');
+  assert.deepStrictEqual(a.order(), [1, 0, 2, 3, 4], 'columns re-order to follow the CRA fields');
   a.run(`swapColumns(3, 4, 'drag')`); // onto an ignored column: that column takes the field, the dragged one is ignored
   assert.deepStrictEqual([3, 4].map(a.field), ['ignore', 'empt_incamt']);
   a.run(`swapColumns(3, 3, 'drag')`); // onto itself: nothing
   assert.deepStrictEqual(a.named('column_remapped'), [{ return_type: 'T4', field: 'empe_gvn_nm', method: 'drag' }, { return_type: 'T4', field: 'ignore', method: 'drag' }]);
   // keyboard: move a column one place left/right in the display order = swap with that neighbour
-  const order = () => a.run('editorColumns()');
+  const order = a.order;
   assert.deepStrictEqual(order(), [1, 0, 2, 4, 3]);
   a.run(`moveColumn(0, -1)`);
   assert.deepStrictEqual(order(), [0, 1, 2, 4, 3]);
