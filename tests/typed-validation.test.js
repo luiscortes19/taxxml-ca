@@ -126,7 +126,7 @@ for (const [rt, c] of Object.entries(cfg)) {
     bad(rt, f.key, '60000X', /isn't a dollar amount/);
   }
 }
-assert.deepStrictEqual(cfg.T4.fields.filter(f => f.type === 'money').map(f => [f.key, f.digits]), [
+assert.deepStrictEqual(plain(cfg.T4.fields.filter(f => f.type === 'money').map(f => [f.key, f.digits])), [
   ['empt_incamt', 8], ['cpp_cntrb_amt', 4], ['cppe_cntrb_amt', 4], ['qpp_cntrb_amt', 4], ['empe_eip_amt', 4], ['rpp_cntrb_amt', 5],
   ['itx_ddct_amt', 8], ['ei_insu_ern_amt', 5], ['cpp_qpp_ern_amt', 7], ['unn_dues_amt', 7]]);
 // Excel numbers: whole cents only, no negatives

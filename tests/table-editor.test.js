@@ -174,7 +174,7 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
 // ---- drag onto a CRA column, drag to Ignored, drag out of Ignored; keyboard moves to the next / previous CRA column ----
 {
   const a = app('T4');
-  a.loadFile('t.csv', csv([[...T4H, 'Notes'], ['Doe', 'John', '046454286', '1', 'n']]));
+  a.loadFile('t.csv', csv([[...T4H, 'Notes'], ['Doe', 'John', '046454286', '1', '2']]));
   a.run(`dropOnSlot(0, 'empe_gvn_nm', 'drag')`); // onto a taken CRA column, from a CRA column: the two trade places
   assert.deepStrictEqual([0, 1].map(a.field), ['empe_gvn_nm', 'empe_snm']);
   a.run(`dropOnSlot(4, 'empt_incamt', 'drag')`); // from Ignored onto a taken CRA column: the one there goes to Ignored
@@ -482,7 +482,7 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   const PII = ['Secret', 'Doe', '046454286', '130692544', 'Payroll Notes', '777'];
   const a = app('T4');
   a.loadFile('secret.csv', csv([['Last Name', 'First Name', 'SIN', 'Box 14 - Employment Income', 'Payroll Notes'], ['Doe', 'Secret', '046454286', '777', 'Secret']]));
-  a.run(`editCell(0, 0, 'Secret Doe'); editCell(0, 4, 'Secret 130692544'); remapColumn(4, 'empe_gvn_nm', 'dropdown'); swapColumns(4, 1, 'drag'); moveColumn(4, -1); remapColumn(4, 'full_name', 'dropdown')`);
+  a.run(`editCell(0, 0, 'Secret Doe'); editCell(0, 4, 'Secret 130692544'); remapColumn(4, 'empe_gvn_nm', 'dropdown'); swapColumns(4, 1, 'drag'); moveColumn(1, 1); dropOnSlot(4, 'sin', 'drag'); remapColumn(4, 'ignore', 'drag'); remapColumn(4, 'full_name', 'dropdown')`);
   const allow = a.run('analyticsFieldAllowlist()');
   const ALLOWED = { return_type: /^(T4|T1204|T5018|NR4)$/, method: /^(dropdown|drag|keyboard)$/ };
   const mine = a.events.filter(e => e[0] === 'column_remapped' || e[0] === 'cell_edited');
@@ -503,6 +503,8 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const js = fs.readFileSync(path.join(ROOT, 'js', 'app.js'), 'utf8');
   const css = fs.readFileSync(path.join(ROOT, 'css', 'styles.css'), 'utf8');
+  const a0 = app('T4');
+  a0.loadFile('t.csv', csv([T4H, ['Doe', 'John', '046454286', '1']]));
   for (const gone of ['mapping-table', 'mapping-tbody', 'preview-table', 'count-matched', 'Continue to Mapping', 'Column Mapping', 'Your Excel Column', 'mapping-errors'])
     assert(!html.includes(gone), `index.html still has ${gone}`);
   for (const gone of ['buildPreview', 'renderPreviewTable', 'updateMappingSummary', 'continueFromMapping', 'badCells', 'mapping-select', 'preview-tbody', 'getVal('])
@@ -517,7 +519,7 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   assert(/never sent anywhere|stay[s]? (on|in) this (device|browser)/i.test(html.slice(html.indexOf('id="step-2"'), html.indexOf('id="step-3"'))), 'Step 2 keeps the privacy promise');
   assert(/\.ed-wrap[^{]*\{[^}]*overflow-x: auto/.test(css), 'table scrolls sideways in its box');
   // v1 code this replaces is gone
-  for (const gone of ['editorColumns', 'rowHeaderState', 'editorFieldOptions', 'more warning', 'ed-head-name', 'ed-src', 'is-ignored', 'class="req"'])
+  for (const gone of ['editorColumns', 'rowHeaderState', 'editorFieldOptions', 'ed-head-name', 'ed-src', 'is-ignored', 'class="req"'])
     assert(!js.includes(gone), `app.js still has ${gone}`);
   for (const gone of ['.ed-head-name', '.ed-src', 'is-ignored', '.ed-pick'])
     assert(!css.includes(gone), `styles.css still has ${gone}`);

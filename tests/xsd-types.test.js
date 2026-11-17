@@ -8,7 +8,7 @@ const { createApp, XLSX } = require('./harness');
 const V = require('../js/validate.js');
 
 const app = createApp({ returnType: 'T4' });
-const RETURN_TYPES = app.run('RETURN_TYPES');
+const RETURN_TYPES = JSON.parse(JSON.stringify(app.run('RETURN_TYPES'))); // plain objects, not the vm realm's
 const XSD_FILE = { T4: 't4.xsd', T1204: 't1204.xsd', T5018: 't5018.xsd', NR4: 'nr4.xsd' };
 
 for (const version of ['1-26-3', '1-27-1']) {
@@ -88,10 +88,10 @@ for (const version of ['1-26-3', '1-27-1']) {
     assert.strictEqual(t, 'indicator1-3-4Type');
     assert.deepStrictEqual(simple(t).patterns, ['1|3|4']);
   }
-  assert.deepStrictEqual([...new Set(Object.values(app.run('BIZ_TYPE_MAP')))].sort(), ['1', '3', '4'], 'T1204/T5018 types map to 1, 3, 4 only');
+  assert.deepStrictEqual([...new Set(Object.values(JSON.parse(JSON.stringify(app.run('BIZ_TYPE_MAP')))))].sort(), ['1', '3', '4'], 'T1204/T5018 types map to 1, 3, 4 only');
   assert.strictEqual(typeOf('nr4.xsd', 'rcpnt_tcd'), 'indicator1-5Type');
   assert.deepStrictEqual(simple('indicator1-5Type').patterns, ['[1-5]{1}']);
-  assert.deepStrictEqual([...new Set(Object.values(app.run('NR4_RCPNT_TYPE_MAP')))].sort(), ['1', '2', '3', '4', '5']);
+  assert.deepStrictEqual([...new Set(Object.values(JSON.parse(JSON.stringify(app.run('NR4_RCPNT_TYPE_MAP')))))].sort(), ['1', '2', '3', '4', '5']);
   for (const el of ['cpp_qpp_xmpt_cd', 'ei_xmpt_cd']) {
     const t = typeOf('t4.xsd', el);
     assert.strictEqual(t, 'indicator0-1Type');
