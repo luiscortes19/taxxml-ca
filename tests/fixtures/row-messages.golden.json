@@ -4,19 +4,20 @@
     "errors": [
       "Row 2, column &quot;SIN&quot; (John Doe): SIN &quot;46454286&quot; has 8 digits; a SIN must be 9 digits. If your spreadsheet dropped a leading zero, format the column as Text and re-open the file.",
       "Row 3, column &quot;SIN&quot; (Jane Roe): SIN &quot;123456789&quot; fails the SIN checksum. Check it for a typo.",
-      "Row 4, column &quot;SIN&quot; (Poe): SIN &quot;150000000&quot; fails the SIN checksum. Check it for a typo.",
+      "Row 4, column &quot;SIN&quot; (Poe): SIN &quot;1.5e8&quot; is not a whole number. Format the column as Text, type the 9 digits, and re-open the file.",
+      "Row 4, column &quot;Province of Employment&quot; (Poe): province of employment is blank. Use AB, BC, MB, NB, NL, NS, NT, NU, ON, PE, QC, SK, YT, US (United States) or ZZ (another country).",
       "Row 5, column &quot;SIN&quot; (Solo): SIN &quot;12345678901&quot; has 11 digits; a SIN must be 9 digits. If your spreadsheet dropped a leading zero, format the column as Text and re-open the file."
     ],
     "warnings": []
   },
   "T4_warnings": {
-    "xmlSha1": "786406fae53022386cfb8124ea0f637c97643c69",
-    "errors": [],
-    "warnings": [
-      "Row 2: &quot;John Doe&quot; has no SIN — using 000000000",
-      "Row 3: &quot;Jane Roe&quot; province of employment not specified, defaulting to ON",
-      "Row 5: &quot;Solo &quot; province of employment not specified, defaulting to ON"
-    ]
+    "xmlSha1": null,
+    "errors": [
+      "Row 3, column &quot;Province of Employment&quot; (Jane Roe): province of employment is blank. Use AB, BC, MB, NB, NL, NS, NT, NU, ON, PE, QC, SK, YT, US (United States) or ZZ (another country).",
+      "Row 4, column &quot;Province of Employment&quot; (Ann Poe): province of employment &quot;XX&quot; isn&apos;t a province or territory code. Use AB, BC, MB, NB, NL, NS, NT, NU, ON, PE, QC, SK, YT, US (United States) or ZZ (another country).",
+      "Row 5, column &quot;Province of Employment&quot; (Solo): province of employment is blank. Use AB, BC, MB, NB, NL, NS, NT, NU, ON, PE, QC, SK, YT, US (United States) or ZZ (another country)."
+    ],
+    "warnings": []
   },
   "T4_xlsx_number": {
     "xmlSha1": "37bceb22c22730365e6754eb1747849c2de18026",
