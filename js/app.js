@@ -745,7 +745,12 @@ edBody.addEventListener('click', e => {
   const td = e.target.closest && e.target.closest('td[data-f]');
   if (td && (!editing || editing.td !== td)) startEdit(td);
 });
-edBody.addEventListener('focusout', e => { if (editing && (e.target === editing.td || e.target === editing.select)) stopEdit(true); });
+// Leaving the cell commits. Focus moving inside it doesn't: WebKit fires focusout on the td as its own select takes focus.
+edBody.addEventListener('focusout', e => {
+  if (!editing || (e.target !== editing.td && e.target !== editing.select)) return;
+  if (editing.td.contains(e.relatedTarget)) return;
+  stopEdit(true);
+});
 edBody.addEventListener('change', e => { if (editing && e.target === editing.select) stopEdit(true); });
 // Typing: the cell turns red / amber at once, before it's saved
 edBody.addEventListener('input', e => {
