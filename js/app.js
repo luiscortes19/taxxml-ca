@@ -605,10 +605,20 @@ function cellText(r, f) {
   return m && !m.error && m.value !== null ? formatMoney(m.value) : String(raw);
 }
 
+// The narrowest width, in characters, that fits text on 2 lines broken between words (never inside one)
+function twoLineCh(text) {
+  const w = String(text).trim().split(/\s+/);
+  let best = w.join(' ').length;
+  for (let i = 1; i < w.length; i++) best = Math.min(best, Math.max(w.slice(0, i).join(' ').length, w.slice(i).join(' ').length));
+  return best;
+}
+// A min-width that sizes the column to fit a name on 2 lines (+ pad for the grip etc.); longer names end in "…"
+const fitCh = (text, pad) => `style="min-width: ${Math.min(twoLineCh(text) + pad, 22)}ch"`;
+
 // A source column's drag handle and name
 function chipName(c) {
-  const name = escapeXml(headers[c] || '(no header)');
-  return `<span class="ed-chip-name" title="${name}"><span class="ed-grip" aria-hidden="true">⠿</span> ${colLetter(c)} · ${name}</span>`;
+  const raw = headers[c] || '(no header)', name = escapeXml(raw);
+  return `<span class="ed-chip-name" title="${name}" ${fitCh(`${colLetter(c)} · ${raw}`, 2)}><span class="ed-grip" aria-hidden="true">⠿</span> ${colLetter(c)} · ${name}</span>`;
 }
 const who = c => `column ${colLetter(c)} (${escapeXml(headers[c] || 'no header')})`;
 const toButton = (c, to, text, label) => `<button type="button" class="ed-act" data-to="${to}" data-col="${c}" aria-label="${label}">${text}</button>`;
@@ -643,7 +653,21 @@ function toggleColumnMenu(c) {
     m.classList.toggle('is-open', open);
     m.querySelector('[data-menu-btn]')?.setAttribute('aria-expanded', String(open));
   });
+  placeColumnMenu();
 }
+
+// The open "⋯" menu is position: fixed (the table's scroll box would clip it): under its button, right edges lined
+// up, above the button when there's no room below
+function placeColumnMenu() {
+  const btn = menuCol !== null && document.querySelector('#editor-thead .ed-menu.is-open [data-menu-btn]');
+  if (!btn) return;
+  const b = btn.getBoundingClientRect(), list = btn.nextElementSibling;
+  const h = list.offsetHeight;
+  list.style.top = `${b.bottom + 2 + h > window.innerHeight ? b.top - 2 - h : b.bottom + 2}px`;
+  list.style.left = `${Math.max(4, b.right - list.offsetWidth)}px`;
+}
+window.addEventListener('scroll', placeColumnMenu, true);
+window.addEventListener('resize', placeColumnMenu);
 
 // Escape or a click elsewhere closes the "⋯" menu, the Ignored "Use column" menus and the help popover
 function closeMenus(e) {
@@ -684,7 +708,7 @@ function renderEditorHead() {
   const cra = fields.map(f => `<th scope="col" class="ed-cra${f.required ? ' is-mandatory' : ''}${collapsed(f)}" data-slot="${f.key}">` +
     (isCollapsed(f) ? `<button type="button" class="ed-expand" data-expand="${f.key}" title="${escapeXml(f.label)}: no column, optional" ` +
       `aria-label="${escapeXml(f.label)}: no column, optional. Show this column">+</button>` : '') +
-    `<span class="ed-cra-label" title="${escapeXml(f.label)}">${escapeXml(f.label)}</span> ` +
+    `<span class="ed-cra-label" title="${escapeXml(f.label)}" ${fitCh(f.label, 1)}>${escapeXml(f.label)}</span> ` +
     `<span class="badge badge-${f.required ? 'mandatory' : 'optional'}">${f.required ? 'Mandatory' : 'Optional'}</span></th>`).join('');
   const slots = fields.map(f => {
     const c = columnMap[f.key];
@@ -697,6 +721,7 @@ function renderEditorHead() {
   }).join('');
   if (menuCol !== null && !fields.some(f => columnMap[f.key] === menuCol)) menuCol = null;
   document.getElementById('editor-thead').innerHTML = `<tr><th scope="col" class="ed-rownum" rowspan="2">Row</th>${cra}</tr><tr>${slots}</tr>`;
+  placeColumnMenu(); // a menu still open after a re-render
   document.getElementById('editor-empty-count').textContent = String(fields.filter(isEmptyOptional).length);
   showLanding(null); // the marked cells were just replaced
 }
