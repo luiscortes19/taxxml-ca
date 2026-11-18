@@ -57,6 +57,7 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
   const els = {};
   const getEl = id => (els[id] = els[id] || makeElement(id));
   const created = [];
+  const docListeners = {}; // document-level listeners (Escape, outside click, Ctrl+Z), fired by docEvent()
   // the hero's .return-pick buttons, so tests can click them
   const heroPicks = ['T4', 'T5018', 'NR4', 'T1204'].map(r => Object.assign(makeElement(), { dataset: { return: r } }));
   const document = {
@@ -64,7 +65,7 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
     querySelector: () => makeElement(),
     querySelectorAll: sel => (sel === '.return-pick' ? heroPicks : []),
     createElement: tag => { const e = makeElement(); e.tagName = tag.toUpperCase(); created.push(e); return e; },
-    addEventListener: () => {},
+    addEventListener: (type, fn) => { (docListeners[type] = docListeners[type] || []).push(fn); },
     body: makeElement('body'),
   };
   class FileReader {
@@ -92,6 +93,7 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
   const run = code => vm.runInContext(code, ctx);
   return {
     ctx, els, created, run, store, el: getEl, heroPicks,
+    docEvent: e => (docListeners[e.type] || []).forEach(fn => fn(e)),
     loadFile(name, bytes) { run('handleFile')({ name, bytes: new Uint8Array(bytes) }); },
     setDetails(overrides = {}) {
       const perReturn = returnType === 'T5018' ? { 'py-bn': '987654321RZ0001' } : {}; // T5018 payer is the RZ program
