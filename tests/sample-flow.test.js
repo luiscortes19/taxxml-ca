@@ -93,7 +93,7 @@ const shown = (a, id) => !a.el(id).classList.contains('hidden');
     const box = a.el('editor-errors');
     assert(shown(a, 'editor-errors'));
     for (const l of ['Last Name (Box 12)', 'SIN (Box 12)', 'Employment Income (Box 14)']) assert(box.innerHTML.includes(l), `lists ${l}: ${box.innerHTML}`);
-    assert(/Move to CRA column/.test(box.innerHTML), 'says how to fix');
+    assert(/Use column/.test(box.innerHTML) && /←/.test(box.innerHTML), 'says how to fix');
     a.run('columnMap.empe_snm = 0; columnMap.sin = 1; columnMap.empt_incamt = 2; continueFromEditor()');
     assert.strictEqual(a.run('currentStep'), 3);
     assert(!shown(a, 'editor-errors'), 'errors cleared once mapped');

@@ -53,7 +53,8 @@ See [ROADMAP.md](ROADMAP.md) for what's planned next.
   - `xsd.test.js` — every sample and golden input, made in both schema modes, validated against CRA's own XSDs (needs `python3` + `lxml`; skips loudly without them)
   - `seasonal.test.js` — default tax year, target schema by date, T619 account / RepID / submission ref ID, NR4 Canadian tax ID, landing-page deep links
   - `analytics.test.js`, `ux.test.js`, `validate.test.js` — GA4 funnel events (no-PII scan), Step 2/3 UX, SIN/BN helpers
-  - `table-editor.test.js` — Step 2 table editor: remapping (dropdown / drag / keyboard), inline edits, add/delete rows, live validation, paging at 5,000 rows, GA4 `column_remapped` / `cell_edited`, XML through the editor byte-identical to the goldens
+  - `table-editor.test.js` — Step 2 table editor: remapping (← / → buttons, drag, Leave out / Use column buttons), inline edits, add/delete rows, live validation, paging at 5,000 rows, GA4 `column_remapped` / `cell_edited`, XML through the editor byte-identical to the goldens
+  - `table-editor-arrows.test.js` — Step 2 column moves without a header dropdown: ← / → beside the column name (disabled at the ends), the "Moves to" landing marker on hover / focus / drag, Leave out and Use column buttons, T4 full name, and no save / autofill prompts (Step 3 inputs, editor cells)
   - `row-messages.test.js` — every row error/warning message word for word against `tests/fixtures/row-messages.golden.json`
   - `ga.test.js` — `js/ga.js` gating (hostname/protocol matrix, internal flag), `cta_click` / `sample_downloaded`
   - `tests/harness.js` loads the browser code into a Node `vm` with a minimal DOM stub; no browser needed
