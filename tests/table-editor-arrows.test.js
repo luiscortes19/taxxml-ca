@@ -198,13 +198,12 @@ for (const [rt, rows] of Object.entries(FILES)) {
   assert(/\.ed-arrow[^{]*\{[^}]*min-height: 44px; min-width: 44px/.test(coarse), coarse);
   assert(/\.is-landing/.test(css) && /\.is-landed/.test(css), 'landing marker styles');
   assert(!css.includes('.ed-move-to') && !css.includes('.ed-move '), 'dead dropdown / old arrow rules are gone');
-  // long column names wrap between words (hyphenated if need be); breaking inside a word is only the last resort
+  // long column names wrap between words, never inside one
   for (const sel of ['.ed-chip-name', '.ed-slot .ed-chip-name']) {
     const r = rule(sel);
-    assert(!/nowrap|break-all|overflow-wrap: break-word/.test(r), `${sel}: ${r}`);
+    assert(!/nowrap|break-all|overflow-wrap: (break-word|anywhere)|hyphens: auto/.test(r), `${sel}: ${r}`);
   }
-  assert(/white-space: normal/.test(rule('.ed-chip-name')) && /word-break: normal/.test(rule('.ed-chip-name')) &&
-    /hyphens: auto/.test(rule('.ed-chip-name')) && /overflow-wrap: anywhere/.test(rule('.ed-chip-name')), rule('.ed-chip-name'));
+  assert(/white-space: normal/.test(rule('.ed-chip-name')) && /word-break: normal/.test(rule('.ed-chip-name')), rule('.ed-chip-name'));
 }
 
 // ---- "Use column" menus close on Escape (focus back on the open one's summary) and on a click outside them ----

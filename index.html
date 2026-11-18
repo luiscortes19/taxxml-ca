@@ -160,25 +160,46 @@
     <!-- Step 2: Review & edit (table editor) -->
     <div class="wizard-step hidden" id="step-2">
       <div class="card card-wide">
+        <div class="ed-top">
         <h3>Check and edit your data</h3>
-        <p>The top row lists the CRA columns for this return, in CRA order. Under each one is the column of your file that fills it. If one is wrong, move your column with the ← and → buttons beside its name, or on a computer drag it (<span aria-hidden="true">⠿</span>) under the right CRA column. “Leave out” puts a column under Ignored columns; “Use column” there brings it back under the CRA column you pick. Click a cell to fix it. Your data stays in this browser: edits are never sent anywhere.</p>
+        <p class="ed-intro">Check each column and fix red cells. Drag a column name to move it.</p>
+        <details class="ed-how"><summary>How this works</summary>
+          <p>The top row lists the CRA columns for this return, in CRA order. Under each one is the column of your file that fills it. If one is wrong, drag it (<span aria-hidden="true">⠿</span>) under the right CRA column, or move it with the ← and → buttons beside its name (on a computer they show when you point at the column). “Leave out”, in the column’s ⋯ menu, puts a column under Ignored columns; “Use column” there brings it back under the CRA column you pick. Empty optional CRA columns are narrow strips: click one, or drag a column over it, to open it. Click a cell to fix it. Your data stays in this browser: edits are never sent anywhere.</p>
+        </details>
+        </div>
         <div id="editor-missing" class="errors-box ed-missing hidden"></div>
-        <p id="editor-status" class="ed-status" role="status" aria-live="polite"></p>
-        <div id="editor-ignored" class="ed-ignored" data-drop="ignore"></div>
         <div class="ed-tools">
+          <p id="editor-status" class="ed-status" role="status" aria-live="polite"></p>
+          <button type="button" class="btn btn-ghost" id="editor-next" onclick="nextProblem(1)">Next problem ▸</button>
           <label class="ed-filter"><input type="checkbox" id="editor-only-problems"> Show only rows with problems</label>
+          <label class="ed-filter ed-fine-only"><input type="checkbox" id="editor-show-empty"> Show empty columns (<span id="editor-empty-count">0</span>)</label>
           <p id="editor-landing" class="ed-landing"></p>
           <button type="button" class="btn btn-ghost" onclick="addRow()">+ Add row</button>
         </div>
-        <div class="ed-wrap">
-          <table id="editor-table" class="ed-table" aria-label="Your rows under the CRA columns" aria-describedby="editor-help">
-            <thead id="editor-thead"></thead>
-            <tbody id="editor-tbody"></tbody>
-          </table>
+        <div class="ed-main">
+          <div class="ed-wrap">
+            <table id="editor-table" class="ed-table" aria-label="Your rows under the CRA columns" aria-describedby="editor-help">
+              <thead id="editor-thead"></thead>
+              <tbody id="editor-tbody"></tbody>
+            </table>
+          </div>
+          <div id="editor-ignored" class="ed-ignored" data-drop="ignore"></div>
         </div>
         <div id="editor-pager" class="ed-pager"></div>
-        <p id="editor-help" class="ed-legend"><span class="badge badge-mandatory">Mandatory</span> CRA columns need a column of your file; <span class="badge badge-optional">Optional</span> ones can stay empty. Keys: arrows or Tab move between cells, Enter or F2 edits, Enter saves, Escape cancels; ← and → beside a column's name move it to the previous or next CRA column (the CRA column it lands on is outlined while you point at or focus the arrow), and “Leave out” moves it to Ignored columns. Red cells are errors, amber cells are warnings.</p>
+        <details class="ed-help"><summary>Keyboard &amp; help ?</summary>
+          <div id="editor-help" class="ed-legend">
+            <p><span class="badge badge-mandatory">Mandatory</span> CRA columns (marked <span class="ed-req" aria-hidden="true">*</span>) need a column of your file; <span class="badge badge-optional">Optional</span> ones can stay empty. Red cells are errors, amber cells are warnings: point at one, or focus it, to read why.</p>
+            <ul>
+              <li><kbd>Arrows</kbd> or <kbd>Tab</kbd> move between cells; type, <kbd>Enter</kbd> or <kbd>F2</kbd> edits; <kbd>Enter</kbd> saves, <kbd>Escape</kbd> cancels. Paste cells copied from Excel or Google Sheets onto a cell to fill right and down.</li>
+              <li><kbd>F8</kbd> / <kbd>Shift</kbd>+<kbd>F8</kbd>: next / previous problem cell (or “Next problem ▸”).</li>
+              <li>On a column name: <kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> move it to the previous or next CRA column, <kbd>Delete</kbd> leaves it out. The ← and → buttons and the ⋯ menu do the same; the CRA column it lands on is outlined.</li>
+              <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> (<kbd>⌘</kbd>+<kbd>Z</kbd> on a Mac) brings back a row you just deleted.</li>
+            </ul>
+          </div>
+        </details>
         <div id="editor-msgs" class="sr-only"></div>
+        <div id="editor-tip" class="ed-tip" role="tooltip" hidden></div>
+        <div id="editor-toast" class="ed-toast hidden" role="status" aria-live="polite"></div>
         <div id="editor-errors" class="errors-box hidden" role="alert"></div>
         <div class="btn-row">
           <button class="btn btn-ghost" onclick="goToStep(1)">← Back</button>
