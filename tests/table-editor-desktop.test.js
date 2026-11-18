@@ -235,7 +235,7 @@ const T4 = [['Last Name', 'First Name', 'Box 14 - Employment Income', 'Notes'], 
   assert.strictEqual(JSON.parse(JSON.stringify(a.run('editing ? [editing.r, editing.c] : null'))).join(), '0,0');
   a.run('stopEdit(true)');
   assert.strictEqual(a.run('parsedData[0][0]'), 'x');
-  const ctrl = { dataset: { r: '0', c: '0', f: 'empe_snm' }, focus() {} };
+  const ctrl = { dataset: { r: '0', c: '0', f: 'empe_snm' }, focus() {}, parentElement: { querySelectorAll: () => [] } };
   a.el('editor-tbody').dispatchEvent(key('c', { ctrlKey: true }, onTd(ctrl)));
   assert.strictEqual(a.run('editing'), null, 'Ctrl+C is not typing');
   a.events.length = 0;

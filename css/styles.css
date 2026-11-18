@@ -262,68 +262,93 @@ select.form-control { cursor: pointer; }
 
 /* ---- STEP 2 TABLE EDITOR ---- */
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-/* Step 2 breaks out of the 1000px converter column to (almost) the full window */
+/* Step 2 breaks out of the 1000px converter column to (almost) the full window. Centred with a margin, not a
+   transform: a transform would make the fixed tooltip and toast inside it position against #step-2. */
 #step-2 {
-  width: min(1800px, calc(100vw - 2rem)); margin-left: 50%; transform: translateX(-50%);
+  width: min(1800px, calc(100vw - 2rem)); margin-left: calc(50% - min(900px, 50vw - 1rem));
 }
-.card.card-wide { padding: 1.25rem 1.5rem; }
-.card.card-wide > p { margin-bottom: 0.75rem; font-size: 0.9rem; }
-.ed-missing { margin: 0 0 0.6rem; }
-.ed-status { margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--ink-2); }
-.ed-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.4rem; }
-.ed-filter { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; min-height: 36px; cursor: pointer; }
-.ed-filter input { width: 1.1rem; height: 1.1rem; }
-/* Ignored columns: chips that can be dragged onto a CRA column, or put under one with their "Use column" menu */
+.card.card-wide { padding: 1rem 1.25rem; }
+.ed-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 1rem; }
+.ed-top h3 { font-size: 1.1rem; }
+.ed-intro { margin: 0; font-size: 0.9rem; }
+.ed-how[open] { flex-basis: 100%; }
+.ed-how, .ed-help { font-size: 0.85rem; }
+.ed-how summary, .ed-help summary { display: inline-block; cursor: pointer; color: var(--pen); font-weight: 600; }
+.ed-how p { margin: 0.3rem 0 0.5rem; max-width: 70rem; color: var(--ink-2); }
+.ed-missing { margin: 0.4rem 0; }
+/* One bar: counts, Next problem, filters, "Moves to", Add row. One line on a desktop. */
+.ed-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.9rem; margin: 0.4rem 0; }
+@media (min-width: 1100px) { .ed-tools { flex-wrap: nowrap; } }
+.ed-tools .btn { padding: 0.3rem 0.7rem; font-size: 0.85rem; white-space: nowrap; }
+.ed-tools .btn:disabled { opacity: 0.45; cursor: default; }
+.ed-status { margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.ed-filter { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; min-height: 32px; cursor: pointer; white-space: nowrap; }
+.ed-filter input { width: 1.05rem; height: 1.05rem; }
+/* The table, with the Ignored columns tray: a bar above it, or (wide desktop) a slim column to its right */
+.ed-main { display: flex; flex-direction: column; gap: 0.4rem; }
 .ed-ignored {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.6rem; margin: 0 0 0.5rem; padding: 0.3rem 0.6rem;
+  order: -1; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.6rem; padding: 0.25rem 0.5rem;
   border: 1px dashed var(--rule); background: var(--paper); font-size: 0.8rem;
 }
-.ed-ignored h4 { font-size: 0.85rem; margin: 0; }
-.ed-ignored .ed-hint { color: var(--ink-3); margin: 0; }
+.ed-tray-btn { padding: 0.1rem 0.3rem; font: inherit; font-weight: 600; color: var(--ink); background: none; border: 0; cursor: pointer; }
+.ed-tray-btn::before { content: "▸ "; color: var(--ink-3); }
+.ed-ignored.is-open .ed-tray-btn::before { content: "▾ "; }
+.ed-tray-btn:focus-visible { outline: 2px solid var(--pen); }
 .ed-chips { list-style: none; display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0; padding: 0; }
 .ed-none { color: var(--ink-3); font-style: italic; align-self: center; }
-.ed-chip { display: inline-flex; align-items: center; gap: 0.3rem; max-width: 100%; padding: 0.1rem 0.25rem; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius-sm); cursor: grab; }
+.ed-chip { display: inline-flex; align-items: center; gap: 0.25rem; max-width: 100%; padding: 0.1rem 0.25rem; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius-sm); cursor: grab; }
+.ed-chip:active { cursor: grabbing; }
+.ed-chip:focus-visible { outline: 2px solid var(--pen); outline-offset: 1px; }
 .ed-grip { color: var(--ink-3); user-select: none; }
 .ed-chip-name { font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 10rem; }
 /* "Use column": a native <details> menu of the CRA columns an ignored column can go to */
 .ed-place { position: relative; }
 .ed-place summary {
-  display: inline-flex; align-items: center; min-height: 28px; padding: 0 0.4rem; list-style: none; cursor: pointer;
+  display: inline-flex; align-items: center; min-height: 26px; padding: 0 0.4rem; list-style: none; cursor: pointer;
   font-size: 0.75rem; font-weight: 600; color: var(--pen); border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--sheet);
 }
 .ed-place summary::-webkit-details-marker { display: none; }
 .ed-place summary::after { content: " ▾"; white-space: pre; }
-.ed-place ul {
+.ed-place ul, .ed-menu-list {
   position: absolute; z-index: 6; left: 0; top: 100%; min-width: 15rem; max-height: 50vh; overflow-y: auto; margin: 2px 0 0; padding: 0.2rem;
   list-style: none; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius-sm); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
 }
 .ed-place li button { display: block; width: 100%; min-height: 32px; padding: 0.2rem 0.45rem; text-align: left; font: inherit; color: var(--ink); background: none; border: 0; cursor: pointer; }
 .ed-place li button:hover { background: var(--pen-tint); }
-/* "Moves to: …" while an arrow, button or dragged column points at its destination; the destination is outlined */
-.ed-landing { flex: 1 1 12rem; margin: 0; min-height: 1.2em; font-size: 0.85rem; font-weight: 600; color: var(--pen); }
-.ed-table thead th.is-landing { background: var(--pen-tint) !important; box-shadow: inset 0 0 0 3px var(--pen); }
+/* "Moves to: …" while an arrow, button or dragged column points at its destination: the destination is outlined,
+   with a 3px bar on its left edge */
+.ed-landing { flex: 1 1 8rem; min-width: 0; margin: 0; min-height: 1.2em; font-size: 0.85rem; font-weight: 600; color: var(--pen); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ed-table thead th.is-landing { background: var(--pen-tint) !important; box-shadow: inset 0 0 0 2px var(--pen); }
+.ed-table thead th.is-landing::after { content: ""; position: absolute; top: 0; bottom: 0; left: -2px; width: 3px; background: var(--pen); }
 .ed-ignored.is-landing { border: 2px solid var(--pen); background: var(--pen-tint); }
 .is-landed { animation: ed-landed 0.9s ease-out; }
 @keyframes ed-landed { from { background-color: var(--pen-tint); box-shadow: inset 0 0 0 3px var(--pen); } }
 @media (prefers-reduced-motion: reduce) { .is-landed { animation: none; } }
-/* Scrolls both ways inside its box, as tall as the window allows; header rows and row numbers stay put */
+/* Scrolls both ways inside its box, as tall as the window under the fixed site header; header rows and row numbers stay put */
 .ed-wrap {
-  overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 9rem); border: 1px solid var(--rule); background: var(--sheet); -webkit-overflow-scrolling: touch;
+  overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 4.75rem); scroll-margin-top: 4.25rem;
+  border: 1px solid var(--rule); background: var(--sheet); -webkit-overflow-scrolling: touch;
 }
 .ed-table { border-collapse: separate; border-spacing: 0; font-size: 0.8rem; line-height: 1.25; min-width: 100%; }
 .ed-table thead {
   position: sticky; top: 0; z-index: 3;
 }
+/* Columns fit their content, 7rem to 13rem; long CRA and column names end in "…" (full name in the title), never break mid-word */
 .ed-table thead th {
-  vertical-align: top; text-align: left; padding: 0.25rem 0.4rem; min-width: 8.5rem; max-width: 12rem;
+  position: relative; vertical-align: top; text-align: left; padding: 0.2rem 0.35rem; min-width: 7rem; max-width: 13rem;
   background: var(--paper); border-bottom: 1px solid var(--rule); border-right: 1px solid var(--rule-soft); font-weight: 500;
 }
 .ed-table thead th.ed-rownum {
-  position: sticky; left: 0; z-index: 4; min-width: 3rem; vertical-align: bottom; font-weight: 600; color: var(--ink-2);
+  position: sticky; left: 0; z-index: 4; min-width: 2.5rem; vertical-align: bottom; font-weight: 600; color: var(--ink-2);
 }
-/* Row 1: the CRA column and its badge (text + colour, never colour alone) */
+/* Row 1: the CRA column, at most 2 lines; mandatory ones get a red * (the "Mandatory" text stays for screen readers) */
 .ed-cra { color: var(--ink); }
-.ed-cra-label { display: block; font-weight: 600; white-space: normal; }
+.ed-cra-label {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; width: 0; min-width: 100%;
+  font-size: 0.75rem; line-height: 1.2; font-weight: 600; overflow-wrap: normal; word-break: keep-all;
+}
+.ed-cra.is-mandatory .ed-cra-label::before, .ed-req { content: "* "; color: var(--correction); font-weight: 700; }
+.ed-cra .badge { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .badge { display: inline-block; margin-top: 0.15rem; padding: 0 0.3rem; border: 1px solid; border-radius: 2px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
 .badge-mandatory {
   color: var(--correction); border-color: var(--correction); background: var(--correction-tint);
@@ -334,23 +359,27 @@ select.form-control { cursor: pointer; }
 /* Row 2: the user's column in that CRA column, or an empty slot (a drop target) */
 .ed-slot { background: var(--sheet) !important; }
 .ed-slot.is-filled { background: var(--filed-tint) !important; }
-/* [←] ⠿ B · First Name [→], with Leave out (and Use as full name) on a line under it */
-.ed-table thead th.ed-slot { min-width: 10rem; }
-.ed-slot .ed-chip { display: flex; flex-wrap: wrap; gap: 0.2rem; border-color: var(--filed); }
-.ed-slot .ed-chip-name { flex: 1 1 0; min-width: 0; max-width: none; white-space: normal; overflow-wrap: break-word; text-align: center; }
-.ed-chip-acts { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 0.2rem; }
-.ed-slot-empty { display: block; padding: 0.3rem 0.2rem; color: var(--ink-3); font-style: italic; border: 1px dashed var(--rule); text-align: center; }
+/* [←] ⠿ B · First Name [→] [⋯]; the whole chip is the drag handle */
+.ed-slot .ed-chip { display: flex; flex-wrap: wrap; gap: 0.15rem; padding: 1px 2px; border-color: var(--filed); }
+.ed-slot .ed-chip-name { flex: 1 1 0; min-width: 0; max-width: none; overflow-wrap: normal; word-break: keep-all; }
+.ed-slot-empty { display: block; padding: 0.15rem 0.2rem; color: var(--ink-3); font-style: italic; border: 1px dashed var(--rule); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ed-slot.is-missing .ed-slot-empty { color: #6B4300; background: #FDF3E1; border-color: #B26A00; font-style: normal; font-weight: 600; }
 .ed-slot-note { color: var(--ink-3); font-style: italic; }
-.ed-arrow, .ed-act, .ed-del {
+/* The "⋯" column menu: Move left / right, Leave out, Use as full name */
+.ed-menu { position: relative; display: inline-flex; }
+.ed-menu-list { left: auto; right: 0; display: flex; flex-direction: column; min-width: 11rem; }
+.ed-menu-list .ed-act { min-height: 28px; text-align: left; border: 0; font-size: 0.8rem; padding: 0 0.5rem; }
+.ed-arrow, .ed-act, .ed-del, .ed-menu-btn, .ed-expand {
   padding: 0; background: var(--sheet); color: var(--ink-2);
   border: 1px solid var(--rule); border-radius: var(--radius-sm); font: inherit; cursor: pointer;
 }
 .ed-arrow { flex: none; min-width: 32px; min-height: 32px; font-size: 1.05rem; line-height: 1; }
-.ed-arrow:disabled { opacity: 0.35; cursor: default; }
+.ed-arrow:disabled, .ed-act:disabled { opacity: 0.35; cursor: default; }
 .ed-act { min-height: 26px; padding: 0 0.4rem; font-size: 0.72rem; }
-.ed-arrow:not(:disabled):hover, .ed-act:hover, .ed-del:hover { border-color: var(--pen); color: var(--pen); }
-.ed-arrow:focus-visible, .ed-act:focus-visible, .ed-place summary:focus-visible, .ed-place li button:focus-visible, .ed-del:focus-visible, .ed-table td:focus, .ed-cell-select:focus { outline: 2px solid var(--pen); outline-offset: -2px; }
+.ed-menu-btn { flex: none; min-width: 20px; min-height: 20px; line-height: 1; font-weight: 700; }
+.ed-arrow:not(:disabled):hover, .ed-act:not(:disabled):hover, .ed-del:hover, .ed-menu-btn:hover, .ed-expand:hover { border-color: var(--pen); color: var(--pen); background: var(--pen-tint); }
+.ed-arrow:focus-visible, .ed-act:focus-visible, .ed-menu-btn:focus-visible, .ed-expand:focus-visible, .ed-place summary:focus-visible, .ed-place li button:focus-visible, .ed-del:focus-visible, .ed-table td:focus, .ed-cell-select:focus { outline: 2px solid var(--pen); outline-offset: -2px; }
+.ed-expand { display: none; }
 .ed-table tbody th {
   position: sticky; left: 0; z-index: 1; padding: 0.1rem 0.35rem; background: var(--paper);
   border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule-soft); font-weight: 500; color: var(--ink-2); white-space: nowrap; text-align: left;
@@ -358,21 +387,80 @@ select.form-control { cursor: pointer; }
 .ed-del { margin-left: 0.3rem; min-width: 22px; min-height: 22px; line-height: 1; }
 .ed-table td {
   padding: 0.2rem 0.4rem; border-bottom: 1px solid var(--rule-soft); border-right: 1px solid var(--rule-soft);
-  white-space: nowrap; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; cursor: text;
+  white-space: nowrap; max-width: 13rem; overflow: hidden; text-overflow: ellipsis; cursor: text;
+  scroll-margin: 4.5rem 0 0 4rem; /* under the sticky header rows and row numbers when it scrolls into view */
 }
 .ed-table td[contenteditable] { white-space: pre-wrap; overflow: visible; background: var(--pen-tint); }
 .ed-table td.ed-noslot { background: var(--rule-soft); cursor: default; }
 .ed-cell-select { width: 100%; font: inherit; font-size: 0.8rem; }
 .ed-empty { color: var(--ink-3); font-style: italic; }
-/* Live validation: red = error (blocks Generate), amber = warning; the message is the cell's title and description */
+/* Live validation: red = error (blocks Generate), amber = warning; the message shows in a tooltip on hover / focus */
 .ed-table .cell-error { background: var(--correction-tint); color: var(--correction); font-weight: 500; box-shadow: inset 3px 0 0 var(--correction); }
 .ed-table .cell-warning { background: #FDF3E1; color: #6B4300; box-shadow: inset 3px 0 0 #B26A00; }
+.ed-tip {
+  position: fixed; z-index: 50; max-width: 20rem; padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); pointer-events: none;
+  font-size: 0.8rem; line-height: 1.35; color: #fff; background: var(--ink); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+.ed-tip.is-error { border-left: 4px solid #F08A8A; }
+.ed-tip.is-warning { border-left: 4px solid #F2B661; }
+.ed-toast {
+  position: fixed; z-index: 60; left: 50%; bottom: 1.25rem; transform: translateX(-50%); display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.5rem 0.6rem 0.5rem 1rem; border-radius: var(--radius-sm); font-size: 0.9rem; color: #fff; background: var(--ink); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.ed-undo { min-height: 32px; padding: 0 0.8rem; font: inherit; font-weight: 600; color: #fff; background: none; border: 1px solid #fff; border-radius: var(--radius-sm); cursor: pointer; }
+.ed-undo:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .ed-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 0.4rem; font-size: 0.85rem; color: var(--ink-2); }
 .ed-pager:empty { display: none; }
-.ed-legend { margin-top: 0.4rem; font-size: 0.78rem; color: var(--ink-2); }
-/* Touch screens: bigger targets, same layout (the table still scrolls sideways in its box) */
+.ed-help { position: relative; margin-top: 0.4rem; }
+.ed-legend {
+  position: absolute; z-index: 7; left: 0; bottom: 100%; width: min(36rem, calc(100vw - 3rem)); margin-bottom: 0.3rem; padding: 0.6rem 0.8rem;
+  font-size: 0.8rem; color: var(--ink-2); background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius-sm); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+}
+.ed-legend ul { margin: 0.4rem 0 0 1.1rem; }
+.ed-legend kbd { font-family: var(--mono); font-size: 0.75rem; padding: 0 0.25rem; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper); }
+/* Desktop (mouse / trackpad): compact header. ← → and ⋯ show on hover / focus (opacity, so they stay in the tab
+   order); empty optional CRA columns are 2.25rem strips; row × on hover; the Ignored tray opens on request. */
+@media (pointer: fine) {
+  .ed-table thead th { min-width: 6.4rem; }
+  /* the chip takes the column's width instead of setting it; ← → ⋯ float over its ends on hover / focus */
+  .ed-slot .ed-chip { position: relative; width: 0; min-width: 100%; flex-wrap: nowrap; }
+  .ed-arrow { position: absolute; top: 1px; left: 1px; z-index: 1; min-width: 20px; min-height: 20px; width: 20px; height: 20px; font-size: 0.8rem; opacity: 0; }
+  .ed-arrow[data-move="1"] { left: auto; right: 23px; }
+  .ed-menu { position: absolute; top: 1px; right: 1px; z-index: 2; }
+  .ed-menu-btn { width: 20px; height: 20px; opacity: 0; }
+  .ed-table thead th:hover .ed-arrow, .ed-table thead th:focus-within .ed-arrow,
+  .ed-table thead th:hover .ed-menu-btn, .ed-table thead th:focus-within .ed-menu-btn, .ed-menu.is-open .ed-menu-btn { opacity: 1; }
+  .ed-menu-list { visibility: hidden; }
+  .ed-menu.is-open .ed-menu-list { visibility: visible; }
+  .ed-table thead th.is-collapsed { min-width: 2.25rem; width: 2.25rem; max-width: 2.25rem; padding: 0; background: var(--rule-soft) !important; }
+  .ed-table thead th.is-collapsed > :not(.ed-expand) { display: none; }
+  .ed-table thead th.is-collapsed .ed-expand { display: block; width: 100%; height: 100%; min-height: 1.6rem; border: 0; background: none; font-weight: 700; color: var(--ink-3); }
+  .ed-table tbody th { padding-right: 1.6rem; }
+  .ed-del { position: absolute; top: 50%; right: 0.2rem; transform: translateY(-50%); margin: 0; min-width: 20px; min-height: 20px; opacity: 0; }
+  .ed-table tbody tr:hover .ed-del, .ed-table tbody tr:focus-within .ed-del { opacity: 1; }
+  .ed-ignored:not(.is-open) .ed-chips { display: none; }
+  @media (min-width: 1200px) {
+    .ed-main { flex-direction: row; align-items: flex-start; }
+    .ed-wrap { flex: 1 1 auto; min-width: 0; }
+    .ed-ignored { order: 0; flex: none; max-width: 13rem; position: sticky; top: 4.25rem; flex-direction: column; align-items: stretch; }
+    .ed-ignored:not(.is-open) .ed-tray-btn { writing-mode: vertical-rl; padding: 0.4rem 0; }
+    .ed-ignored .ed-chips { flex-direction: column; }
+    .ed-ignored .ed-chip { flex-wrap: wrap; }
+    .ed-ignored .ed-place ul { left: auto; right: 0; }
+  }
+}
+/* Touch screens: today's layout, bigger targets; ← → and the menu's buttons (Leave out, full name) always shown */
 @media (pointer: coarse) {
   .ed-arrow, .ed-act, .ed-place summary, .ed-place li button, .ed-del, .ed-filter, .ed-cell-select { min-height: 44px; min-width: 44px; }
+  .ed-arrow, .ed-menu-list { opacity: 1; visibility: visible; }
+  .ed-menu { flex: 1 1 100%; }
+  .ed-menu-list { position: static; flex-direction: row; flex-wrap: wrap; gap: 0.2rem; min-width: 0; max-height: none; margin: 0; padding: 0; border: 0; box-shadow: none; background: none; }
+  .ed-menu-list .ed-act { min-height: 44px; border: 1px solid var(--rule); }
+  .ed-table thead th.ed-slot, .ed-table thead th.ed-cra { min-width: 10rem; }
+  .ed-slot .ed-chip-name { white-space: normal; text-align: center; }
+  .ed-menu-btn, .ed-menu-move, .ed-fine-only { display: none; }
+  .ed-tray-btn { pointer-events: none; }
+  .ed-tray-btn::before { content: none; }
   .ed-table td { padding: 0.55rem 0.5rem; }
 }
 @media (max-width: 520px) {
