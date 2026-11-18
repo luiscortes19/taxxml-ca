@@ -53,7 +53,7 @@ const T4 = [['Last Name', 'First Name', 'Box 14 - Employment Income', 'Notes'], 
     assert(!/Leave out|Use as full name/.test(outside), `${f}: no Leave out / full name outside the menu: ${outside}`);
     // the CRA label: one line of text, red * + "Mandatory" text (kept for screen readers), long name in its title
     const cra = slotCell(head, f, 'cra')[1];
-    assert(/<span class="ed-cra-label" title="[^"]+">/.test(cra), `${f}: label title: ${cra}`);
+    assert(/<span class="ed-cra-label" title="[^"]+"[^>]*>/.test(cra), `${f}: label title: ${cra}`);
   }
 }
 

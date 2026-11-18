@@ -45,6 +45,9 @@ function makeElement(id) {
     setAttribute: (k, v) => { el[`attr:${k}`] = String(v); },
     removeAttribute: k => { delete el[`attr:${k}`]; },
     scrollIntoView: () => {},
+    getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+    offsetWidth: 0, offsetHeight: 0,
+    get nextElementSibling() { return makeElement(); },
     focus: () => {},
     click: () => { (listeners.click || []).forEach(fn => fn({ target: el })); el.onclickCalled = (el.onclickCalled || 0) + 1; },
   };
