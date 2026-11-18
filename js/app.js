@@ -314,6 +314,10 @@ const EDITOR_PAGE = 200; // rows rendered at once, so thousands of rows stay fas
 let editorPage = 0;
 let onlyProblems = false;
 let rowIssues = new Map(); // parsedData index -> its issues, from the last validateRows()
+let showEmpty = false; // "Show empty columns": empty optional CRA columns at full width (a fine pointer collapses them)
+const expandedSlots = new Set(); // empty optional CRA columns opened one by one (click on the strip, or a drag over it)
+let menuCol = null; // the column whose "⋯" menu is open
+let ignoredOpen = false; // the Ignored columns tray (desktop); always open on a touch screen
 
 function autoMapColumns() {
   const config = getReturnConfig();
@@ -355,6 +359,9 @@ function autoMapColumns() {
 // A new file or return: first page, all rows, no stale Continue error
 function openEditor() {
   editorPage = 0;
+  expandedSlots.clear();
+  deleted = null;
+  document.getElementById('editor-toast').classList.add('hidden');
   onlyProblems = document.getElementById('editor-only-problems').checked = false;
   document.getElementById('editor-errors').classList.add('hidden');
   refreshEditor();
@@ -512,11 +519,36 @@ function addRow() {
   focusCell(parsedData.length - 1, editorSlots().find(f => columnMap[f] >= 0));
 }
 
+// A deleted row can come back (Undo in the toast, or Ctrl/Cmd+Z) until the toast goes, 8 s later
+let deleted = null, toastTimer; // { r, row }
 function deleteRow(r) {
   if (!Number.isInteger(r) || r < 0 || r >= parsedData.length) return;
-  parsedData.splice(r, 1);
+  deleted = { r, row: parsedData.splice(r, 1)[0] };
   refreshEditor();
+  const toast = document.getElementById('editor-toast');
+  toast.innerHTML = `Row ${r + 2} deleted · <button type="button" class="ed-undo" onclick="undoDelete()">Undo</button>`;
+  toast.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { deleted = null; toast.classList.add('hidden'); }, 8000);
+  toastTimer.unref?.(); // node (tests) only: don't hold the process open
 }
+
+function undoDelete() {
+  if (!deleted) return;
+  const { r, row } = deleted;
+  deleted = null;
+  clearTimeout(toastTimer);
+  document.getElementById('editor-toast').classList.add('hidden');
+  parsedData.splice(r, 0, row);
+  refreshEditor();
+  focusCell(r, editorSlots().find(f => columnMap[f] >= 0));
+}
+document.addEventListener('keydown', e => {
+  if (!deleted || currentStep !== 2 || editing || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== 'z') return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  e.preventDefault();
+  undoDelete();
+});
 
 function setEditorPage(p) {
   editorPage = p;
@@ -574,20 +606,52 @@ function chipName(c) {
 const who = c => `column ${colLetter(c)} (${escapeXml(headers[c] || 'no header')})`;
 const toButton = (c, to, text, label) => `<button type="button" class="ed-act" data-to="${to}" data-col="${c}" aria-label="${label}">${text}</button>`;
 
-// A column in a CRA column: [←] name [→], then Leave out (and, on T4 names, the full-name switch)
+// A column in a CRA column: the whole chip is the drag handle; [←] name [→] [⋯]. The "⋯" menu holds Move left /
+// right, Leave out (and, on T4 names, the full-name switch). A fine pointer shows ← → on hover / focus; a touch
+// screen always shows ← → and the menu's buttons. Focused chip: Alt+← / Alt+→ move it, Delete leaves it out.
 function slotChip(c, f) {
-  const arrow = (dir, sym, word) => {
+  const move = (dir, cls, text, word) => {
     const to = moveTarget(c, dir);
-    return `<button type="button" class="ed-arrow" data-move="${dir}" data-col="${c}"${to ? '' : ' disabled'} ` +
-      `aria-label="Move ${who(c)} to the ${word} CRA column${to ? `. Moves to: ${escapeXml(slotLabel(to))}` : ''}">${sym}</button>`;
+    return `<button type="button" class="${cls}" data-move="${dir}" data-col="${c}"${to ? '' : ' disabled'} ` +
+      `aria-label="Move ${who(c)} to the ${word} CRA column${to ? `. Moves to: ${escapeXml(slotLabel(to))}` : ''}">${text}</button>`;
   };
   const full = getSelectedReturnType() !== 'T4' ? ''
     : columnField(c) === 'full_name' ? toButton(c, 'empe_snm', 'Last name only', `Last name only: use ${who(c)} for Last Name only`)
     : ['empe_snm', 'empe_gvn_nm'].includes(f) ? toButton(c, 'full_name', 'Use as full name', `Use as full name: ${who(c)} fills Last Name and First Name`)
     : '';
-  return `<span class="ed-chip" draggable="true" data-drag="${c}">${arrow(-1, '←', 'previous')}${chipName(c)}${arrow(1, '→', 'next')}` +
-    `<span class="ed-chip-acts">${full}${toButton(c, 'ignore', 'Leave out', `Leave out ${who(c)}`)}</span></span>`;
+  return `<span class="ed-chip" draggable="true" data-drag="${c}" tabindex="0" role="group" ` +
+    `aria-label="${who(c)}. Drag it, or press Alt+Left or Alt+Right to move it, Delete to leave it out">` +
+    `${move(-1, 'ed-arrow', '←', 'previous')}${chipName(c)}${move(1, 'ed-arrow', '→', 'next')}` +
+    `<span class="ed-menu${menuCol === c ? ' is-open' : ''}"><button type="button" class="ed-menu-btn" data-menu-btn="${c}" aria-expanded="${menuCol === c}" ` +
+    `aria-label="Column menu: ${who(c)}">⋯</button><span class="ed-menu-list">` +
+    `${move(-1, 'ed-act ed-menu-move', 'Move left', 'previous')}${move(1, 'ed-act ed-menu-move', 'Move right', 'next')}` +
+    `${toButton(c, 'ignore', 'Leave out', `Leave out ${who(c)}`)}${full}</span></span></span>`;
 }
+
+// The "⋯" menu of column c opens (null: all close). One open at a time.
+function toggleColumnMenu(c) {
+  menuCol = c === null || menuCol === c ? null : c;
+  document.querySelectorAll('#editor-thead .ed-menu').forEach(m => {
+    const open = menuCol !== null && m.querySelector('[data-menu-btn]')?.dataset.menuBtn === String(menuCol);
+    m.classList.toggle('is-open', open);
+    m.querySelector('[data-menu-btn]')?.setAttribute('aria-expanded', String(open));
+  });
+}
+
+// Escape or a click elsewhere closes the "⋯" menu, the Ignored "Use column" menus and the help popover
+function closeMenus(e) {
+  if (menuCol !== null && !(e.type === 'click' && e.target.closest?.('.ed-menu'))) {
+    const c = menuCol;
+    toggleColumnMenu(null);
+    if (e.type === 'keydown') document.querySelector(`#editor-thead [data-menu-btn="${c}"]`)?.focus();
+  }
+  document.querySelectorAll('details.ed-place[open], details.ed-help[open]').forEach(d => {
+    if (e.type === 'click' && d.contains(e.target)) return;
+    d.open = false;
+  });
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(e); });
+document.addEventListener('click', closeMenus);
 
 // An ignored column: name and a "Use column" menu of the empty CRA columns, mandatory first (all of them, when none
 // is empty: the one there goes to Ignored), then T4's full name
@@ -603,36 +667,64 @@ function ignoredChip(c) {
     `<summary data-col="${c}" aria-label="Use ${who(c)}: pick a CRA column">Use column</summary><ul>${items.join('')}</ul></details></li>`;
 }
 
+// An empty optional CRA column (a fine pointer shows it as a narrow strip; "+" or a drag over it opens it)
+const isEmptyOptional = f => !f.required && !(columnMap[f.key] >= 0);
+const isCollapsed = f => isEmptyOptional(f) && !showEmpty && !expandedSlots.has(f.key);
+
 function renderEditorHead() {
   const fields = getReturnConfig().fields;
-  const cra = fields.map(f => `<th scope="col" class="ed-cra${f.required ? ' is-mandatory' : ''}" data-slot="${f.key}">` +
-    `<span class="ed-cra-label">${escapeXml(f.label)}</span> ` +
+  const collapsed = f => (isCollapsed(f) ? ' is-collapsed' : '');
+  const cra = fields.map(f => `<th scope="col" class="ed-cra${f.required ? ' is-mandatory' : ''}${collapsed(f)}" data-slot="${f.key}">` +
+    (isCollapsed(f) ? `<button type="button" class="ed-expand" data-expand="${f.key}" title="${escapeXml(f.label)}: no column, optional" ` +
+      `aria-label="${escapeXml(f.label)}: no column, optional. Show this column">+</button>` : '') +
+    `<span class="ed-cra-label" title="${escapeXml(f.label)}">${escapeXml(f.label)}</span> ` +
     `<span class="badge badge-${f.required ? 'mandatory' : 'optional'}">${f.required ? 'Mandatory' : 'Optional'}</span></th>`).join('');
   const slots = fields.map(f => {
     const c = columnMap[f.key];
     let body;
     if (c >= 0 && f.key === 'empe_gvn_nm' && columnMap.empe_snm === c) body = '<span class="ed-slot-note">Same column as Last Name (full name)</span>';
     else if (c >= 0) body = slotChip(c, f.key);
-    else body = f.required ? '<span class="ed-slot-empty"><span aria-hidden="true">⚠</span> Mandatory: no column yet</span>' : '<span class="ed-slot-empty">No column</span>';
+    else body = f.required ? '<span class="ed-slot-empty"><span aria-hidden="true">⚠</span> Mandatory: no column yet</span>' : '<span class="ed-slot-empty">No column: drop one here</span>';
     const cls = c >= 0 ? 'is-filled' : f.required ? 'is-empty is-missing' : 'is-empty';
-    return `<th scope="col" class="ed-slot ${cls}" data-slot="${f.key}">${body}</th>`;
+    return `<th scope="col" class="ed-slot ${cls}${collapsed(f)}" data-slot="${f.key}">${body}</th>`;
   }).join('');
+  if (menuCol !== null && !fields.some(f => columnMap[f.key] === menuCol)) menuCol = null;
   document.getElementById('editor-thead').innerHTML = `<tr><th scope="col" class="ed-rownum" rowspan="2">Row</th>${cra}</tr><tr>${slots}</tr>`;
+  document.getElementById('editor-empty-count').textContent = String(fields.filter(isEmptyOptional).length);
   showLanding(null); // the marked cells were just replaced
 }
 
+// A column dragged over a strip: that column opens, in place (a re-render mid-drag would drop the dragged chip)
+function expandSlot(f) {
+  if (expandedSlots.has(f) || !editorSlots().includes(f)) return;
+  expandedSlots.add(f);
+  document.querySelectorAll(`#editor-thead [data-slot="${f}"]`).forEach(el => el.classList.remove('is-collapsed'));
+  document.querySelector(`#editor-thead [data-expand="${f}"]`)?.remove();
+}
+
+// The Ignored columns tray: beside the table on a wide desktop screen, a one-line bar above it otherwise
 function renderEditorIgnored() {
   const cols = ignoredColumns();
-  document.getElementById('editor-ignored').innerHTML =
-    `<h4>Ignored columns (${cols.length})</h4><p class="ed-hint">Left out of the file. To use one, pick a CRA column in its “Use column” menu, or drag it onto a CRA column in the table header. To leave a column out, use its “Leave out” button or drag it here.</p>` +
+  const el = document.getElementById('editor-ignored');
+  el.classList.toggle('is-open', ignoredOpen);
+  el.innerHTML =
+    `<button type="button" class="ed-tray-btn" aria-expanded="${ignoredOpen}" title="Left out of the file. To use one, pick a CRA column in its “Use column” menu, or drag it onto a CRA column in the table header. To leave a column out, use its “Leave out” menu item, or drag it here.">Ignored columns (${cols.length})</button>` +
     `<ul class="ed-chips" data-drop="ignore">${cols.length ? cols.map(ignoredChip).join('') : '<li class="ed-none">None: every column of your file is used.</li>'}</ul>`;
+}
+
+function toggleIgnored() {
+  ignoredOpen = !ignoredOpen;
+  renderEditorIgnored();
 }
 
 let editorVisibleRows = [];
 
+// The rows "Show only rows with problems" leaves (null: all rows)
+const problemRows = () => (onlyProblems ? [...rowIssues.keys()].filter(r => rowIssues.get(r).some(counted)) : null);
+
 function renderEditorBody() {
   const slots = editorSlots();
-  const list = onlyProblems ? [...rowIssues.keys()].filter(r => rowIssues.get(r).some(counted)) : null;
+  const list = problemRows();
   const total = list ? list.length : parsedData.length;
   const pages = Math.max(1, Math.ceil(total / EDITOR_PAGE));
   editorPage = Math.min(Math.max(0, editorPage), pages - 1);
@@ -700,10 +792,12 @@ function renderEditorStatus() {
   }
   const count = (k, word) => `${k.toLocaleString('en-CA')} ${word}${k === 1 ? '' : 's'}`;
   const labels = getReturnConfig().fields.filter(f => noteFields.has(f.key)).map(f => f.label);
-  document.getElementById('editor-status').textContent =
-    (errors || warnings ? `${count(errors, 'error')}, ${count(warnings, 'warning')} in the table.` : 'No problems found in the table.') +
-    (errors ? ' Errors are marked in red and stop the file from being made; warnings are marked in amber.' : '') +
+  const status = document.getElementById('editor-status');
+  status.textContent = (errors || warnings ? `${count(errors, 'error')} · ${count(warnings, 'warning')}` : 'No problems found.') +
+    (notes ? ` · ${count(notes, 'more warning')} (no column)` : '');
+  status.title = (errors ? 'Errors (red) stop the file from being made; warnings (amber) don’t.' : '') +
     (notes ? ` ${count(notes, 'more warning')} for ${labels.join(', ')}, which ${labels.length === 1 ? 'has' : 'have'} no column; you'll see them with the file.` : '');
+  document.getElementById('editor-next').disabled = !(errors || warnings);
 
   const unmapped = unmappedRequired();
   const missing = document.getElementById('editor-missing');
@@ -720,6 +814,11 @@ const moveButton = e => e.target.closest && (e.target.closest('[data-move]') || 
 const buttonTarget = btn => (btn.dataset.move ? moveTarget(+btn.dataset.col, +btn.dataset.move) : btn.dataset.to);
 for (const el of [document.getElementById('editor-thead'), document.getElementById('editor-ignored')]) {
   el.addEventListener('click', e => {
+    const menuBtn = e.target.closest && e.target.closest('[data-menu-btn]');
+    if (menuBtn) { toggleColumnMenu(+menuBtn.dataset.menuBtn); return; }
+    const strip = e.target.closest && e.target.closest('[data-expand]');
+    if (strip) { expandedSlots.add(strip.dataset.expand); renderEditorHead(); return; }
+    if (e.target.closest && e.target.closest('.ed-tray-btn')) { toggleIgnored(); return; }
     const btn = moveButton(e);
     if (!btn) return;
     const c = +btn.dataset.col, to = buttonTarget(btn);
@@ -747,7 +846,24 @@ for (const el of [document.getElementById('editor-thead'), document.getElementBy
     const t = dropTarget(e);
     if (!t) return;
     e.preventDefault();
+    if (t.dataset.slot) expandSlot(t.dataset.slot); // a collapsed strip opens under the dragged column
     showLanding(t.dataset.slot || 'ignore');
+  });
+  // A focused chip (or a button in it): Alt+← / Alt+→ move the column, Delete / Backspace leave it out
+  el.addEventListener('keydown', e => {
+    const chip = e.target.closest && e.target.closest('[data-drag]');
+    if (!chip || e.ctrlKey || e.metaKey) return;
+    const c = +chip.dataset.drag;
+    const dir = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
+    if (dir && e.altKey) {
+      e.preventDefault();
+      moveColumn(c, dir);
+      document.querySelector(`#editor-thead [data-drag="${c}"]`)?.focus();
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && !e.altKey && columnField(c) !== 'ignore') {
+      e.preventDefault();
+      remapColumn(c, 'ignore', 'keyboard');
+      flashLanded('ignore');
+    }
   });
   el.addEventListener('drop', e => {
     showLanding(null);
@@ -760,6 +876,10 @@ for (const el of [document.getElementById('editor-thead'), document.getElementBy
     else remapColumn(+from, 'ignore', 'drag');
   });
 }
+document.getElementById('editor-show-empty').addEventListener('change', e => {
+  showEmpty = e.target.checked;
+  renderEditorHead();
+});
 document.getElementById('editor-only-problems').addEventListener('change', e => {
   onlyProblems = e.target.checked;
   editorPage = 0;
@@ -784,8 +904,10 @@ function focusCell(r, f) {
 
 let editing = null; // { td, r, c, select? } while a cell is being edited
 
-function startEdit(td) {
+// typed: the key that started the edit replaces the value (like a spreadsheet); code columns open their select
+function startEdit(td, typed) {
   if (editing || td.dataset.c === undefined) return;
+  hideTip();
   const r = +td.dataset.r, c = +td.dataset.c;
   editing = { td, r, c };
   const select = cellEditor(r, c);
@@ -795,7 +917,7 @@ function startEdit(td) {
     editing.select.focus();
     return;
   }
-  td.textContent = String(parsedData[r][c] ?? ''); // the value as stored, not as displayed (60,000.00)
+  td.textContent = typed ?? String(parsedData[r][c] ?? ''); // the value as stored, not as displayed (60,000.00)
   try { td.contentEditable = 'plaintext-only'; } catch { td.contentEditable = 'true'; } // pasted formatting stays out
   td.focus();
   const range = document.createRange(); // caret at the end
@@ -836,6 +958,12 @@ edBody.addEventListener('input', e => {
 edBody.addEventListener('keydown', e => {
   const td = e.target.closest && e.target.closest('td[data-f]');
   if (!td) return;
+  if (e.key === 'F8') {
+    e.preventDefault();
+    if (editing) stopEdit(true);
+    nextProblem(e.shiftKey ? -1 : 1, [+td.dataset.r, td.dataset.f]);
+    return;
+  }
   if (editing) {
     if (e.key === 'Escape') { e.preventDefault(); stopEdit(false); }
     else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); stopEdit(true); }
@@ -843,8 +971,92 @@ edBody.addEventListener('keydown', e => {
     return;
   }
   if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); startEdit(td); return; }
+  if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); startEdit(td, e.key); return; }
   moveFocus(e, td);
 });
+edBody.addEventListener('paste', e => {
+  const td = e.target.closest && e.target.closest('td[data-f]');
+  if (!td || editing) return;
+  e.preventDefault();
+  if (pasteCells(+td.dataset.r, td.dataset.f, e.clipboardData.getData('text/plain'))) focusCell(+td.dataset.r, td.dataset.f);
+});
+
+// A block copied from Excel / Sheets (tab-separated lines) pasted on cell (row r, CRA column f): fills right and down
+// over the rows on show; empty CRA columns and cells past the last row are skipped. One cell_edited per paste
+// (the first changed field). Returns the number of cells changed.
+function pasteCells(r, f, text) {
+  const slots = editorSlots();
+  const lines = String(text).replace(/\r\n?/g, '\n').replace(/\n$/, '').split('\n');
+  const at = editorVisibleRows.indexOf(r);
+  let changed = 0, first = null;
+  lines.forEach((line, i) => {
+    const row = parsedData[at < 0 ? r + i : editorVisibleRows[at + i]];
+    if (!row) return;
+    line.split('\t').forEach((v, j) => {
+      const c = columnMap[slots[slots.indexOf(f) + j]];
+      if (!(c >= 0) || String(row[c] ?? '') === v) return;
+      row[c] = v;
+      changed++;
+      if (first === null) first = c;
+    });
+  });
+  if (!changed) return 0;
+  track('cell_edited', { return_type: getSelectedReturnType(), field: columnField(first) });
+  revalidate();
+  renderEditorBody();
+  renderEditorStatus();
+  return changed;
+}
+
+// ---- Problems: "Next problem ▸", F8 / Shift+F8 ----
+let problemAt = null; // [row, CRA column] of the last problem cell jumped to
+
+// Red and amber cells in table order: [row, CRA column]
+function problemCells() {
+  const slots = editorSlots();
+  return [...rowIssues.keys()].sort((a, b) => a - b).flatMap(r => slots.filter(f => cellState(r, f).cls).map(f => [r, f]));
+}
+
+// Focuses the next (dir 1) or previous (-1) problem cell after `from` (default: the focused cell, else the last one
+// jumped to), wrapping around; turns the page when it's on another one. Returns [row, CRA column], or null.
+function nextProblem(dir = 1, from) {
+  const cells = problemCells();
+  if (!cells.length) return null;
+  const slots = editorSlots();
+  const ord = ([r, f]) => r * slots.length + slots.indexOf(f);
+  const focused = document.activeElement?.closest?.('#editor-tbody td[data-f]');
+  const here = from || (focused ? [+focused.dataset.r, focused.dataset.f] : problemAt);
+  let i = here ? (dir > 0 ? cells.findIndex(x => ord(x) > ord(here)) : cells.findLastIndex(x => ord(x) < ord(here))) : -1;
+  if (i < 0) i = dir > 0 ? 0 : cells.length - 1;
+  problemAt = cells[i];
+  const [r, f] = problemAt;
+  const list = problemRows();
+  const page = Math.floor((list ? list.indexOf(r) : r) / EDITOR_PAGE);
+  if (page !== editorPage) setEditorPage(page);
+  document.querySelector('.ed-wrap')?.scrollIntoView({ block: 'start', behavior: 'instant' }); // the table just under the site header
+  focusCell(r, f);
+  return problemAt;
+}
+
+// ---- Error tooltip: the message of a red / amber cell, on hover or focus (the title stays as a fallback) ----
+const edTip = document.getElementById('editor-tip');
+function hideTip() { edTip.hidden = true; }
+function showTip(td) {
+  const s = td && !editing && cellState(+td.dataset.r, td.dataset.f);
+  if (!s || !s.msg) return hideTip();
+  edTip.textContent = s.msg;
+  edTip.className = `ed-tip ${s.cls === 'cell-error' ? 'is-error' : 'is-warning'}`;
+  const box = td.getBoundingClientRect();
+  edTip.style.left = `${Math.max(4, Math.min(box.left, (window.innerWidth || 1e4) - 330))}px`;
+  edTip.style.top = `${box.bottom + 4}px`;
+  edTip.hidden = false;
+}
+const tipCell = e => e.target.closest && e.target.closest('td[data-f]');
+edBody.addEventListener('mouseover', e => showTip(tipCell(e)));
+edBody.addEventListener('focusin', e => showTip(tipCell(e)));
+edBody.addEventListener('mouseout', hideTip);
+edBody.addEventListener('focusout', hideTip);
+document.querySelector('.ed-wrap')?.addEventListener('scroll', hideTip);
 
 function moveFocus(e, td) {
   const rows = [...edBody.querySelectorAll('tr[data-r]')];
