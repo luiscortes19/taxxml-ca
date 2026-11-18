@@ -95,7 +95,7 @@ for (const [rt, rows] of Object.entries(FILES)) {
   assert(slots.every(f => a.run(`columnMap.${f}`) >= 0), 'all taken');
   const menu = a.ign().match(/<summary data-col="5"[\s\S]*?<\/details>/)[0];
   assert.deepStrictEqual([...menu.matchAll(/data-to="(\w+)"/g)].map(x => x[1]), slots, 'all CRA columns, in CRA order');
-  assert(/data-to="rcpnt_type" data-col="5">Recipient Type \(replaces column C\)</.test(menu), menu);
+  assert(/data-to="rcpnt_type" data-col="5">Recipient Type \(replaces Recipient Type\)</.test(menu), menu);
   on(a, 'editor-ignored', 'click', '[data-to]', { to: 'rcpnt_type', col: '5' });
   assert.deepStrictEqual([2, 5].map(a.field), ['ignore', 'rcpnt_type'], 'the column that was there goes to Ignored');
   // moveColumn on an ignored column: nothing, as before
