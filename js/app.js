@@ -267,14 +267,19 @@ function handleFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
+// SheetJS reads BOM-marked UTF-8/UTF-16LE CSVs itself, but not UTF-16BE, and it reads a BOM-less CSV as
+// Windows-1252 ("Côté" -> "CÃ´tÃ©"). Decode those here; null = let SheetJS read the bytes (BOM files, Excel's Windows-1252).
+function csvText(bytes) {
+  if (bytes[0] === 0xFE && bytes[1] === 0xFF) return new TextDecoder('utf-16be').decode(bytes);
+  if ((bytes[0] === 0xFF && bytes[1] === 0xFE) || (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF)) return null;
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { return null; } // not valid UTF-8 -> Windows-1252
+}
+
 // Parses the file bytes and moves to Step 2. isSample: the one-click sample (fetched, not chosen by the user).
 function openWorkbook(buffer, name, ext, isSample) {
     try {
-      const bytes = new Uint8Array(buffer);
-      // SheetJS reads UTF-8 and UTF-16LE CSVs itself but not UTF-16BE, so decode that one here
-      const wb = bytes[0] === 0xFE && bytes[1] === 0xFF
-        ? XLSX.read(new TextDecoder('utf-16be').decode(bytes), { type: 'string' })
-        : XLSX.read(buffer, { type: 'array' });
+      const text = ext === 'csv' ? csvText(new Uint8Array(buffer)) : null;
+      const wb = text !== null ? XLSX.read(text, { type: 'string' }) : XLSX.read(buffer, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       Object.keys(ws).forEach(k => { if (k[0] !== '!') keepDigitText(ws[k], ext === 'csv'); }); // keep SIN/BN/ZIP leading zeros
       const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
