@@ -53,7 +53,8 @@ function makeElement(id) {
 
 // Returns a fresh app instance: { ctx, run(code), els, loadFile(name, bytes), setDetails(), generate() }.
 // now: pins the app's clock (e.g. '2027-01-15T10:00'); search: the page's ?query (e.g. '?return=NR4').
-function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, search = '', fetch, session } = {}) {
+// reportEndpoint: stands in for js/report.js's REPORT_ENDPOINT (empty in the committed file).
+function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, search = '', fetch, session, reportEndpoint } = {}) {
   const els = {};
   const getEl = id => (els[id] = els[id] || makeElement(id));
   const created = [];
@@ -86,8 +87,10 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
   vm.createContext(ctx);
   if (now) vm.runInContext(`Date = class extends Date { constructor(...a) { super(...(a.length ? a : [${+new Date(now)}])); } static now() { return ${+new Date(now)}; } };`, ctx);
   getEl('return-type').value = returnType;
-  for (const f of ['js/validate.js', 'js/app.js']) {
-    vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
+  for (const f of ['js/report.js', 'js/validate.js', 'js/app.js']) {
+    let src = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    if (f === 'js/report.js' && reportEndpoint) src = src.replace("REPORT_ENDPOINT = ''", `REPORT_ENDPOINT = ${JSON.stringify(reportEndpoint)}`);
+    vm.runInContext(src, ctx, { filename: f });
   }
   const run = code => vm.runInContext(code, ctx);
   return {
@@ -114,4 +117,8 @@ function fileToXML(returnType, fileName, bytes, detailOverrides, appOptions) {
   return { xml, app };
 }
 
-module.exports = { createApp, fileToXML, FILING_DETAILS, ROOT, XLSX };
+// Personal values that must never reach GA4 or an error report (names, SINs, BNs, amounts, file names, emails...).
+const PII_FIXTURES = ['John', 'Doe', 'Roe', 'Jane', '46454286', '046454286', '123456789', '130692544', '54321.99', '777.10',
+                      'secret-payroll.csv', 'Test Transmitter', 'Test Payer', 'jane@example.com', '604-638-8328', '987654321', '100 Main'];
+
+module.exports = { createApp, fileToXML, FILING_DETAILS, PII_FIXTURES, ROOT, XLSX };
