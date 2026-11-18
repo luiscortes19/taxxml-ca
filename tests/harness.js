@@ -65,9 +65,11 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
     querySelector: () => makeElement(),
     querySelectorAll: sel => (sel === '.return-pick' ? heroPicks : []),
     createElement: tag => { const e = makeElement(); e.tagName = tag.toUpperCase(); created.push(e); return e; },
-    addEventListener: () => {},
     body: makeElement('body'),
   };
+  const docListeners = {}; // recorded, never fired on their own (DOMContentLoaded included); tests call dispatchEvent
+  document.addEventListener = (type, fn) => { (docListeners[type] = docListeners[type] || []).push(fn); };
+  document.dispatchEvent = e => { (docListeners[e.type] || []).forEach(fn => fn(e)); };
   class FileReader {
     readAsArrayBuffer(file) { this.onload({ target: { result: file.bytes } }); }
   }
