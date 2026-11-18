@@ -1228,7 +1228,7 @@ function generateXML() {
     // A bug, not a problem with the user's data: fixed message on screen (err.message can hold cell values), scrubbed report out
     const box = document.getElementById('generate-errors');
     box.innerHTML = '<h4>Something went wrong while building the XML</h4><p>This is a problem on our side, not in your file. ' +
-      'Nothing from your spreadsheet was sent. Try again, or use Feedback at the top of the page to tell us which return you were filing.</p>';
+      'Nothing from your spreadsheet was sent. Try again, or use the Feedback (Contact us) link at the top of the page to tell us which return you were filing.</p>';
     box.classList.remove('hidden');
     reportCrash('xml_generate_failed', err);
   }
