@@ -605,20 +605,10 @@ function cellText(r, f) {
   return m && !m.error && m.value !== null ? formatMoney(m.value) : String(raw);
 }
 
-// The narrowest width, in characters, that fits text on 2 lines broken between words (never inside one)
-function twoLineCh(text) {
-  const w = String(text).trim().split(/\s+/);
-  let best = w.join(' ').length;
-  for (let i = 1; i < w.length; i++) best = Math.min(best, Math.max(w.slice(0, i).join(' ').length, w.slice(i).join(' ').length));
-  return best;
-}
-// A min-width that sizes the column to fit a name on 2 lines (+ pad for the grip etc.); longer names end in "…"
-const fitCh = (text, pad) => `style="min-width: ${Math.min(twoLineCh(text) + pad, 22)}ch"`;
-
 // A source column's drag handle and name
 function chipName(c) {
-  const raw = headers[c] || '(no header)', name = escapeXml(raw);
-  return `<span class="ed-chip-name" title="${name}" ${fitCh(`${colLetter(c)} · ${raw}`, 2)}><span class="ed-grip" aria-hidden="true">⠿</span> ${colLetter(c)} · ${name}</span>`;
+  const name = escapeXml(headers[c] || '(no header)');
+  return `<span class="ed-chip-name" title="${name}"><span class="ed-grip" aria-hidden="true">⠿</span> ${colLetter(c)} · ${name}</span>`;
 }
 const who = c => `column ${colLetter(c)} (${escapeXml(headers[c] || 'no header')})`;
 const toButton = (c, to, text, label) => `<button type="button" class="ed-act" data-to="${to}" data-col="${c}" aria-label="${label}">${text}</button>`;
@@ -645,7 +635,10 @@ function slotChip(c, f) {
     `${toButton(c, 'ignore', 'Leave out', `Leave out ${who(c)}`)}${full}</span></span></span>`;
 }
 
-// The "⋯" menu of column c opens (null: all close). One open at a time.
+// The "⋯" menu of column c opens (null: all close). One open at a time. It opens in #editor-menu, outside the
+// table's scroll box (which would clip it), position: fixed under its button, above it when there's no room below;
+// it holds a copy of the chip's own buttons (shown inline on touch screens)
+const edMenu = document.getElementById('editor-menu');
 function toggleColumnMenu(c) {
   menuCol = c === null || menuCol === c ? null : c;
   document.querySelectorAll('#editor-thead .ed-menu').forEach(m => {
@@ -653,29 +646,42 @@ function toggleColumnMenu(c) {
     m.classList.toggle('is-open', open);
     m.querySelector('[data-menu-btn]')?.setAttribute('aria-expanded', String(open));
   });
-  placeColumnMenu();
+  const btn = menuCol !== null && document.querySelector(`#editor-thead [data-menu-btn="${menuCol}"]`);
+  edMenu.hidden = !btn;
+  if (!btn) return;
+  edMenu.innerHTML = btn.nextElementSibling.innerHTML;
+  const b = btn.getBoundingClientRect(), h = edMenu.offsetHeight;
+  edMenu.style.top = `${b.bottom + 2 + h > window.innerHeight ? Math.max(4, b.top - 2 - h) : b.bottom + 2}px`;
+  edMenu.style.left = `${Math.max(4, b.right - edMenu.offsetWidth)}px`;
+  edMenu.querySelector('button:not(:disabled)')?.focus();
 }
 
-// The open "⋯" menu is position: fixed (the table's scroll box would clip it): under its button, right edges lined
-// up, above the button when there's no room below
-function placeColumnMenu() {
-  const btn = menuCol !== null && document.querySelector('#editor-thead .ed-menu.is-open [data-menu-btn]');
-  if (!btn) return;
-  const b = btn.getBoundingClientRect(), list = btn.nextElementSibling;
-  const h = list.offsetHeight;
-  list.style.top = `${b.bottom + 2 + h > window.innerHeight ? b.top - 2 - h : b.bottom + 2}px`;
-  list.style.left = `${Math.max(4, b.right - list.offsetWidth)}px`;
+// Closes the "⋯" menu; focus goes back to its ⋯ when it was in the menu (or on Escape)
+function closeColumnMenu(e) {
+  if (menuCol === null) return;
+  const c = menuCol, back = e?.type === 'keydown' || edMenu.contains(document.activeElement);
+  toggleColumnMenu(null);
+  if (back) document.querySelector(`#editor-thead [data-menu-btn="${c}"]`)?.focus({ preventScroll: true });
 }
-window.addEventListener('scroll', placeColumnMenu, true);
-window.addEventListener('resize', placeColumnMenu);
+// it doesn't follow its button: any scroll (page or table box, not the menu's own) and resize close it
+window.addEventListener('scroll', e => { if (!edMenu.contains(e.target)) closeColumnMenu(); }, true);
+window.addEventListener('resize', () => closeColumnMenu());
+
+// The page scrolls too (mouse wheel beside the table, or past the end of its box). The header is sticky in the
+// table's box only, so when the box's top goes under the fixed site header, the header moves down by that much and
+// stays just under it, until the box's bottom
+function pinHead() {
+  const wrap = document.querySelector('.ed-wrap'), head = document.getElementById('editor-thead');
+  if (!wrap) return;
+  const under = document.getElementById('site-header').getBoundingClientRect().bottom - wrap.getBoundingClientRect().top;
+  head.style.top = `${Math.max(0, Math.min(under, wrap.clientHeight - head.offsetHeight))}px`;
+}
+window.addEventListener('scroll', pinHead, { passive: true });
+window.addEventListener('resize', pinHead);
 
 // Escape or a click elsewhere closes the "⋯" menu, the Ignored "Use column" menus and the help popover
 function closeMenus(e) {
-  if (menuCol !== null && !(e.type === 'click' && e.target.closest?.('.ed-menu'))) {
-    const c = menuCol;
-    toggleColumnMenu(null);
-    if (e.type === 'keydown') document.querySelector(`#editor-thead [data-menu-btn="${c}"]`)?.focus();
-  }
+  if (!(e.type === 'click' && e.target.closest?.('.ed-menu, #editor-menu'))) closeColumnMenu(e);
   document.querySelectorAll('details.ed-place[open], details.ed-help[open]').forEach(d => {
     if (e.type === 'click' && d.contains(e.target)) return;
     d.open = false;
@@ -708,7 +714,7 @@ function renderEditorHead() {
   const cra = fields.map(f => `<th scope="col" class="ed-cra${f.required ? ' is-mandatory' : ''}${collapsed(f)}" data-slot="${f.key}">` +
     (isCollapsed(f) ? `<button type="button" class="ed-expand" data-expand="${f.key}" title="${escapeXml(f.label)}: no column, optional" ` +
       `aria-label="${escapeXml(f.label)}: no column, optional. Show this column">+</button>` : '') +
-    `<span class="ed-cra-label" title="${escapeXml(f.label)}" ${fitCh(f.label, 1)}>${escapeXml(f.label)}</span> ` +
+    `<span class="ed-cra-label" title="${escapeXml(f.label)}">${escapeXml(f.label)}</span> ` +
     `<span class="badge badge-${f.required ? 'mandatory' : 'optional'}">${f.required ? 'Mandatory' : 'Optional'}</span></th>`).join('');
   const slots = fields.map(f => {
     const c = columnMap[f.key];
@@ -719,9 +725,9 @@ function renderEditorHead() {
     const cls = c >= 0 ? 'is-filled' : f.required ? 'is-empty is-missing' : 'is-empty';
     return `<th scope="col" class="ed-slot ${cls}${collapsed(f)}" data-slot="${f.key}">${body}</th>`;
   }).join('');
-  if (menuCol !== null && !fields.some(f => columnMap[f.key] === menuCol)) menuCol = null;
   document.getElementById('editor-thead').innerHTML = `<tr><th scope="col" class="ed-rownum" rowspan="2">Row</th>${cra}</tr><tr>${slots}</tr>`;
-  placeColumnMenu(); // a menu still open after a re-render
+  closeColumnMenu(); // its button was just replaced (e.g. after one of its actions)
+  pinHead();
   document.getElementById('editor-empty-count').textContent = String(fields.filter(isEmptyOptional).length);
   showLanding(null); // the marked cells were just replaced
 }
@@ -856,7 +862,7 @@ document.addEventListener('keydown', e => {
 const dropTarget = e =>e.target.closest && (e.target.closest('[data-slot]') || e.target.closest('[data-drop]'));
 const moveButton = e => e.target.closest && (e.target.closest('[data-move]') || e.target.closest('[data-to]'));
 const buttonTarget = btn => (btn.dataset.move ? moveTarget(+btn.dataset.col, +btn.dataset.move) : btn.dataset.to);
-for (const el of [document.getElementById('editor-thead'), document.getElementById('editor-ignored')]) {
+for (const el of [document.getElementById('editor-thead'), document.getElementById('editor-ignored'), edMenu]) {
   el.addEventListener('click', e => {
     const menuBtn = e.target.closest && e.target.closest('[data-menu-btn]');
     if (menuBtn) { toggleColumnMenu(+menuBtn.dataset.menuBtn); return; }

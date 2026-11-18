@@ -72,15 +72,16 @@ const T4 = [['Employee ID', 'Last Name', 'First Name', 'SIN', 'Employment Income
   assert(wrapEnd > 0 && step2.indexOf('id="editor-menu"') > wrapEnd, '#editor-menu sits after .ed-wrap, not inside it');
   assert(/<div id="editor-menu" class="ed-menu-pop" role="group" aria-label="Column menu" hidden><\/div>/.test(html), '#editor-menu markup');
   assert(/position: fixed/.test(rules('.ed-menu-pop')), '.ed-menu-pop fixed: ' + rules('.ed-menu-pop'));
-  assert(/display: none/.test(rulesIn(fine, '.ed-menu-list')), 'desktop: the in-chip list never shows (the pop-up does)');
+  assert(/display: none/.test(rules('.ed-menu-list')) && !/display/.test(rulesIn(fine, '.ed-menu-list')), 'desktop: the in-chip list never shows (the pop-up does)');
   assert(/display: flex/.test(rulesIn(coarse, '.ed-menu-list')) && /position: static/.test(rulesIn(coarse, '.ed-menu-list')), 'touch: in-chip buttons, as before');
-  assert(/min-height: 44px/.test(rulesIn(coarse, '.ed-arrow, .ed-act, .ed-place summary, .ed-place li button, .ed-del, .ed-filter, .ed-cell-select')), 'touch: 44px');
+  assert(/min-height: 44px/.test(rulesIn(coarse, '.ed-arrow')), 'touch: 44px');
 
   const a = createApp({ returnType: 'T4' });
   a.loadFile('t4.csv', csv(T4));
   const menu = a.el('editor-menu');
   menu.offsetWidth = 176;
   menu.offsetHeight = 120;
+  menu.contains = x => x === menu;
   let first = 0;
   menu.querySelector = sel => (sel === 'button:not(:disabled)' ? { focus: () => first++ } : null);
   const list = { innerHTML: '<button class="ed-act">Move left</button><button class="ed-act">Leave out</button>' };

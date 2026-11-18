@@ -113,7 +113,7 @@ const T4 = [['Last Name', 'First Name', 'Box 14 - Employment Income', 'Notes'], 
   a.docEvent({ type: 'click', target: { closest: () => null } });
   assert.strictEqual(a.run('menuCol'), null, 'a click outside closes');
   open(1);
-  a.docEvent({ type: 'click', target: { closest: s => (s === '.ed-menu' ? {} : null) } });
+  a.docEvent({ type: 'click', target: { closest: s => (s === '.ed-menu, #editor-menu' ? {} : null) } });
   assert.strictEqual(a.run('menuCol'), 1, 'a click inside the menu does not');
   a.el('editor-thead').dispatchEvent({ type: 'click', target: target('[data-to]', { to: 'ignore', col: '1' }) });
   assert.strictEqual(a.field(1), 'ignore');
