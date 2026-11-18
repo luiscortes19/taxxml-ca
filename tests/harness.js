@@ -62,11 +62,13 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
   const els = {};
   const getEl = id => (els[id] = els[id] || makeElement(id));
   const created = [];
+  const kept = {};
   // the hero's .return-pick buttons, so tests can click them
   const heroPicks = ['T4', 'T5018', 'NR4', 'T1204'].map(r => Object.assign(makeElement(), { dataset: { return: r } }));
   const document = {
     getElementById: getEl,
-    querySelector: () => makeElement(),
+    // the table's scroll box and help popover keep one element each, so tests can fire their scroll / toggle events
+    querySelector: sel => (['.ed-wrap', 'details.ed-help'].includes(sel) ? (kept[sel] = kept[sel] || makeElement()) : makeElement()),
     querySelectorAll: sel => (sel === '.return-pick' ? heroPicks : []),
     createElement: tag => { const e = makeElement(); e.tagName = tag.toUpperCase(); created.push(e); return e; },
     body: makeElement('body'),
