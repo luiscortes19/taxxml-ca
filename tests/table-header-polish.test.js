@@ -54,7 +54,7 @@ const T4 = [['Employee ID', 'Last Name', 'First Name', 'SIN', 'Employment Income
     assert(!/line-clamp|text-overflow: ellipsis|white-space: nowrap/.test(all), `${sel}: never cut: ${all}`);
     assert(/word-break: keep-all/.test(all) && !/overflow-wrap: (break-word|anywhere)|word-break: break-all/.test(all), `${sel}: no mid-word breaks: ${all}`);
   }
-  // the generic .ed-chip-name has "…" for the Ignored tray; the header chip turns it off
+  // the header chip lets its name size the column
   assert(/overflow: visible/.test(rules('.ed-slot .ed-chip-name')), 'header chip: overflow visible: ' + rules('.ed-slot .ed-chip-name'));
   assert(!/width: 0/.test(rules('.ed-cra-label')) && !/\.ed-slot \.ed-chip \{[^}]*width: 0/.test(fine), 'the names size their column');
   // no per-name inline width any more (CSS sizes them)

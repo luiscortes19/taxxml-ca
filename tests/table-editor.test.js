@@ -51,7 +51,7 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   assert.deepStrictEqual([0, 1, 2, 3, 4].map(a.field), ['empe_snm', 'empe_gvn_nm', 'sin', 'empt_incamt', 'ignore']);
   // the unmatched column is in the Ignored area, not in the table
   const ign = a.el('editor-ignored').innerHTML;
-  assert(/Ignored columns/.test(ign) && /E · Notes/.test(ign) && /<summary data-col="4"/.test(ign), ign);
+  assert(/Ignored columns/.test(ign) && /title="Column E: Notes"><span class="ed-grip" aria-hidden="true">⠿<\/span> Notes</.test(ign) && /<summary data-col="4"/.test(ign), ign);
   assert(!/Notes/.test(th));
   assert(/data-drop="ignore"/.test(ign), 'the area is a drop target');
   const tb = a.tbody();
@@ -104,7 +104,7 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
         assert(!/\bis-missing\b/.test(slot[1]) && /No column/.test(slot[2]) && !/Mandatory/.test(slot[2]), `${rt}.${key} neutral: ${slot[0]}`);
       }
     }
-    assert(/A · Unrelated/.test(a.el('editor-ignored').innerHTML));
+    assert(/title="Column A: Unrelated"/.test(a.el('editor-ignored').innerHTML));
   }
 }
 
@@ -116,7 +116,7 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   a.run(`remapColumn(4, 'sin', 'button')`);
   assert.strictEqual(a.field(4), 'sin');
   assert.strictEqual(a.field(2), 'ignore', 'old SIN column is now ignored');
-  assert(/C · SIN/.test(a.el('editor-ignored').innerHTML), 'and listed in the Ignored area');
+  assert(/title="Column C: SIN"/.test(a.el('editor-ignored').innerHTML), 'and listed in the Ignored area');
   assert.strictEqual(a.run('columnMap.sin'), 4);
   assert.strictEqual(Object.values(JSON.parse(JSON.stringify(a.run('columnMap')))).filter(c => c === 4).length, 1);
   a.run(`remapColumn(4, 'ignore', 'button')`);
@@ -168,7 +168,7 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
   const th = a.thead();
   assert(/data-drag="1"/.test(th) && /data-drag="2"/.test(th));
   assert.deepStrictEqual([1, 2].map(a.field), ['sbctrcr_amt', 'ignore']);
-  assert(/\bB\b[^<]*Amount/.test(th) && /\bC\b[^<]*Amount/.test(th), 'column letters tell them apart: ' + th);
+  assert(/title=\"Column B: Amount\"/.test(th) && /title=\"Column C: Amount\"/.test(th), 'the tooltips tell them apart: ' + th);
   a.run(`remapColumn(2, 'sbctrcr_amt', 'button')`);
   assert.deepStrictEqual([1, 2].map(a.field), ['ignore', 'sbctrcr_amt']);
   a.setDetails();
