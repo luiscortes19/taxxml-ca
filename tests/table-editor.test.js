@@ -375,7 +375,9 @@ for (const [name, bytes] of [['empty.csv', Buffer.alloc(0)], ['header.csv', csv(
 {
   const a = app('T4');
   a.loadFile('t.csv', csv([['Employee Name', 'SIN', 'Box 14 - Employment Income'], ['John Q Doe', '046454286', '100']]));
-  assert.strictEqual(a.field(0), 'empe_snm');
+  assert.strictEqual(a.field(0), 'ignore', 'no header match');
+  a.run(`remapColumn(0, 'empe_snm', 'button')`); // under Last Name
+  a.events.length = 0;
   assert(/<button type="button" class="ed-act" data-to="full_name" data-col="0" aria-label="Use as full name: column A \(Employee Name\) fills Last Name and First Name">Use as full name<\/button>/.test(a.thead()), a.thead());
   a.el('editor-thead').dispatchEvent({ type: 'click', target: { closest: s => (s === '[data-to]' ? { dataset: { to: 'full_name', col: '0' } } : null) } });
   assert.deepStrictEqual([a.run('columnMap.empe_snm'), a.run('columnMap.empe_gvn_nm')], [0, 0]);

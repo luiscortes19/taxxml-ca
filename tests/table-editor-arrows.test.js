@@ -53,7 +53,7 @@ for (const [rt, rows] of Object.entries(FILES)) {
     const L = a.run(`colLetter(${c})`);
     const name = rows[0][c];
     // ← before the name, → after it
-    const m = cell.match(/<button type="button" class="ed-arrow" data-move="-1"[^>]*>←<\/button><span class="ed-chip-name"[^>]*>[\s\S]*?<\/span><\/span><button type="button" class="ed-arrow" data-move="1"[^>]*>→<\/button>/);
+    const m = cell.match(/<button type="button" class="ed-arrow" data-move="-1"[^>]*>←<\/button><span class="ed-chip-name"[^>]*><span class="ed-grip"[^>]*>⠿<\/span>[^<]*<\/span><button type="button" class="ed-arrow" data-move="1"[^>]*>→<\/button>/);
     assert(m, `${rt}.${f}: [←] name [→]: ${cell}`);
     assert(new RegExp(`data-move="-1" data-col="${c}"( disabled)? aria-label="Move column ${L} \\(${name}\\) to the previous CRA column`).test(cell), `${rt}.${f} ← label: ${cell}`);
     assert(new RegExp(`data-move="1" data-col="${c}"( disabled)? aria-label="Move column ${L} \\(${name}\\) to the next CRA column`).test(cell), `${rt}.${f} → label`);
@@ -237,7 +237,7 @@ for (const [rt, rows] of Object.entries(FILES)) {
   }
   for (const tag of step3.match(/<input\b[^>]*type="text"[^>]*>/g)) assert(/autocomplete="off"/.test(tag), `every text field in Step 3 is autocomplete="off": ${tag}`);
   // Step 2: cells are plain table cells with no name; the code-cell select doesn't autofill either
-  const a = app('T4', [['Last Name', 'First Name', 'SIN', 'Box 14 - Employment Income', 'Province'], ['Doe', 'John', '046454286', '100', 'ON']]);
+  const a = app('T4', [['Last Name', 'First Name', 'SIN', 'Box 14 - Employment Income', 'Province of Employment'], ['Doe', 'John', '046454286', '100', 'ON']]);
   assert(!/\bname=/.test(a.el('editor-tbody').innerHTML + a.head() + a.ign()), 'no form-like names in the editor');
   const sel = a.run(`cellEditor(0, 4)`);
   assert(/^<select class="ed-cell-select" autocomplete="off"/.test(sel), 'province cell editor: ' + sel);

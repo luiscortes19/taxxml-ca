@@ -372,7 +372,7 @@ function editorSlots() {
   return getReturnConfig().fields.map(f => f.key);
 }
 
-// "Move to CRA column" choices: Ignored, then (T4 only) one column holding the whole name, then the CRA columns
+// Where a column can go: Ignored, then (T4 only) one column holding the whole name, then the CRA columns
 function moveOptions() {
   const rt = getSelectedReturnType();
   return [{ key: 'ignore', label: 'Ignored' },
@@ -395,7 +395,7 @@ function ignoredColumns() {
 }
 
 // Puts column c under a CRA column (or 'ignore' / 'full_name'). One CRA column, one source column: the column that
-// was there goes to Ignored. method ('dropdown' | 'drag' | 'keyboard') is for GA4 only.
+// was there goes to Ignored. method ('button' | 'drag' | 'keyboard') is for GA4 only.
 function remapColumn(c, field, method) {
   if (!isColumn(c) || !moveOptions().some(o => o.key === field) || columnField(c) === field) return;
   getReturnConfig().fields.forEach(f => { if (columnMap[f.key] === c) columnMap[f.key] = -1; });
@@ -425,14 +425,49 @@ function dropOnSlot(c, f, method) {
   else remapColumn(c, f, method);
 }
 
-// Keyboard alternative to dragging: column c moves to the previous (-1) or next (+1) CRA column
-function moveColumn(c, dir) {
+// The CRA column ← (-1) / → (+1) moves column c to; null when it can't move (first / last CRA column, Ignored)
+function moveTarget(c, dir) {
   const slots = editorSlots();
   const f = columnField(c);
-  const i = slots.indexOf(f === 'full_name' ? 'empe_snm' : f);
-  if (i < 0 || !slots[i + dir]) return;
-  dropOnSlot(c, slots[i + dir], 'keyboard');
-  document.querySelector(`#editor-thead [data-move="${dir}"][data-col="${c}"]`)?.focus();
+  const to = slots[slots.indexOf(f === 'full_name' ? 'empe_snm' : f) + dir];
+  return f !== 'ignore' && to && columnMap[to] !== c ? to : null;
+}
+
+// Keyboard alternative to dragging: column c moves to the previous (-1) or next (+1) CRA column.
+// Focus stays on the same arrow of the moved column (the other one when it reached the end).
+function moveColumn(c, dir) {
+  const to = moveTarget(c, dir);
+  if (!to) return;
+  dropOnSlot(c, to, 'keyboard');
+  const b = document.querySelector(`#editor-thead [data-move="${dir}"][data-col="${c}"]`);
+  (b && !b.disabled ? b : document.querySelector(`#editor-thead [data-move="${-dir}"][data-col="${c}"]`))?.focus();
+}
+
+const slotLabel = f => (f === 'ignore' ? 'Ignored columns' : getReturnConfig().fields.find(x => x.key === f).label);
+
+// The header cells of CRA column `to` (both rows), or the Ignored area
+const landingEls = to => (to === 'ignore' ? [document.getElementById('editor-ignored')] : [...document.querySelectorAll(`#editor-thead [data-slot="${to}"]`)]);
+
+// "Moves to: …" while an arrow, a Leave out / Use column button or a dragged column is over its destination:
+// that CRA column (or the Ignored area) is outlined. null clears it. Anything else (full_name, junk) shows nothing.
+let landing = null, landingMarked = [];
+function showLanding(to) {
+  if (to !== 'ignore' && !editorSlots().includes(to)) to = null;
+  if (to === landing) return;
+  landingMarked.forEach(el => el.classList.remove('is-landing'));
+  landing = to;
+  landingMarked = to ? landingEls(to) : [];
+  landingMarked.forEach(el => el.classList.add('is-landing'));
+  document.getElementById('editor-landing').textContent = to ? `Moves to: ${slotLabel(to)}` : '';
+}
+
+// After a move by button: the destination flashes, so a phone user sees where the column went
+function flashLanded(to) {
+  if (to !== 'ignore' && !editorSlots().includes(to)) return;
+  landingEls(to).forEach(el => {
+    el.classList.add('is-landed');
+    setTimeout(() => el.classList.remove('is-landed'), 900);
+  });
 }
 
 // Inline edit of one cell. Returns false (and does nothing) when the value didn't change.
@@ -465,7 +500,7 @@ function cellEditor(r, c) {
   const opts = match ? f.codes
     : [[cur, cur ? `${cur} (${cellState(r, f.key).cls === 'cell-error' ? 'not valid' : 'as typed'})` : '(blank)'], ...f.codes];
   const selected = match ? match[0] : cur;
-  return `<select class="ed-cell-select" aria-label="${escapeXml(f.label)}, row ${r + 2}">` +
+  return `<select class="ed-cell-select" autocomplete="off" aria-label="${escapeXml(f.label)}, row ${r + 2}">` +
     opts.map(([v, label]) => `<option value="${escapeXml(v)}"${v === selected ? ' selected' : ''}>${escapeXml(label)}</option>`).join('') + '</select>';
 }
 
@@ -531,20 +566,41 @@ function cellText(r, f) {
   return m && !m.error && m.value !== null ? formatMoney(m.value) : String(raw);
 }
 
-// A source column: drag handle, name, and its "Move to CRA column" dropdown (in a slot, or in the Ignored area)
-function columnChip(c, tag, extra = '') {
-  const L = colLetter(c);
+// A source column's drag handle and name
+function chipName(c) {
   const name = escapeXml(headers[c] || '(no header)');
-  const here = columnField(c);
-  const opts = moveOptions().map(o => {
-    const at = columnMap[o.key];
-    const note = !o.autoMatch ? '' : at >= 0 && at !== c ? ` (now column ${colLetter(at)})` : o.required ? ' (mandatory)' : '';
-    return `<option value="${o.key}"${o.key === here ? ' selected' : ''}>${escapeXml(o.label)}${note}</option>`;
-  }).join('');
-  return `<${tag} class="ed-chip" draggable="true" data-drag="${c}">` +
-    `<span class="ed-chip-name" title="${name}"><span class="ed-grip" aria-hidden="true">⠿</span> ${L} · ${name}</span>` +
-    `<label class="sr-only" for="ed-col-${c}">Move column ${L} (${name}) to CRA column</label>` +
-    `<select id="ed-col-${c}" data-col="${c}" class="ed-move-to"><option value="" disabled>Move to CRA column…</option>${opts}</select>${extra}</${tag}>`;
+  return `<span class="ed-chip-name" title="${name}"><span class="ed-grip" aria-hidden="true">⠿</span> ${colLetter(c)} · ${name}</span>`;
+}
+const who = c => `column ${colLetter(c)} (${escapeXml(headers[c] || 'no header')})`;
+const toButton = (c, to, text, label) => `<button type="button" class="ed-act" data-to="${to}" data-col="${c}" aria-label="${label}">${text}</button>`;
+
+// A column in a CRA column: [←] name [→], then Leave out (and, on T4 names, the full-name switch)
+function slotChip(c, f) {
+  const arrow = (dir, sym, word) => {
+    const to = moveTarget(c, dir);
+    return `<button type="button" class="ed-arrow" data-move="${dir}" data-col="${c}"${to ? '' : ' disabled'} ` +
+      `aria-label="Move ${who(c)} to the ${word} CRA column${to ? `. Moves to: ${escapeXml(slotLabel(to))}` : ''}">${sym}</button>`;
+  };
+  const full = getSelectedReturnType() !== 'T4' ? ''
+    : columnField(c) === 'full_name' ? toButton(c, 'empe_snm', 'Last name only', `Last name only: use ${who(c)} for Last Name only`)
+    : ['empe_snm', 'empe_gvn_nm'].includes(f) ? toButton(c, 'full_name', 'Use as full name', `Use as full name: ${who(c)} fills Last Name and First Name`)
+    : '';
+  return `<span class="ed-chip" draggable="true" data-drag="${c}">${arrow(-1, '←', 'previous')}${chipName(c)}${arrow(1, '→', 'next')}` +
+    `<span class="ed-chip-acts">${full}${toButton(c, 'ignore', 'Leave out', `Leave out ${who(c)}`)}</span></span>`;
+}
+
+// An ignored column: name and a "Use column" menu of the empty CRA columns, mandatory first (all of them, when none
+// is empty: the one there goes to Ignored), then T4's full name
+function ignoredChip(c) {
+  const fields = getReturnConfig().fields;
+  const empty = fields.filter(f => !(columnMap[f.key] >= 0));
+  const list = empty.length ? [...empty.filter(f => f.required), ...empty.filter(f => !f.required)] : fields;
+  const items = list.map(f => `<li><button type="button" data-to="${f.key}" data-col="${c}">${escapeXml(f.label)}` +
+    (f.required ? ' <span class="badge badge-mandatory">Mandatory</span>' : '') +
+    (columnMap[f.key] >= 0 ? ` (replaces column ${colLetter(columnMap[f.key])})` : '') + '</button></li>');
+  if (getSelectedReturnType() === 'T4') items.push(`<li><button type="button" data-to="full_name" data-col="${c}">Full name (Last Name and First Name)</button></li>`);
+  return `<li class="ed-chip" draggable="true" data-drag="${c}">${chipName(c)}<details class="ed-place">` +
+    `<summary data-col="${c}" aria-label="Use ${who(c)}: pick a CRA column">Use column</summary><ul>${items.join('')}</ul></details></li>`;
 }
 
 function renderEditorHead() {
@@ -556,22 +612,20 @@ function renderEditorHead() {
     const c = columnMap[f.key];
     let body;
     if (c >= 0 && f.key === 'empe_gvn_nm' && columnMap.empe_snm === c) body = '<span class="ed-slot-note">Same column as Last Name (full name)</span>';
-    else if (c >= 0) {
-      const L = colLetter(c);
-      body = columnChip(c, 'span', `<span class="ed-move"><button type="button" data-move="-1" data-col="${c}" aria-label="Move column ${L} to the previous CRA column">←</button>` +
-        `<button type="button" data-move="1" data-col="${c}" aria-label="Move column ${L} to the next CRA column">→</button></span>`);
-    } else body = f.required ? '<span class="ed-slot-empty"><span aria-hidden="true">⚠</span> Mandatory: no column yet</span>' : '<span class="ed-slot-empty">No column</span>';
+    else if (c >= 0) body = slotChip(c, f.key);
+    else body = f.required ? '<span class="ed-slot-empty"><span aria-hidden="true">⚠</span> Mandatory: no column yet</span>' : '<span class="ed-slot-empty">No column</span>';
     const cls = c >= 0 ? 'is-filled' : f.required ? 'is-empty is-missing' : 'is-empty';
     return `<th scope="col" class="ed-slot ${cls}" data-slot="${f.key}">${body}</th>`;
   }).join('');
   document.getElementById('editor-thead').innerHTML = `<tr><th scope="col" class="ed-rownum" rowspan="2">Row</th>${cra}</tr><tr>${slots}</tr>`;
+  showLanding(null); // the marked cells were just replaced
 }
 
 function renderEditorIgnored() {
   const cols = ignoredColumns();
   document.getElementById('editor-ignored').innerHTML =
-    `<h4>Ignored columns (${cols.length})</h4><p class="ed-hint">Left out of the file. Drag one onto a CRA column in the table header, or pick its CRA column in its dropdown. Drop a column here to leave it out.</p>` +
-    `<ul class="ed-chips" data-drop="ignore">${cols.length ? cols.map(c => columnChip(c, 'li')).join('') : '<li class="ed-none">None: every column of your file is used.</li>'}</ul>`;
+    `<h4>Ignored columns (${cols.length})</h4><p class="ed-hint">Left out of the file. To use one, pick a CRA column in its “Use column” menu, or drag it onto a CRA column in the table header. To leave a column out, use its “Leave out” button or drag it here.</p>` +
+    `<ul class="ed-chips" data-drop="ignore">${cols.length ? cols.map(ignoredChip).join('') : '<li class="ed-none">None: every column of your file is used.</li>'}</ul>`;
 }
 
 let editorVisibleRows = [];
@@ -659,24 +713,44 @@ function renderEditorStatus() {
   missing.classList.toggle('hidden', !unmapped.length);
 }
 
-// ---- Mapping events (header slots and the Ignored area): move dropdowns, move buttons, drag-and-drop ----
+// ---- Mapping events (header slots and the Ignored area): ← / → (data-move), Leave out / Use column / full name
+// buttons (data-to), drag-and-drop; and the "Moves to" landing marker for all three ----
 const dropTarget = e => e.target.closest && (e.target.closest('[data-slot]') || e.target.closest('[data-drop]'));
+const moveButton = e => e.target.closest && (e.target.closest('[data-move]') || e.target.closest('[data-to]'));
+const buttonTarget = btn => (btn.dataset.move ? moveTarget(+btn.dataset.col, +btn.dataset.move) : btn.dataset.to);
 for (const el of [document.getElementById('editor-thead'), document.getElementById('editor-ignored')]) {
-  el.addEventListener('change', e => {
-    if (e.target.dataset && e.target.dataset.col !== undefined) remapColumn(+e.target.dataset.col, e.target.value, 'dropdown');
-  });
   el.addEventListener('click', e => {
-    const btn = e.target.closest && e.target.closest('[data-move]');
-    if (btn) moveColumn(+btn.dataset.col, +btn.dataset.move);
+    const btn = moveButton(e);
+    if (!btn) return;
+    const c = +btn.dataset.col, to = buttonTarget(btn);
+    if (btn.dataset.move) moveColumn(c, +btn.dataset.move);
+    else {
+      remapColumn(c, to, 'button');
+      document.querySelector(`#editor-thead [data-col="${c}"]:not(:disabled), #editor-ignored [data-col="${c}"]`)?.focus(); // its button was replaced
+    }
+    flashLanded(to);
   });
+  const hover = e => { const btn = moveButton(e); showLanding(btn ? buttonTarget(btn) : null); };
+  el.addEventListener('mouseover', hover);
+  el.addEventListener('focusin', hover);
+  el.addEventListener('mouseout', () => showLanding(null));
+  el.addEventListener('focusout', () => showLanding(null));
+  el.addEventListener('dragleave', () => showLanding(null));
+  el.addEventListener('dragend', () => showLanding(null));
   el.addEventListener('dragstart', e => {
     const handle = e.target.closest && e.target.closest('[data-drag]');
     if (!handle) return;
     e.dataTransfer.setData('text/plain', handle.dataset.drag);
     e.dataTransfer.effectAllowed = 'move';
   });
-  el.addEventListener('dragover', e => { if (dropTarget(e)) e.preventDefault(); });
+  el.addEventListener('dragover', e => {
+    const t = dropTarget(e);
+    if (!t) return;
+    e.preventDefault();
+    showLanding(t.dataset.slot || 'ignore');
+  });
   el.addEventListener('drop', e => {
+    showLanding(null);
     const t = dropTarget(e);
     if (!t) return;
     e.preventDefault();
@@ -1199,7 +1273,7 @@ function checkRequiredColumns() {
   box.innerHTML = unmapped.length
     ? `<h4>Pick a column for ${unmapped.length === 1 ? 'this required field' : `these ${unmapped.length} required fields`} before you continue</h4>` +
       `<ul>${unmapped.map(f => `<li>${escapeXml(f.label)}</li>`).join('')}</ul>` +
-      `<p>Put the column of your file that holds it under that CRA column: drag it there, or pick the CRA column in its “Move to CRA column” dropdown (columns not used are under Ignored columns). If none fits, add that column to your spreadsheet and open it again, or check that ${getSelectedReturnType()} is the right return for this file.</p>`
+      `<p>Put the column of your file that holds it under that CRA column: move it there with ← and → beside its name, drag it there, or, if it's under Ignored columns, pick the CRA column in its “Use column” menu. If none fits, add that column to your spreadsheet and open it again, or check that ${getSelectedReturnType()} is the right return for this file.</p>`
     : '';
   box.classList.toggle('hidden', !unmapped.length);
   return !unmapped.length;
