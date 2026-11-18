@@ -2,7 +2,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { createApp } = require('./harness');
+const { createApp, PII_FIXTURES } = require('./harness');
 
 function setup({ xml = '<Submission/>', createObjectURL } = {}) {
   const log = [];
@@ -180,8 +180,7 @@ const csv = s => Buffer.from(s);
   assert.deepStrictEqual(named('start_fresh'), [{}]);
 }
 { // NO PII: drive every event with personal data in the file and Step 3, then scan every param value
-  const PII = ['John', 'Doe', 'Roe', 'Jane', '46454286', '046454286', '123456789', '130692544', '54321.99', '777.10',
-               'secret-payroll.csv', 'Test Transmitter', 'Test Payer', 'jane@example.com', '604-638-8328', '987654321', '100 Main'];
+  const PII = PII_FIXTURES;
   const { app, events } = funnel('T4');
   app.loadFile('secret-payroll.pdf', csv('x'));
   app.el('dropzone').click();
@@ -194,16 +193,23 @@ const csv = s => Buffer.from(s);
   app.generate();                                      // row_data failure
   app.run('parsedData[0][2] = "046454286"; parsedData[1][2] = "130692544"');
   assert(app.generate());                              // passed
+  // crashes with personal data in the error: app_error carries only error_kind + return_type
+  app.ctx.XLSX = { read: () => { throw new Error('corrupt secret-payroll.csv: Jane Doe 046454286 54321.99'); } };
+  app.loadFile('secret-payroll.csv', csv('x'));
+  app.run('getReturnConfig().generateXML = () => { throw new Error("Test Payer 987654321 jane@example.com"); }');
+  app.generate();
+  app.ctx.XLSX = require('xlsx');
   app.run('downloadXML(); clearFilingDetails(); goToStep(1); resetAll()');
   app.heroPicks[0].click();
   app.el('return-type').dispatchEvent(new app.ctx.Event('change'));
   const names = new Set(events.map(e => e[0]));
   for (const n of ['return_selected', 'file_opened', 'file_parse_error', 'step_reached', 'validation_failed', 'validation_passed', 'xml_downloaded', 'start_fresh',
-                   'picker_opened', 'generate_clicked'])
+                   'picker_opened', 'generate_clicked', 'app_error'])
     assert(names.has(n), `expected ${n} in ${[...names]}`);
   const ALLOWED = { return_type: /^(T4|T1204|T5018|NR4)$/, source: /^(default|hero|dropdown|landing)$/, step: /^[1-4]$/, error_count: /^\d+$/,
                     error_category: /^(filing_details|row_data|unsupported_type|no_data_rows|read_error)$/,
                     first_error_field: /^[a-z0-9_-]+$/, direction: /^(forward|back|reset)$/,
+                    error_kind: /^(js_error|xml_generate_failed|parse_crash)$/,
                     is_sample: /^(true|false)$/, rows_bucket: /^(1|2-5|6-20|21-100|100\+)$/, required_unmapped: /^\d$/ };
   for (const [, params] of events) for (const k of ['is_sample', 'required_unmapped', 'step']) if (k in params) assert.notStrictEqual(typeof params[k], 'string', k);
   for (const [name, params] of events) {

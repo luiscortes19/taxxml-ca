@@ -300,7 +300,8 @@ select.form-control { cursor: pointer; }
 .ed-chip:active { cursor: grabbing; }
 .ed-chip:focus-visible { outline: 2px solid var(--pen); outline-offset: 1px; }
 .ed-grip { color: var(--ink-3); user-select: none; }
-.ed-chip-name { font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 10rem; }
+/* Long names wrap between words, never inside one; a single word too long for 10rem is cut with an ellipsis */
+.ed-chip-name { font-weight: 600; color: var(--ink); white-space: normal; word-break: normal; overflow: hidden; text-overflow: ellipsis; max-width: 10rem; }
 /* "Use column": a native <details> menu of the CRA columns an ignored column can go to */
 .ed-place { position: relative; }
 .ed-place summary {
@@ -560,6 +561,25 @@ footer { background: var(--sheet); border-top: 1px solid var(--rule); padding: 3
 .legal strong { color: var(--ink); }
 .legal code { color: var(--ink); word-break: break-word; }
 
+/* ---- FEEDBACK (js/report.js; the dialog exists only when REPORT_ENDPOINT is set) ---- */
+.link-button { background: none; border: 0; padding: 0; font: inherit; color: var(--ink-2); font-size: 0.9rem; font-weight: 500; cursor: pointer; }
+.link-button:hover { color: var(--ink); text-decoration: underline; }
+.link-button:focus-visible { outline: 2px solid var(--pen); outline-offset: 3px; }
+.footer-links .link-button { font-size: 0.85rem; text-align: left; }
+.feedback-dialog {
+  width: min(32rem, calc(100vw - 2rem)); margin: auto; padding: 1.5rem;
+  background: var(--sheet); color: var(--ink); border: 1px solid var(--rule); border-radius: var(--radius);
+}
+.feedback-dialog::backdrop { background: rgba(20, 38, 59, 0.45); }
+.feedback-dialog h2 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+.feedback-dialog .form-group { margin-bottom: 0.9rem; }
+.feedback-dialog textarea { resize: vertical; }
+.feedback-dialog .btn-row { margin-top: 1rem; }
+.fb-warn { font-size: 0.85rem; color: var(--ink-2); background: var(--paper); border-left: 3px solid var(--pen); padding: 0.5rem 0.75rem; margin-bottom: 1rem; }
+.fb-hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.fb-status { font-size: 0.85rem; color: var(--ink-2); min-height: 1.2em; }
+.optional { font-weight: 400; color: var(--ink-3); }
+
 /* ---- UTILITIES ---- */
 .hidden { display: none !important; }
 
@@ -581,6 +601,7 @@ footer { background: var(--sheet); border-top: 1px solid var(--rule); padding: 3
   nav { gap: 0.35rem; }
   nav a { font-size: 0.8rem; }
   .nav-cta { padding: 0.4rem 0.6rem; }
+  .link-button { font-size: 0.8rem; }
   .logo-text { font-size: 1.1rem; }
   #hero { padding: 6rem 1rem 2.5rem; }
   #hero h1 { font-size: 2rem; }
@@ -599,6 +620,10 @@ footer { background: var(--sheet); border-top: 1px solid var(--rule); padding: 3
   .btn-row .btn { width: 100%; justify-content: center; }
   .btn-row .btn-primary { order: -1; }
   #btn-download { width: 100%; font-size: 0.88rem; padding: 0.9rem 1rem; }
+}
+
+@media (max-width: 400px) {
+  nav [data-feedback] { display: none; } /* still in the footer */
 }
 
 /* ---- INLINE VALIDATION (correction red: errors only) ---- */

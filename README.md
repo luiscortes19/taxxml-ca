@@ -44,6 +44,7 @@ See [ROADMAP.md](ROADMAP.md) for what's planned next.
 - Pure HTML/CSS/JS — no build step, no server required
 - [SheetJS](https://sheetjs.com/) for Excel/CSV parsing
 - [Lucide Icons](https://lucide.dev/) for SVG icons
+- `js/report.js` + `worker/`: in-app Feedback form and scrubbed crash alerts through a Cloudflare Worker (Slack / email). Off until `REPORT_ENDPOINT` is set; see [worker/README.md](worker/README.md)
 - Output tested against CRA's published schema packages: 1-27-1 (2027 package, accepted from January 11, 2027) and 1-26-3 (2026 package, accepted until December 22, 2026). From December 22, 2026 the tool builds 1-27-1 files; only NR4 differs (the new `<CIN>`, box 13). See `tests/xsd/README.md`
 - Tests: `npm install` (once, fetches the xlsx 0.20.3 build index.html loads) then `npm test`. Runs every `tests/*.test.js`:
   - `golden.test.js` — real `js/app.js` pipeline (parse file → auto map → generate) must reproduce `tests/fixtures/*.golden.xml` byte for byte. Regenerate only for an intended XML change: `UPDATE_GOLDENS=1 node tests/golden.test.js`

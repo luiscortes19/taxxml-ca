@@ -22,6 +22,8 @@
 
   <!-- Google tag (gtag.js), loaded by js/ga.js except on local copies -->
   <script src="/js/ga.js"></script>
+  <!-- Feedback form + scrubbed crash reports; off until REPORT_ENDPOINT is set in js/report.js -->
+  <script src="/js/report.js"></script>
 </head>
 <body>
   <header id="site-header">
@@ -31,6 +33,7 @@
       </a>
       <nav>
         <a href="/terms">Terms</a>
+        <a href="https://avanza-automation.com" target="_blank" rel="noopener" data-feedback>Contact us</a>
         <a href="/#converter" class="nav-cta" data-cta="nav">Start Converting</a>
       </nav>
     </div>
@@ -38,7 +41,7 @@
 
   <main class="legal">
     <h1>Privacy</h1>
-    <p class="legal-updated">Last updated: 26 October 2026</p>
+    <p class="legal-updated">Last updated: 17 November 2026</p>
 
     <p>TaxXML.ca is a free tool from <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a>. It turns a spreadsheet into XML for certain Canada Revenue Agency (CRA) information returns. This notice describes what the site actually does with information. It is written for people using the site in Canada.</p>
 
@@ -71,7 +74,7 @@
 
     <p><strong>GitHub Pages.</strong> The site is static files hosted on GitHub Pages. Loading a page, stylesheet, image, or sample CSV template means GitHub receives an ordinary request for that file, including your IP address and browser. Those requests do not contain your spreadsheet.</p>
 
-    <p><strong>Google Analytics 4.</strong> Pages load Google’s tag from <code>www.googletagmanager.com</code> with measurement ID <strong>G-E2F5Q3RZVH</strong>. Local copies of the site (<code>localhost</code>, <code>127.0.0.1</code>, or a file opened from disk) don’t load it. Besides pageviews, the site sends a few usage events: <code>return_selected</code>, <code>file_opened</code>, <code>file_parse_error</code>, <code>step_reached</code>, <code>picker_opened</code>, <code>generate_clicked</code>, <code>validation_failed</code>, <code>validation_passed</code>, <code>xml_downloaded</code>, <code>start_fresh</code>, <code>cta_click</code>, <code>sample_downloaded</code>, <code>sample_loaded</code>, <code>reminder_added</code>, <code>intent_selected</code>, <code>column_remapped</code>, and <code>cell_edited</code>. They carry only these values:</p>
+    <p><strong>Google Analytics 4.</strong> Pages load Google’s tag from <code>www.googletagmanager.com</code> with measurement ID <strong>G-E2F5Q3RZVH</strong>. Local copies of the site (<code>localhost</code>, <code>127.0.0.1</code>, or a file opened from disk) don’t load it. Besides pageviews, the site sends a few usage events: <code>return_selected</code>, <code>file_opened</code>, <code>file_parse_error</code>, <code>step_reached</code>, <code>picker_opened</code>, <code>generate_clicked</code>, <code>validation_failed</code>, <code>validation_passed</code>, <code>xml_downloaded</code>, <code>start_fresh</code>, <code>cta_click</code>, <code>sample_downloaded</code>, <code>sample_loaded</code>, <code>reminder_added</code>, <code>intent_selected</code>, <code>column_remapped</code>, <code>cell_edited</code>, and <code>app_error</code>. They carry only these values:</p>
     <ul>
       <li>the return type (<code>return_type</code>);</li>
       <li>how the return was chosen (<code>source</code>: <code>default</code> when a file is opened with the preselected return, <code>landing</code> when a guide page’s link chose it, <code>hero</code> for the buttons at the top of the home page, or <code>dropdown</code> for the Step 1 list);</li>
@@ -82,9 +85,19 @@
       <li>for <code>cta_click</code>, a short page name such as <code>home</code>, <code>t4</code> or <code>cra-xml-samples</code> (<code>page</code>) and which button or link was clicked, such as <code>nav</code>, <code>hero</code>, <code>sample_try</code> or <code>reminder</code> (<code>cta</code>);</li>
       <li>for <code>sample_loaded</code>, where the sample data was asked for (<code>page</code>: <code>home</code> for the Step 1 button, or <code>landing</code> for a link on another page of the site);</li>
       <li>for <code>column_remapped</code> (you changed which CRA field a column of the Step 2 table feeds) and <code>cell_edited</code> (you changed a cell in that table), the converter’s own name for the field, such as <code>sin</code>, <code>full_name</code> or <code>ignore</code> (<code>field</code>), and for <code>column_remapped</code> whether drag-and-drop, the ← / → buttons or another button (Leave out, Use column, Use as full name) was used (<code>method</code>: <code>drag</code>, <code>keyboard</code> or <code>button</code>; before November 2026 a dropdown sent <code>dropdown</code>). Never the cell’s value or your column header;</li>
+      <li>for <code>app_error</code> (the site itself hit an error, described under “Feedback and error reports” below), the kind of error (<code>error_kind</code>: <code>js_error</code>, <code>xml_generate_failed</code> or <code>parse_crash</code>) and the return type when one is chosen. Never the error message or stack;</li>
       <li>for <code>intent_selected</code>, the answer to the optional “What brings you here?” question (<code>intent</code>: <code>filing_now</code>, <code>exploring_format</code>, or <code>for_client</code>).</li>
     </ul>
     <p>The events never include spreadsheet cells, the values you type into filing fields, your column headers, file names, SINs, names, or amounts. Opening the site with <code>?internal=1</code> is meant for the site owner’s own testing. It saves the key <strong>taxxml_internal</strong> in this browser’s localStorage (<code>?internal=0</code> removes it), and the browser’s hits then carry <code>traffic_type</code> set to <code>internal</code> so they can be left out of reports. <code>?debug_mode=1</code> adds <code>debug_mode</code> to that page’s hits for Google’s debugging view. Google can receive the page address, rough location, device and browser details, and a client identifier stored in cookies (such as <code>_ga</code>). Google’s policy is at <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a>.</p>
+
+    <p><strong>Feedback and error reports (Cloudflare Worker).</strong> The <strong>Feedback</strong> link at the top and bottom of each page opens a Feedback form for a comment, a question, or a bug report. Separately, if the site itself breaks while you use it (a script error, a crash while reading your file, or a failure while building the XML), your browser sends an automatic error report. Both go to a small Cloudflare Worker run by AVANZA. That request is processed on Cloudflare’s network, which includes servers in the United States. The Worker passes each report on to AVANZA as a Slack message and, when it is set up, as an email sent through Resend. Until the Worker is set up, the Feedback link simply opens avanza-automation.com, and no feedback and error reports are sent from the site.</p>
+    <ul>
+      <li>Only the message and optional email you type in the Feedback form leave the browser, plus a scrubbed technical report (return type, step, browser, error kind, scrubbed stack) and the site version. The error kind is <code>js_error</code>, <code>xml_generate_failed</code> or <code>parse_crash</code>. The scrubbed stack lists only the site’s own script files and line numbers. Numbers, quoted values, capitalised words such as names, file names, email addresses and web addresses are removed from the error text in your browser, and again by the Worker.</li>
+      <li>Feedback and error reports never include your slip data, spreadsheet cells, SINs, BNs, names, amounts, Step 3 filing details, or file names. The form asks you not to paste them, and SIN- or BN-like numbers are removed from your message. Anything else you type is sent as written.</li>
+      <li>The form is protected by Cloudflare Turnstile, which checks that a person, not a bot, is sending it. Turnstile loads from <code>challenges.cloudflare.com</code> only when you open the Feedback form. Cloudflare receives your IP address and browser details for that check. Cloudflare’s policy is at <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">cloudflare.com/privacypolicy</a>.</li>
+      <li>Reports are not stored in a TaxXML database. The site stays static files on GitHub Pages, and the Worker forwards each report and does not keep a copy. AVANZA keeps the Slack message or email it receives. Cloudflare, Slack and Resend keep their own logs under their own policies.</li>
+      <li>Ordinary problems you can fix yourself, such as a wrong file type or a field that fails validation, are not reported this way. Local copies of the site (<code>localhost</code>, <code>127.0.0.1</code>, or a file opened from disk) never send reports.</li>
+    </ul>
 
     <p><strong>Google Fonts.</strong> Pages request the IBM Plex Sans and IBM Plex Mono fonts from <code>fonts.googleapis.com</code> and <code>fonts.gstatic.com</code>. Your browser sends that request, including your IP address, to Google.</p>
 
@@ -100,7 +113,7 @@
     <p>TaxXML’s own pages do not set cookies. Google Analytics, loaded as described above, uses cookies under Google’s default setup. The filing details in localStorage are stored by the browser, and they are not cookies.</p>
 
     <h2>How long information is kept</h2>
-    <p>Slip data in memory lasts until you close the tab or start over. Saved filing details stay in localStorage until you clear them or your browser removes them. TaxXML has no copy of either. Google, GitHub, Stripe, and the CDNs named above keep their own logs under their own policies.</p>
+    <p>Slip data in memory lasts until you close the tab or start over. Saved filing details stay in localStorage until you clear them or your browser removes them. TaxXML has no copy of either. Feedback and error reports are kept only as the Slack message or email AVANZA receives. Google, GitHub, Stripe, Cloudflare, Slack, Resend, and the CDNs named above keep their own logs under their own policies.</p>
 
     <h2>Children</h2>
     <p>The tool is for people preparing Canadian information returns. It is not directed at children.</p>
@@ -109,7 +122,7 @@
     <p>If the site starts handling information differently, this page will be updated. The date at the top is the latest revision.</p>
 
     <h2>Contact</h2>
-    <p>TaxXML.ca does not publish an email address. Questions about this notice can be sent through <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a> at avanza-automation.com. See also the <a href="/terms">Terms</a>.</p>
+    <p>TaxXML.ca does not publish an email address. Questions about this notice can be sent with the Feedback link, or through <a href="https://avanza-automation.com" target="_blank" rel="noopener">AVANZA Business Automation</a> at avanza-automation.com. See also the <a href="/terms">Terms</a>.</p>
   </main>
 
   <footer>
@@ -128,6 +141,7 @@
         <h4>Legal</h4>
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
+        <a href="https://avanza-automation.com" target="_blank" rel="noopener" data-feedback>Contact us</a>
       </div>
     </div>
     <div class="footer-bottom">

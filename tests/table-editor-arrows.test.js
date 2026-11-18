@@ -198,6 +198,33 @@ for (const [rt, rows] of Object.entries(FILES)) {
   assert(/\.ed-arrow[^{]*\{[^}]*min-height: 44px; min-width: 44px/.test(coarse), coarse);
   assert(/\.is-landing/.test(css) && /\.is-landed/.test(css), 'landing marker styles');
   assert(!css.includes('.ed-move-to') && !css.includes('.ed-move '), 'dead dropdown / old arrow rules are gone');
+  // long column names wrap between words, never inside one
+  for (const sel of ['.ed-chip-name', '.ed-slot .ed-chip-name']) {
+    const r = rule(sel);
+    assert(!/nowrap|break-all|overflow-wrap: (break-word|anywhere)|hyphens: auto/.test(r), `${sel}: ${r}`);
+  }
+  assert(/white-space: normal/.test(rule('.ed-chip-name')) && /word-break: normal/.test(rule('.ed-chip-name')), rule('.ed-chip-name'));
+}
+
+// ---- "Use column" menus close on Escape (focus back on the open one's summary) and on a click outside them ----
+{
+  const a = app('T4', FILES.T4);
+  const doc = a.ctx.document;
+  const menu = () => { const summary = { focused: 0, focus() { summary.focused++; } }; const d = { open: true, inside: new Set([summary]), contains: x => d.inside.has(x), querySelector: s => (s === 'summary' ? summary : null), summary }; return d; };
+  const m1 = menu(), m2 = menu();
+  doc.querySelectorAll = sel => (sel === 'details.ed-place[open]' ? [m1, m2].filter(d => d.open) : []);
+  const click = inside => doc.dispatchEvent({ type: 'click', target: { closest: s => (s === 'details.ed-place' ? inside : null) } });
+  click(m1); // e.g. opening m1's summary: the other open menu closes, m1 stays as the browser left it
+  assert(m1.open && !m2.open, 'click inside one menu closes the others');
+  click(null);
+  assert(!m1.open, 'click outside closes every menu');
+  m1.open = m2.open = true;
+  doc.activeElement = m2.summary;
+  doc.dispatchEvent({ type: 'keydown', key: 'Enter' });
+  assert(m1.open && m2.open, 'other keys leave menus open');
+  doc.dispatchEvent({ type: 'keydown', key: 'Escape' });
+  assert(!m1.open && !m2.open, 'Escape closes every menu');
+  assert(m2.summary.focused === 1 && m1.summary.focused === 0, 'focus returns to the summary of the menu it was in');
 }
 
 // ---- copy: no "Move to CRA column" dropdown anywhere; arrows, drag and the buttons are explained ----

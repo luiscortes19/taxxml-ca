@@ -1,0 +1,13 @@
+# TaxXML feedback + crash-report Worker. Setup steps: worker/README.md.
+# Secrets are set with `npx wrangler secret put <NAME>` and never written here:
+#   SLACK_WEBHOOK_URL   Slack incoming webhook (optional if email is set)
+#   TURNSTILE_SECRET    Cloudflare Turnstile secret key (required for the Feedback form)
+#   RESEND_API_KEY      optional, with RESEND_FROM (verified sender) and ALERT_EMAIL (where alerts go)
+# No KV / D1 / R2 bindings: the Worker forwards reports and keeps no copy.
+name = "taxxml-report"
+main = "index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true # https://taxxml-report.<account>.workers.dev, the first value for REPORT_ENDPOINT in js/report.js
+
+# Later, once taxxml.ca's DNS is on Cloudflare, serve it at https://api.taxxml.ca and set REPORT_ENDPOINT to that:
+# routes = [{ pattern = "api.taxxml.ca", custom_domain = true }]

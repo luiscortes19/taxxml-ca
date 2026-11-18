@@ -306,7 +306,9 @@ function openWorkbook(buffer, name, ext, isSample) {
         rows_bucket: n === 1 ? '1' : n <= 5 ? '2-5' : n <= 20 ? '6-20' : n <= 100 ? '21-100' : '100+',
         required_unmapped: unmappedRequired().length });
     } catch (err) {
-      showFileError('Error reading file: ' + err.message, 'read_error');
+      // err.message can hold the file name or a cell value: never shown, only the scrubbed report leaves
+      showFileError("We couldn't read this file. Check that it is a valid Excel (.xlsx, .xls) or CSV file, then try again.", 'read_error');
+      reportCrash('parse_crash', err);
     }
 }
 
@@ -814,7 +816,19 @@ function renderEditorStatus() {
 
 // ---- Mapping events (header slots and the Ignored area): ← / → (data-move), Leave out / Use column / full name
 // buttons (data-to), drag-and-drop; and the "Moves to" landing marker for all three ----
-const dropTarget = e => e.target.closest && (e.target.closest('[data-slot]') || e.target.closest('[data-drop]'));
+// "Use column" menus (<details>) close on a click outside them and on Escape (focus back on that menu's summary)
+document.addEventListener('click', e => {
+  const inside = e.target.closest && e.target.closest('details.ed-place');
+  document.querySelectorAll('details.ed-place[open]').forEach(d => { if (d !== inside) d.open = false; });
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  document.querySelectorAll('details.ed-place[open]').forEach(d => {
+    d.open = false;
+    if (d.contains(document.activeElement)) d.querySelector('summary').focus();
+  });
+});
+const dropTarget = e =>e.target.closest && (e.target.closest('[data-slot]') || e.target.closest('[data-drop]'));
 const moveButton = e => e.target.closest && (e.target.closest('[data-move]') || e.target.closest('[data-to]'));
 const buttonTarget = btn => (btn.dataset.move ? moveTarget(+btn.dataset.col, +btn.dataset.move) : btn.dataset.to);
 for (const el of [document.getElementById('editor-thead'), document.getElementById('editor-ignored')]) {
@@ -1504,14 +1518,23 @@ function continueFromEditor() {
 
 function generateXML() {
   track('generate_clicked', { return_type: getSelectedReturnType() });
-  const config = getReturnConfig();
-  const unmapped = unmappedRequired();
-  if (unmapped.length) {
-    clearFieldErrors();
-    showGenerateErrors(unmapped.map(f => `No column is set to "${f.label}". Move a column under it in Step 2, or check that ${getSelectedReturnType()} is the right return for this file.`));
-    return;
+  try {
+    const config = getReturnConfig();
+    const unmapped = unmappedRequired();
+    if (unmapped.length) {
+      clearFieldErrors();
+      showGenerateErrors(unmapped.map(f => `No column is set to "${f.label}". Move a column under it in Step 2, or check that ${getSelectedReturnType()} is the right return for this file.`));
+      return;
+    }
+    config.generateXML();
+  } catch (err) {
+    // A bug, not a problem with the user's data: fixed message on screen (err.message can hold cell values), scrubbed report out
+    const box = document.getElementById('generate-errors');
+    box.innerHTML = '<h4>Something went wrong while building the XML</h4><p>This is a problem on our side, not in your file. ' +
+      'Nothing from your spreadsheet was sent. Try again, or use the Feedback (Contact us) link at the top of the page to tell us which return you were filing.</p>';
+    box.classList.remove('hidden');
+    reportCrash('xml_generate_failed', err);
   }
-  config.generateXML();
 }
 
 // ============================================================
@@ -2115,6 +2138,15 @@ function showResults(slips, stats, warnings) {
 // Analytics must never break the app.
 function track(name, params) {
   try { if (window.gtag) gtag('event', name, params); } catch (e) { /* ignore */ }
+}
+
+// Unexpected errors -> js/report.js (scrubbed, de-duplicated, app_error + Worker POST when allowed). Never throws.
+function reportCrash(kind, err) {
+  try { if (window.taxxmlReport) window.taxxmlReport.crash(kind, err); } catch (e) { /* ignore */ }
+}
+// What js/report.js may attach to a report: the return type and step, nothing from the file or Step 3
+function reportContext() {
+  return { return_type: getSelectedReturnType(), step: currentStep };
 }
 
 // Field names safe to send to GA4: our own column keys (sin, empt_incamt, ...) and Step 3 input ids.
