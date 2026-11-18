@@ -717,7 +717,19 @@ function renderEditorStatus() {
 
 // ---- Mapping events (header slots and the Ignored area): ← / → (data-move), Leave out / Use column / full name
 // buttons (data-to), drag-and-drop; and the "Moves to" landing marker for all three ----
-const dropTarget = e => e.target.closest && (e.target.closest('[data-slot]') || e.target.closest('[data-drop]'));
+// "Use column" menus (<details>) close on a click outside them and on Escape (focus back on that menu's summary)
+document.addEventListener('click', e => {
+  const inside = e.target.closest && e.target.closest('details.ed-place');
+  document.querySelectorAll('details.ed-place[open]').forEach(d => { if (d !== inside) d.open = false; });
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  document.querySelectorAll('details.ed-place[open]').forEach(d => {
+    d.open = false;
+    if (d.contains(document.activeElement)) d.querySelector('summary').focus();
+  });
+});
+const dropTarget = e =>e.target.closest && (e.target.closest('[data-slot]') || e.target.closest('[data-drop]'));
 const moveButton = e => e.target.closest && (e.target.closest('[data-move]') || e.target.closest('[data-to]'));
 const buttonTarget = btn => (btn.dataset.move ? moveTarget(+btn.dataset.col, +btn.dataset.move) : btn.dataset.to);
 for (const el of [document.getElementById('editor-thead'), document.getElementById('editor-ignored')]) {

@@ -284,7 +284,8 @@ select.form-control { cursor: pointer; }
 .ed-none { color: var(--ink-3); font-style: italic; align-self: center; }
 .ed-chip { display: inline-flex; align-items: center; gap: 0.3rem; max-width: 100%; padding: 0.1rem 0.25rem; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--radius-sm); cursor: grab; }
 .ed-grip { color: var(--ink-3); user-select: none; }
-.ed-chip-name { font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 10rem; }
+/* Long names wrap between words, hyphenated if need be; overflow-wrap only breaks a word that still doesn't fit */
+.ed-chip-name { font-weight: 600; color: var(--ink); white-space: normal; word-break: normal; overflow-wrap: anywhere; hyphens: auto; max-width: 10rem; }
 /* "Use column": a native <details> menu of the CRA columns an ignored column can go to */
 .ed-place { position: relative; }
 .ed-place summary {
@@ -337,7 +338,7 @@ select.form-control { cursor: pointer; }
 /* [←] ⠿ B · First Name [→], with Leave out (and Use as full name) on a line under it */
 .ed-table thead th.ed-slot { min-width: 10rem; }
 .ed-slot .ed-chip { display: flex; flex-wrap: wrap; gap: 0.2rem; border-color: var(--filed); }
-.ed-slot .ed-chip-name { flex: 1 1 0; min-width: 0; max-width: none; white-space: normal; overflow-wrap: break-word; text-align: center; }
+.ed-slot .ed-chip-name { flex: 1 1 0; min-width: 0; max-width: none; text-align: center; }
 .ed-chip-acts { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 0.2rem; }
 .ed-slot-empty { display: block; padding: 0.3rem 0.2rem; color: var(--ink-3); font-style: italic; border: 1px dashed var(--rule); text-align: center; }
 .ed-slot.is-missing .ed-slot-empty { color: #6B4300; background: #FDF3E1; border-color: #B26A00; font-style: normal; font-weight: 600; }
