@@ -161,12 +161,13 @@
     <div class="wizard-step hidden" id="step-2">
       <div class="card card-wide">
         <h3>Check and edit your data</h3>
-        <p>The top row lists the CRA columns for this return, in CRA order. Under each one is the column of your file that fills it. If one is wrong, drag your column (<span aria-hidden="true">⠿</span>) under the right CRA column, or pick it in the column's “Move to CRA column” dropdown. Click a cell to fix it. Your data stays in this browser: edits are never sent anywhere.</p>
+        <p>The top row lists the CRA columns for this return, in CRA order. Under each one is the column of your file that fills it. If one is wrong, move your column with the ← and → buttons beside its name, or on a computer drag it (<span aria-hidden="true">⠿</span>) under the right CRA column. “Leave out” puts a column under Ignored columns; “Use column” there brings it back under the CRA column you pick. Click a cell to fix it. Your data stays in this browser: edits are never sent anywhere.</p>
         <div id="editor-missing" class="errors-box ed-missing hidden"></div>
         <p id="editor-status" class="ed-status" role="status" aria-live="polite"></p>
         <div id="editor-ignored" class="ed-ignored" data-drop="ignore"></div>
         <div class="ed-tools">
           <label class="ed-filter"><input type="checkbox" id="editor-only-problems"> Show only rows with problems</label>
+          <p id="editor-landing" class="ed-landing"></p>
           <button type="button" class="btn btn-ghost" onclick="addRow()">+ Add row</button>
         </div>
         <div class="ed-wrap">
@@ -176,7 +177,7 @@
           </table>
         </div>
         <div id="editor-pager" class="ed-pager"></div>
-        <p id="editor-help" class="ed-legend"><span class="badge badge-mandatory">Mandatory</span> CRA columns need a column of your file; <span class="badge badge-optional">Optional</span> ones can stay empty. Keys: arrows or Tab move between cells, Enter or F2 edits, Enter saves, Escape cancels; ← and → under a column move it to the previous or next CRA column. Red cells are errors, amber cells are warnings.</p>
+        <p id="editor-help" class="ed-legend"><span class="badge badge-mandatory">Mandatory</span> CRA columns need a column of your file; <span class="badge badge-optional">Optional</span> ones can stay empty. Keys: arrows or Tab move between cells, Enter or F2 edits, Enter saves, Escape cancels; ← and → beside a column's name move it to the previous or next CRA column (the CRA column it lands on is outlined while you point at or focus the arrow), and “Leave out” moves it to Ignored columns. Red cells are errors, amber cells are warnings.</p>
         <div id="editor-msgs" class="sr-only"></div>
         <div id="editor-errors" class="errors-box hidden" role="alert"></div>
         <div class="btn-row">
@@ -197,23 +198,23 @@
           <div class="form-row">
             <div class="form-group">
               <label for="tx-bn">Transmitter CRA account number *</label>
-              <input type="text" id="tx-bn" class="form-control mono" placeholder="123456789RP0001" maxlength="15">
+              <input type="text" id="tx-bn" class="form-control mono" placeholder="123456789RP0001" maxlength="15" autocomplete="off">
               <span class="field-hint">The account you sign in to IFT with: a 15-character BN (e.g. 123456789RP0001), a 9-digit BN (My Business Account only), a trust account (T12345678) or a non-resident account (NRA123456). Signing in with Represent a Client? Enter your RepID below; this is then optional.</span>
             </div>
             <div class="form-group">
               <label for="tx-name">Transmitter Name *</label>
-              <input type="text" id="tx-name" class="form-control" placeholder="Your Organization Name" maxlength="35" required>
+              <input type="text" id="tx-name" name="f-tx-n" autocomplete="off" class="form-control" placeholder="Your Organization Name" maxlength="35" required>
             </div>
           </div>
           <div class="form-group">
             <label for="tx-repid">RepID (Represent a Client only)</label>
-            <input type="text" id="tx-repid" class="form-control mono" placeholder="A1B2C3D" maxlength="7">
+            <input type="text" id="tx-repid" class="form-control mono" placeholder="A1B2C3D" maxlength="7" autocomplete="off">
             <span class="field-hint">Up to 7 letters or digits. CRA needs the account number, the RepID, or both, matching how you sign in to IFT.</span>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label for="tx-ref">Submission Reference ID *</label>
-              <input type="text" id="tx-ref" class="form-control mono" maxlength="8" required>
+              <input type="text" id="tx-ref" class="form-control mono" maxlength="8" required autocomplete="off">
               <span class="field-hint">Up to 8 letters or digits, no spaces or hyphens, new for every file you send. We suggest one from the return and today's date; change it if you like.</span>
             </div>
             <div class="form-group">
@@ -227,16 +228,16 @@
           <div class="form-row">
             <div class="form-group">
               <label for="tx-contact">Contact Name *</label>
-              <input type="text" id="tx-contact" class="form-control" placeholder="Jane Smith" maxlength="35" required>
+              <input type="text" id="tx-contact" name="f-tx-c" autocomplete="off" class="form-control" placeholder="Jane Smith" maxlength="35" required>
             </div>
             <div class="form-group">
               <label for="tx-phone">Phone *</label>
-              <input type="text" id="tx-phone" class="form-control" inputmode="tel" autocomplete="tel" placeholder="604-638-8328" required>
+              <input type="text" id="tx-phone" name="f-tx-p" autocomplete="off" class="form-control" inputmode="tel" placeholder="604-638-8328" required>
             </div>
           </div>
           <div class="form-group">
             <label for="tx-email">Email *</label>
-            <input type="email" id="tx-email" class="form-control" autocomplete="email" placeholder="contact@example.com" maxlength="60" required>
+            <input type="text" inputmode="email" id="tx-email" name="f-tx-e" autocomplete="off" class="form-control" placeholder="contact@example.com" maxlength="60" required>
           </div>
         </div>
 
@@ -250,28 +251,28 @@
           <div class="form-row">
             <div class="form-group" id="py-bn-group">
               <label for="py-bn">Account Number (15 chars) *</label>
-              <input type="text" id="py-bn" class="form-control mono" placeholder="123456789RP0001" maxlength="15" required>
+              <input type="text" id="py-bn" class="form-control mono" placeholder="123456789RP0001" maxlength="15" required autocomplete="off">
               <span class="field-hint">The 15-character Business Number. T4 and T1204 use RP; T5018 uses RZ.</span>
             </div>
             <div class="form-group">
               <label for="py-name">Organization Name *</label>
-              <input type="text" id="py-name" class="form-control" placeholder="Employer or Department Name" maxlength="30" required>
+              <input type="text" id="py-name" name="f-py-n" autocomplete="off" class="form-control" placeholder="Employer or Department Name" maxlength="30" required>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label for="py-addr">Address</label>
-              <input type="text" id="py-addr" class="form-control" placeholder="123 Main Street" maxlength="30">
+              <input type="text" id="py-addr" name="f-py-a" autocomplete="off" class="form-control" placeholder="123 Main Street" maxlength="30">
             </div>
             <div class="form-group">
               <label for="py-city">City</label>
-              <input type="text" id="py-city" class="form-control" placeholder="Ottawa" maxlength="28">
+              <input type="text" id="py-city" name="f-py-ci" autocomplete="off" class="form-control" placeholder="Ottawa" maxlength="28">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label for="py-prov">Province</label>
-              <select id="py-prov" class="form-control">
+              <select id="py-prov" name="f-py-pr" autocomplete="off" class="form-control">
                 <option value="">Select...</option>
                 <option value="AB">Alberta</option>
                 <option value="BC">British Columbia</option>
@@ -290,17 +291,17 @@
             </div>
             <div class="form-group">
               <label for="py-postal">Postal Code</label>
-              <input type="text" id="py-postal" class="form-control mono" placeholder="K1A 0B1" maxlength="10">
+              <input type="text" id="py-postal" name="f-py-pc" autocomplete="off" class="form-control mono" placeholder="K1A 0B1" maxlength="10">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label for="py-contact">Contact Name *</label>
-              <input type="text" id="py-contact" class="form-control" placeholder="Jane Smith" maxlength="22" required>
+              <input type="text" id="py-contact" name="f-py-c" autocomplete="off" class="form-control" placeholder="Jane Smith" maxlength="22" required>
             </div>
             <div class="form-group">
               <label for="py-phone">Phone *</label>
-              <input type="text" id="py-phone" class="form-control" inputmode="tel" autocomplete="tel" placeholder="604-638-8328" required>
+              <input type="text" id="py-phone" name="f-py-p" autocomplete="off" class="form-control" inputmode="tel" placeholder="604-638-8328" required>
             </div>
           </div>
 
@@ -349,7 +350,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="nr4-acct">Non-Resident Account Number *</label>
-                <input type="text" id="nr4-acct" class="form-control mono" placeholder="NRA123456" maxlength="9">
+                <input type="text" id="nr4-acct" class="form-control mono" placeholder="NRA123456" maxlength="9" autocomplete="off">
                 <span class="field-hint">Your CRA non-resident (NR) account: 3 letters + 6 digits. Used on the summary and every slip.</span>
               </div>
             </div>
