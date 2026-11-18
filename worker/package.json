@@ -1,0 +1,5 @@
+{
+  "name": "taxxml-report-worker",
+  "private": true,
+  "type": "module"
+}
