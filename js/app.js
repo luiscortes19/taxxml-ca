@@ -635,7 +635,10 @@ function slotChip(c, f) {
     `${toButton(c, 'ignore', 'Leave out', `Leave out ${who(c)}`)}${full}</span></span></span>`;
 }
 
-// The "⋯" menu of column c opens (null: all close). One open at a time.
+// The "⋯" menu of column c opens (null: all close). One open at a time. It opens in #editor-menu, outside the
+// table's scroll box (which would clip it), position: fixed under its button, above it when there's no room below;
+// it holds a copy of the chip's own buttons (shown inline on touch screens)
+const edMenu = document.getElementById('editor-menu');
 function toggleColumnMenu(c) {
   menuCol = c === null || menuCol === c ? null : c;
   document.querySelectorAll('#editor-thead .ed-menu').forEach(m => {
@@ -643,15 +646,42 @@ function toggleColumnMenu(c) {
     m.classList.toggle('is-open', open);
     m.querySelector('[data-menu-btn]')?.setAttribute('aria-expanded', String(open));
   });
+  const btn = menuCol !== null && document.querySelector(`#editor-thead [data-menu-btn="${menuCol}"]`);
+  edMenu.hidden = !btn;
+  if (!btn) return;
+  edMenu.innerHTML = btn.nextElementSibling.innerHTML;
+  const b = btn.getBoundingClientRect(), h = edMenu.offsetHeight;
+  edMenu.style.top = `${b.bottom + 2 + h > window.innerHeight ? Math.max(4, b.top - 2 - h) : b.bottom + 2}px`;
+  edMenu.style.left = `${Math.max(4, b.right - edMenu.offsetWidth)}px`;
+  edMenu.querySelector('button:not(:disabled)')?.focus();
 }
+
+// Closes the "⋯" menu; focus goes back to its ⋯ when it was in the menu (or on Escape)
+function closeColumnMenu(e) {
+  if (menuCol === null) return;
+  const c = menuCol, back = e?.type === 'keydown' || edMenu.contains(document.activeElement);
+  toggleColumnMenu(null);
+  if (back) document.querySelector(`#editor-thead [data-menu-btn="${c}"]`)?.focus({ preventScroll: true });
+}
+// it doesn't follow its button: any scroll (page or table box, not the menu's own) and resize close it
+window.addEventListener('scroll', e => { if (!edMenu.contains(e.target)) closeColumnMenu(); }, true);
+window.addEventListener('resize', () => closeColumnMenu());
+
+// The page scrolls too (mouse wheel beside the table, or past the end of its box). The header is sticky in the
+// table's box only, so when the box's top goes under the fixed site header, the header moves down by that much and
+// stays just under it, until the box's bottom
+function pinHead() {
+  const wrap = document.querySelector('.ed-wrap'), head = document.getElementById('editor-thead');
+  if (!wrap) return;
+  const under = document.getElementById('site-header').getBoundingClientRect().bottom - wrap.getBoundingClientRect().top;
+  head.style.top = `${Math.max(0, Math.min(under, wrap.clientHeight - head.offsetHeight))}px`;
+}
+window.addEventListener('scroll', pinHead, { passive: true });
+window.addEventListener('resize', pinHead);
 
 // Escape or a click elsewhere closes the "⋯" menu, the Ignored "Use column" menus and the help popover
 function closeMenus(e) {
-  if (menuCol !== null && !(e.type === 'click' && e.target.closest?.('.ed-menu'))) {
-    const c = menuCol;
-    toggleColumnMenu(null);
-    if (e.type === 'keydown') document.querySelector(`#editor-thead [data-menu-btn="${c}"]`)?.focus();
-  }
+  if (!(e.type === 'click' && e.target.closest?.('.ed-menu, #editor-menu'))) closeColumnMenu(e);
   document.querySelectorAll('details.ed-place[open], details.ed-help[open]').forEach(d => {
     if (e.type === 'click' && d.contains(e.target)) return;
     d.open = false;
@@ -695,8 +725,9 @@ function renderEditorHead() {
     const cls = c >= 0 ? 'is-filled' : f.required ? 'is-empty is-missing' : 'is-empty';
     return `<th scope="col" class="ed-slot ${cls}${collapsed(f)}" data-slot="${f.key}">${body}</th>`;
   }).join('');
-  if (menuCol !== null && !fields.some(f => columnMap[f.key] === menuCol)) menuCol = null;
   document.getElementById('editor-thead').innerHTML = `<tr><th scope="col" class="ed-rownum" rowspan="2">Row</th>${cra}</tr><tr>${slots}</tr>`;
+  closeColumnMenu(); // its button was just replaced (e.g. after one of its actions)
+  pinHead();
   document.getElementById('editor-empty-count').textContent = String(fields.filter(isEmptyOptional).length);
   showLanding(null); // the marked cells were just replaced
 }
@@ -831,7 +862,7 @@ document.addEventListener('keydown', e => {
 const dropTarget = e =>e.target.closest && (e.target.closest('[data-slot]') || e.target.closest('[data-drop]'));
 const moveButton = e => e.target.closest && (e.target.closest('[data-move]') || e.target.closest('[data-to]'));
 const buttonTarget = btn => (btn.dataset.move ? moveTarget(+btn.dataset.col, +btn.dataset.move) : btn.dataset.to);
-for (const el of [document.getElementById('editor-thead'), document.getElementById('editor-ignored')]) {
+for (const el of [document.getElementById('editor-thead'), document.getElementById('editor-ignored'), edMenu]) {
   el.addEventListener('click', e => {
     const menuBtn = e.target.closest && e.target.closest('[data-menu-btn]');
     if (menuBtn) { toggleColumnMenu(+menuBtn.dataset.menuBtn); return; }

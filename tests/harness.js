@@ -40,11 +40,15 @@ function makeElement(id) {
     append: () => {},
     remove: () => {},
     closest: () => makeElement(),
+    contains: () => false,
     querySelector: () => null,
     querySelectorAll: () => [],
     setAttribute: (k, v) => { el[`attr:${k}`] = String(v); },
     removeAttribute: k => { delete el[`attr:${k}`]; },
     scrollIntoView: () => {},
+    getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }),
+    offsetWidth: 0, offsetHeight: 0,
+    get nextElementSibling() { return makeElement(); },
     focus: () => {},
     click: () => { (listeners.click || []).forEach(fn => fn({ target: el })); el.onclickCalled = (el.onclickCalled || 0) + 1; },
   };
@@ -84,7 +88,8 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
     Event: class Event { constructor(type) { this.type = type; } },
   };
   ctx.window = ctx;
-  ctx.addEventListener = () => {};
+  const winListeners = {}; // window listeners (scroll, resize): tests fire them with winEvent
+  ctx.addEventListener = (type, fn) => { (winListeners[type] = winListeners[type] || []).push(fn); };
   if (gtag) ctx.gtag = gtag;
   vm.createContext(ctx);
   if (now) vm.runInContext(`Date = class extends Date { constructor(...a) { super(...(a.length ? a : [${+new Date(now)}])); } static now() { return ${+new Date(now)}; } };`, ctx);
@@ -98,6 +103,7 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
   return {
     ctx, els, created, run, store, el: getEl, heroPicks,
     docEvent: e => (docListeners[e.type] || []).forEach(fn => fn(e)),
+    winEvent: e => (winListeners[e.type] || []).forEach(fn => fn(e)),
     loadFile(name, bytes) { run('handleFile')({ name, bytes: new Uint8Array(bytes) }); },
     setDetails(overrides = {}) {
       const perReturn = returnType === 'T5018' ? { 'py-bn': '987654321RZ0001' } : {}; // T5018 payer is the RZ program

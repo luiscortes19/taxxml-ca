@@ -53,7 +53,7 @@ const T4 = [['Last Name', 'First Name', 'Box 14 - Employment Income', 'Notes'], 
     assert(!/Leave out|Use as full name/.test(outside), `${f}: no Leave out / full name outside the menu: ${outside}`);
     // the CRA label: one line of text, red * + "Mandatory" text (kept for screen readers), long name in its title
     const cra = slotCell(head, f, 'cra')[1];
-    assert(/<span class="ed-cra-label" title="[^"]+">/.test(cra), `${f}: label title: ${cra}`);
+    assert(/<span class="ed-cra-label" title="[^"]+"[^>]*>/.test(cra), `${f}: label title: ${cra}`);
   }
 }
 
@@ -113,7 +113,7 @@ const T4 = [['Last Name', 'First Name', 'Box 14 - Employment Income', 'Notes'], 
   a.docEvent({ type: 'click', target: { closest: () => null } });
   assert.strictEqual(a.run('menuCol'), null, 'a click outside closes');
   open(1);
-  a.docEvent({ type: 'click', target: { closest: s => (s === '.ed-menu' ? {} : null) } });
+  a.docEvent({ type: 'click', target: { closest: s => (s === '.ed-menu, #editor-menu' ? {} : null) } });
   assert.strictEqual(a.run('menuCol'), 1, 'a click inside the menu does not');
   a.el('editor-thead').dispatchEvent({ type: 'click', target: target('[data-to]', { to: 'ignore', col: '1' }) });
   assert.strictEqual(a.field(1), 'ignore');
