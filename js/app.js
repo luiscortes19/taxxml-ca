@@ -605,10 +605,10 @@ function cellText(r, f) {
   return m && !m.error && m.value !== null ? formatMoney(m.value) : String(raw);
 }
 
-// A source column's drag handle and name
+// A source column's drag handle and name; its spreadsheet letter only in the tooltip
 function chipName(c) {
   const name = escapeXml(headers[c] || '(no header)');
-  return `<span class="ed-chip-name" title="${name}"><span class="ed-grip" aria-hidden="true">⠿</span> ${colLetter(c)} · ${name}</span>`;
+  return `<span class="ed-chip-name" title="Column ${colLetter(c)}: ${name}"><span class="ed-grip" aria-hidden="true">⠿</span> ${name}</span>`;
 }
 const who = c => `column ${colLetter(c)} (${escapeXml(headers[c] || 'no header')})`;
 const toButton = (c, to, text, label) => `<button type="button" class="ed-act" data-to="${to}" data-col="${c}" aria-label="${label}">${text}</button>`;
@@ -627,7 +627,7 @@ function slotChip(c, f) {
     : ['empe_snm', 'empe_gvn_nm'].includes(f) ? toButton(c, 'full_name', 'Use as full name', `Use as full name: ${who(c)} fills Last Name and First Name`)
     : '';
   return `<span class="ed-chip" draggable="true" data-drag="${c}" tabindex="0" role="group" ` +
-    `aria-label="${who(c)}. Drag it, or press Alt+Left or Alt+Right to move it, Delete to leave it out">` +
+    `aria-label="Column ${colLetter(c)}, ${escapeXml(headers[c] || 'no header')}. Drag it, or press Alt+Left or Alt+Right to move it, Delete to leave it out">` +
     `${move(-1, 'ed-arrow', '←', 'previous')}${chipName(c)}${move(1, 'ed-arrow', '→', 'next')}` +
     `<span class="ed-menu${menuCol === c ? ' is-open' : ''}"><button type="button" class="ed-menu-btn" data-menu-btn="${c}" aria-expanded="${menuCol === c}" ` +
     `aria-label="Column menu: ${who(c)}">⋯</button><span class="ed-menu-list">` +
@@ -698,7 +698,7 @@ function ignoredChip(c) {
   const list = empty.length ? [...empty.filter(f => f.required), ...empty.filter(f => !f.required)] : fields;
   const items = list.map(f => `<li><button type="button" data-to="${f.key}" data-col="${c}">${escapeXml(f.label)}` +
     (f.required ? ' <span class="badge badge-mandatory">Mandatory</span>' : '') +
-    (columnMap[f.key] >= 0 ? ` (replaces column ${colLetter(columnMap[f.key])})` : '') + '</button></li>');
+    (columnMap[f.key] >= 0 ? ` (replaces ${escapeXml(headers[columnMap[f.key]] || 'no header')})` : '') + '</button></li>');
   if (getSelectedReturnType() === 'T4') items.push(`<li><button type="button" data-to="full_name" data-col="${c}">Full name (Last Name and First Name)</button></li>`);
   return `<li class="ed-chip" draggable="true" data-drag="${c}">${chipName(c)}<details class="ed-place">` +
     `<summary data-col="${c}" aria-label="Use ${who(c)}: pick a CRA column">Use column</summary><ul>${items.join('')}</ul></details></li>`;

@@ -300,8 +300,8 @@ select.form-control { cursor: pointer; }
 .ed-chip:active { cursor: grabbing; }
 .ed-chip:focus-visible { outline: 2px solid var(--pen); outline-offset: 1px; }
 .ed-grip { color: var(--ink-3); user-select: none; }
-/* Long names wrap between words, never inside one; a single word too long for 10rem is cut with an ellipsis */
-.ed-chip-name { font-weight: 600; color: var(--ink); white-space: normal; word-break: normal; overflow: hidden; text-overflow: ellipsis; max-width: 10rem; }
+/* Long names wrap between words, never inside one, and are never cut (no ellipsis) */
+.ed-chip-name { font-weight: 600; color: var(--ink); white-space: normal; word-break: normal; max-width: 10rem; }
 /* "Use column": a native <details> menu of the CRA columns an ignored column can go to */
 .ed-place { position: relative; }
 .ed-place summary {
