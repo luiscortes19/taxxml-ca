@@ -193,14 +193,15 @@ const csv = s => Buffer.from(s);
   app.generate();                                      // row_data failure
   app.run('parsedData[0][2] = "046454286"; parsedData[1][2] = "130692544"');
   assert(app.generate());                              // passed
-  app.run('downloadXML(); clearFilingDetails(); goToStep(1); resetAll()');
-  app.heroPicks[0].click();
-  app.el('return-type').dispatchEvent(new app.ctx.Event('change'));
   // crashes with personal data in the error: app_error carries only error_kind + return_type
   app.ctx.XLSX = { read: () => { throw new Error('corrupt secret-payroll.csv: Jane Doe 046454286 54321.99'); } };
   app.loadFile('secret-payroll.csv', csv('x'));
   app.run('getReturnConfig().generateXML = () => { throw new Error("Test Payer 987654321 jane@example.com"); }');
   app.generate();
+  app.ctx.XLSX = require('xlsx');
+  app.run('downloadXML(); clearFilingDetails(); goToStep(1); resetAll()');
+  app.heroPicks[0].click();
+  app.el('return-type').dispatchEvent(new app.ctx.Event('change'));
   const names = new Set(events.map(e => e[0]));
   for (const n of ['return_selected', 'file_opened', 'file_parse_error', 'step_reached', 'validation_failed', 'validation_passed', 'xml_downloaded', 'start_fresh',
                    'picker_opened', 'generate_clicked', 'app_error'])

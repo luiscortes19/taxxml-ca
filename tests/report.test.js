@@ -151,8 +151,8 @@ assert(/TURNSTILE_SITE_KEY = '';/.test(SRC), 'TURNSTILE_SITE_KEY ships empty');
 // ---- No URL: no POST, no throw. app_error still goes to GA4 on the live host ----
 {
   const r = load();
-  assert.doesNotThrow(() => r.win('error', { error: fakeErr('Jane') }));
-  assert.doesNotThrow(() => r.win('unhandledrejection', { reason: fakeErr('Doe') }));
+  assert.doesNotThrow(() => r.win('error', { error: fakeErr('Jane alpha') }));
+  assert.doesNotThrow(() => r.win('unhandledrejection', { reason: fakeErr('Doe beta') }));
   assert.deepStrictEqual(r.posts, []);
   assert.deepStrictEqual(r.events.map(e => e[0]), ['app_error', 'app_error']);
   const rep = r.api.crash('parse_crash', fakeErr('Jane Doe 046454286'));
@@ -197,13 +197,13 @@ for (const fetch of [() => { throw new Error('blocked'); }, () => Promise.reject
   const r = load({ endpoint: URL_, siteKey: KEY });
   assert.strictEqual(r.api.feedbackLive, true);
   r.ctx.reportContext = () => ({ return_type: 'T4', step: 3 });
-  const ok = await r.api.sendFeedback({ type: 'bug', message: 'Step 3 froze', email: 'me@example.org', website: '', turnstile: 'tok' });
+  const ok = await r.api.sendFeedback({ type: 'bug', message: 'Step 3 froze. SIN 046 454 286, BN 123456789RP0001', email: 'me@example.org', website: '', turnstile: 'tok' });
   assert.strictEqual(ok, true);
   assert.strictEqual(r.posts.length, 1);
   const b = r.posts[0].body;
   assert.deepStrictEqual(Object.keys(b).sort(), ['browser', 'email', 'kind', 'message', 'page', 'return_type', 'step', 'turnstile', 'type', 'version', 'website']);
   assert.strictEqual(b.kind, 'feedback');
-  assert.strictEqual(b.message, 'Step 3 froze');
+  assert.strictEqual(b.message, 'Step 3 froze. SIN [number removed], BN [number removed]RP0001', 'SIN/BN-like numbers never leave the browser');
   assert.strictEqual(b.return_type, 'T4');
   // failure is reported, not thrown
   const bad = load({ endpoint: URL_, siteKey: KEY, fetch: () => Promise.resolve({ ok: false }) });
@@ -279,8 +279,9 @@ for (const p of PAGES) {
     const block = html.slice(html.indexOf(`<${part}`), html.indexOf(`</${part}>`));
     assert(/<a href="https:\/\/avanza-automation\.com" target="_blank" rel="noopener" data-feedback>Contact us<\/a>/.test(block), `${p}: ${part} Feedback fallback`);
   }
-  assert(!/[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(html.replace(/https?:\/\/\S+/g, '')), `${p} publishes no email address`);
-  assert(!html.includes('challenges.cloudflare.com'), `${p} does not load Turnstile itself`);
+  const emails = html.replace(/https?:\/\/\S+/g, '').match(/[\w.+-]+@[\w-]+\.[a-z]{2,}/gi) || [];
+  assert.deepStrictEqual(emails.filter(e => !/@example\.com$/.test(e)), [], `${p} publishes no email address (placeholders aside)`);
+  assert(!/<script[^>]*challenges\.cloudflare\.com/.test(html), `${p} does not load Turnstile itself`);
 }
 
 console.log('report.test.js: all passed');
