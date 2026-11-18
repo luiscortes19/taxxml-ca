@@ -187,6 +187,20 @@ const csv = s => Buffer.from(s);
   // custom headers carry a fake name + SIN too: the SIN column's own header, and an unmapped free-text column
   app.loadFile('secret-payroll.csv', csv('Last Name,First Name,SIN Jane Doe 046454286,Box 14 - Employment Income,Jane Doe 046454286 notes\r\n' +
                                          'Doe,John,46454286,54321.99,Jane Doe 046454286\r\nRoe,Jane,123456789,777.10,Jane Doe\r\n'));
+  // Step 2 table events, with red cells whose tip text holds the names, SINs and the custom header
+  const tdAt = (r, f) => ({ dataset: { r: String(r), f }, getBoundingClientRect: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) });
+  assert(/Jane Doe 046454286|46454286/.test(app.run('cellState(0, "sin").msg')), 'the tip text does hold personal data');
+  app.run('toggleColumnMenu(4)');
+  const help = app.ctx.document.querySelector('details.ed-help');
+  help.open = true; help.dispatchEvent(new app.ctx.Event('toggle'));
+  app.run('showTip')(tdAt(0, 'sin'));
+  const wrap = app.ctx.document.querySelector('.ed-wrap');
+  wrap.scrollLeft = 80; wrap.dispatchEvent(new app.ctx.Event('scroll'));
+  app.run('editCell(0, 4, "Jane Doe 046454286 54321.99"); pasteCells(1, "empt_incamt", "777.10")');
+  app.run('remapColumn(2, "ignore", "button"); continueFromEditor()');   // Continue blocked: SIN has no column
+  app.run('remapColumn(2, "sin", "drag"); goToStep(1); goToStep(2)');    // back, then a new visit
+  app.winEvent({ type: 'pagehide' });
+  app.run('continueFromEditor()');
   app.setDetails({ 'tx-email': 'jane@example' });
   app.generate();                                      // filing_details failure
   app.setDetails();
@@ -199,19 +213,28 @@ const csv = s => Buffer.from(s);
   app.run('getReturnConfig().generateXML = () => { throw new Error("Test Payer 987654321 jane@example.com"); }');
   app.generate();
   app.ctx.XLSX = require('xlsx');
-  app.run('downloadXML(); clearFilingDetails(); goToStep(1); resetAll()');
+  app.run('goToStep(2); deleteRow(0); undoDelete(); deleteRow(1)');
+  app.run('downloadXML(); clearFilingDetails(); resetAll()');
   app.heroPicks[0].click();
   app.el('return-type').dispatchEvent(new app.ctx.Event('change'));
   const names = new Set(events.map(e => e[0]));
   for (const n of ['return_selected', 'file_opened', 'file_parse_error', 'step_reached', 'validation_failed', 'validation_passed', 'xml_downloaded', 'start_fresh',
-                   'picker_opened', 'generate_clicked', 'app_error'])
+                   'picker_opened', 'generate_clicked', 'app_error', 'column_remapped', 'cell_edited',
+                   'table_shown', 'table_error_state', 'table_exited', 'row_deleted', 'table_menu_opened', 'table_help_opened', 'table_hscroll'])
     assert(names.has(n), `expected ${n} in ${[...names]}`);
   const ALLOWED = { return_type: /^(T4|T1204|T5018|NR4)$/, source: /^(default|hero|dropdown|landing)$/, step: /^[1-4]$/, error_count: /^\d+$/,
                     error_category: /^(filing_details|row_data|unsupported_type|no_data_rows|read_error)$/,
                     first_error_field: /^[a-z0-9_-]+$/, direction: /^(forward|back|reset)$/,
                     error_kind: /^(js_error|xml_generate_failed|parse_crash)$/,
-                    is_sample: /^(true|false)$/, rows_bucket: /^(1|2-5|6-20|21-100|100\+)$/, required_unmapped: /^\d$/ };
-  for (const [, params] of events) for (const k of ['is_sample', 'required_unmapped', 'step']) if (k in params) assert.notStrictEqual(typeof params[k], 'string', k);
+                    is_sample: /^(true|false)$/, rows_bucket: /^(0|1|2-5|6-20|21-100|100\+)$/, required_unmapped: /^\d$/,
+                    field: /^[a-z0-9_-]+$/, method: /^(button|drag|keyboard)$/,
+                    cols_bucket: /^(1-8|9-16|17-24|25\+)$/, error_cells: /^\d+$/, warning_cells: /^\d+$/, error_cells_bucket: /^(0|1-2|3-10|11\+)$/,
+                    error_field_list: /^([a-z0-9_]+(,[a-z0-9_]+)*)?$/, error_by_field: /^([a-z0-9_]+:\d+(,[a-z0-9_]+:\d+)*)?$/,
+                    trigger: /^(continue|generate)$/, exit_reason: /^(continue|back|reset|pagehide)$/, transport_type: /^beacon$/,
+                    step2_seconds_bucket: /^(0-10|11-30|31-60|61-180|181\+)$/, step2_seconds: /^\d+$/,
+                    remaps_count: /^\d+$/, edits_count: /^\d+$/, deletes_count: /^\d+$/, help_kind: /^(keyboard|cell_tip)$/ };
+  const INTS = ['required_unmapped', 'step', 'error_cells', 'warning_cells', 'step2_seconds', 'remaps_count', 'edits_count', 'deletes_count'];
+  for (const [, params] of events) for (const k of ['is_sample', ...INTS]) if (k in params) assert.notStrictEqual(typeof params[k], 'string', k);
   for (const [name, params] of events) {
     for (const [k, v] of Object.entries(params || {})) {
       assert(ALLOWED[k], `${name}: unexpected param ${k}`);
@@ -222,6 +245,13 @@ const csv = s => Buffer.from(s);
   const allow = app.run('analyticsFieldAllowlist()');
   assert.deepStrictEqual(events.filter(e => e[0] === 'validation_failed').map(e => e[1].first_error_field), ['tx-email', 'sin']);
   for (const [, p] of events) if ('first_error_field' in p) assert(p.first_error_field === 'other' || allow.has(p.first_error_field));
+  // the per-field lists hold only our own column keys
+  const listed = events.flatMap(([, p]) => [...(p.error_field_list ? p.error_field_list.split(',') : []),
+                                            ...(p.error_by_field ? p.error_by_field.split(',').map(x => x.split(':')[0]) : [])]);
+  assert(listed.includes('sin'), listed.join());
+  for (const k of listed) assert(k === 'other' || allow.has(k), k);
+  const exits = events.filter(e => e[0] === 'table_exited').map(e => e[1].exit_reason);
+  assert.deepStrictEqual(exits, ['back', 'pagehide', 'reset']);
 }
 { // allowlist: known column keys + Step 3 ids pass through; anything else (custom header, free text, cell value) -> 'other'
   const { app } = funnel('T4');

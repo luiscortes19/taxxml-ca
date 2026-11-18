@@ -184,7 +184,9 @@ const shown = (a, id) => !a.el(id).classList.contains('hidden');
     a.run(`chooseIntent('for_client'); addReminder()`);
     const ALLOWED = { return_type: /^(T4|T1204|T5018|NR4)$/, page: /^(home|landing)$/, is_sample: /^(true|false)$/, source: /^default$/,
                       rows_bucket: /^2-5$/, required_unmapped: /^0$/, direction: /^(forward|back|reset)$/,
-                      intent: /^(filing_now|exploring_format|for_client)$/, step: /^[1-4]$/ };
+                      intent: /^(filing_now|exploring_format|for_client)$/, step: /^[1-4]$/,
+                      // table_shown: the sample's table, clean
+                      cols_bucket: /^1-8$/, error_cells: /^0$/, warning_cells: /^\d+$/, error_cells_bucket: /^0$/, error_field_list: /^$/, error_by_field: /^$/ };
     for (const [name, params] of a.events) for (const [k, v] of Object.entries(params)) {
       assert(ALLOWED[k], `${name}: unexpected param ${k}`);
       assert(ALLOWED[k].test(String(v)), `${name}.${k} = ${v}`);

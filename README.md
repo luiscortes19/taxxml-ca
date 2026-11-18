@@ -67,6 +67,7 @@ Every page loads Google Analytics through `js/ga.js` (property `G-E2F5Q3RZVH`). 
 
 - **Local copies never send anything.** On `localhost`, `127.0.0.1`, `::1` or `file://`, gtag.js isn't loaded and `track()` does nothing.
 - **Mark your own browser as internal:** open any page once with `?internal=1` (for example `https://taxxml.ca/?internal=1`). GA still loads, but every hit from this browser carries `traffic_type=internal`. GA4's *Internal Traffic* data filter drops those hits once the filter is Active. Do this once on each browser or device you use. To undo it, open any page with `?internal=0`. The flag is the `taxxml_internal` key in localStorage, so clearing site data also removes it.
+- **Step 2 table events:** `table_shown`, `table_error_state` (Continue or Generate blocked by the table), `table_exited` (continue / back / reset / pagehide, with time on the table and remap / edit / delete counts), `row_deleted`, `table_menu_opened`, `table_help_opened` (keyboard help or a red / amber cell's tip) and `table_hscroll`. They send counts, ranges and our own column keys (`sin`, `empt_incamt`, ... or `other`), never a cell, header or message. `tests/table-analytics.test.js` covers them.
 - **See events live:** add `?debug_mode=1` (for example `/?internal=1&debug_mode=1`), then open GA4 Admin > DebugView. It applies to that page load only.
 
 ## CRA Resources
