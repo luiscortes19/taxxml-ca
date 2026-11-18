@@ -21,7 +21,9 @@ for (const page of ['terms.html', 'privacy.html']) {
   for (const e of events) assert(privacy.includes(`<code>${e}</code>`), `privacy.html names event ${e}`);
   // ...and every event parameter, by name
   for (const p of ['return_type', 'source', 'step', 'direction', 'error_count', 'error_category', 'first_error_field',
-                   'is_sample', 'rows_bucket', 'required_unmapped', 'page', 'cta', 'traffic_type', 'debug_mode', 'field', 'method', 'error_kind'])
+                   'is_sample', 'rows_bucket', 'required_unmapped', 'page', 'cta', 'traffic_type', 'debug_mode', 'field', 'method', 'error_kind',
+                   'cols_bucket', 'error_cells', 'warning_cells', 'error_cells_bucket', 'error_field_list', 'error_by_field', 'trigger',
+                   'exit_reason', 'transport_type', 'step2_seconds_bucket', 'step2_seconds', 'remaps_count', 'edits_count', 'deletes_count', 'help_kind'])
     assert(privacy.includes(`<code>${p}</code>`), `privacy.html names parameter ${p}`);
 }
 
@@ -29,7 +31,7 @@ for (const page of ['terms.html', 'privacy.html']) {
 {
   const privacy = fs.readFileSync(path.join(ROOT, 'privacy.html'), 'utf8');
   const text = privacy.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ');
-  assert(text.includes('Last updated: 17 November 2026'), 'privacy.html date bumped');
+  assert(text.includes('Last updated: 18 November 2026'), 'privacy.html date bumped');
   for (const k of ['js_error', 'xml_generate_failed', 'parse_crash']) assert(privacy.includes(`<code>${k}</code>`), `privacy.html names error_kind ${k}`);
   for (const re of [/Feedback form/, /feedback and error reports/i, /Cloudflare Worker/, /United States/, /Slack/, /Resend/, /Cloudflare Turnstile/,
                     /only the message and optional email you type/i,

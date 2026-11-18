@@ -10,6 +10,7 @@ let headers = [];
 let xmlOutput = '';
 let currentStep = 1;
 let columnMap = {};
+let step2Visit = null; // GA4: the current visit to the Step 2 table { start, remaps, edits, deletes, tips, hscroll }, null when off it
 
 // ============================================================
 // RETURN TYPE REGISTRY
@@ -124,7 +125,8 @@ const NR4_RCPNT_TYPE_MAP = { 'individual': '1', 'joint account': '2', 'joint': '
 // ============================================================
 // STEP NAVIGATION
 // ============================================================
-function goToStep(step, direction) {
+// showTable false: the caller sends table_shown itself (a new file: after file_opened)
+function goToStep(step, direction, showTable = true) {
   document.querySelectorAll('.wizard-step').forEach(el => el.classList.add('hidden'));
   document.getElementById(`step-${step}`).classList.remove('hidden');
 
@@ -135,12 +137,16 @@ function goToStep(step, direction) {
     else if (s < step) el.classList.add('done');
   });
 
+  if (currentStep === 2 && step !== 2) tableExited(step === 1 ? 'back' : 'continue');
   if (step !== currentStep) track('step_reached', { step, direction: direction || (step > currentStep ? 'forward' : 'back') });
+  const entered = step === 2 && currentStep !== 2;
   currentStep = step;
+  if (entered && showTable) tableShown();
   document.getElementById('converter').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function resetAll() {
+  tableExited('reset'); // before the file is cleared, so it reports the table being left
   parsedData = [];
   headers = [];
   xmlOutput = '';
@@ -299,12 +305,11 @@ function openWorkbook(buffer, name, ext, isSample) {
 
       autoMapColumns();
       openEditor();
-      goToStep(2);
+      goToStep(2, undefined, false);
       if (!returnChosen) { returnChosen = true; track('return_selected', { return_type: getSelectedReturnType(), source: 'default' }); }
-      const n = parsedData.length;
       track('file_opened', { return_type: getSelectedReturnType(), is_sample: isSampleFile(),
-        rows_bucket: n === 1 ? '1' : n <= 5 ? '2-5' : n <= 20 ? '6-20' : n <= 100 ? '21-100' : '100+',
-        required_unmapped: unmappedRequired().length });
+        rows_bucket: rowsBucket(parsedData.length), required_unmapped: unmappedRequired().length });
+      tableShown();
     } catch (err) {
       // err.message can hold the file name or a cell value: never shown, only the scrubbed report leaves
       showFileError("We couldn't read this file. Check that it is a valid Excel (.xlsx, .xls) or CSV file, then try again.", 'read_error');
@@ -416,6 +421,7 @@ function remapColumn(c, field, method) {
   if (field === 'full_name') columnMap.empe_snm = columnMap.empe_gvn_nm = c;
   else if (field !== 'ignore') columnMap[field] = c;
   track('column_remapped', { return_type: getSelectedReturnType(), field, method });
+  tableCount('remaps');
   refreshEditor();
 }
 
@@ -427,6 +433,7 @@ function swapColumns(a, b, method) {
   ka.forEach(k => { columnMap[k] = b; });
   kb.forEach(k => { columnMap[k] = a; });
   track('column_remapped', { return_type: getSelectedReturnType(), field: columnField(a), method });
+  tableCount('remaps');
   refreshEditor();
 }
 
@@ -491,6 +498,7 @@ function editCell(r, c, value) {
   if (!row || !isColumn(c) || String(row[c] ?? '') === value) return false;
   row[c] = value;
   track('cell_edited', { return_type: getSelectedReturnType(), field: columnField(c) });
+  tableCount('edits');
   revalidate();
   patchEditorRow(r); // in place, so the cell being clicked next isn't replaced under the pointer
   renderEditorStatus();
@@ -531,6 +539,8 @@ let deleted = null, toastTimer; // { r, row }
 function deleteRow(r) {
   if (!Number.isInteger(r) || r < 0 || r >= parsedData.length) return;
   deleted = { r, row: parsedData.splice(r, 1)[0] };
+  track('row_deleted', { return_type: getSelectedReturnType(), rows_bucket: rowsBucket(parsedData.length) });
+  tableCount('deletes');
   refreshEditor();
   const toast = document.getElementById('editor-toast');
   toast.innerHTML = `Row ${r + 2} deleted · <button type="button" class="ed-undo" onclick="undoDelete()">Undo</button>`;
@@ -649,6 +659,7 @@ function toggleColumnMenu(c) {
   const btn = menuCol !== null && document.querySelector(`#editor-thead [data-menu-btn="${menuCol}"]`);
   edMenu.hidden = !btn;
   if (!btn) return;
+  track('table_menu_opened', { return_type: getSelectedReturnType() });
   edMenu.innerHTML = btn.nextElementSibling.innerHTML;
   const b = btn.getBoundingClientRect(), h = edMenu.offsetHeight;
   edMenu.style.top = `${b.bottom + 2 + h > window.innerHeight ? Math.max(4, b.top - 2 - h) : b.bottom + 2}px`;
@@ -1052,6 +1063,7 @@ function pasteCells(r, f, text) {
   });
   if (!changed) return 0;
   track('cell_edited', { return_type: getSelectedReturnType(), field: columnField(first) });
+  tableCount('edits');
   revalidate();
   renderEditorBody();
   renderEditorStatus();
@@ -1094,6 +1106,10 @@ function hideTip() { edTip.hidden = true; }
 function showTip(td) {
   const s = td && !editing && cellState(+td.dataset.r, td.dataset.f);
   if (!s || !s.msg) return hideTip();
+  if (step2Visit && !step2Visit.tips.has(td.dataset.f)) { // GA4: once per field per visit, never the message
+    step2Visit.tips.add(td.dataset.f);
+    track('table_help_opened', { return_type: getSelectedReturnType(), help_kind: 'cell_tip', field: analyticsField(td.dataset.f) });
+  }
   edTip.textContent = s.msg;
   edTip.className = `ed-tip ${s.cls === 'cell-error' ? 'is-error' : 'is-warning'}`;
   const box = td.getBoundingClientRect();
@@ -1106,7 +1122,20 @@ edBody.addEventListener('mouseover', e => showTip(tipCell(e)));
 edBody.addEventListener('focusin', e => showTip(tipCell(e)));
 edBody.addEventListener('mouseout', hideTip);
 edBody.addEventListener('focusout', hideTip);
-document.querySelector('.ed-wrap')?.addEventListener('scroll', hideTip);
+const edWrap = document.querySelector('.ed-wrap');
+edWrap?.addEventListener('scroll', hideTip);
+
+// ---- GA4: help opened, sideways scroll (once per visit), page closed on Step 2 ----
+const edHelp = document.querySelector('details.ed-help');
+edHelp?.addEventListener('toggle', () => {
+  if (edHelp.open) track('table_help_opened', { return_type: getSelectedReturnType(), help_kind: 'keyboard' });
+});
+edWrap?.addEventListener('scroll', () => {
+  if (!step2Visit || step2Visit.hscroll || !(edWrap.scrollLeft > 0)) return;
+  step2Visit.hscroll = true;
+  track('table_hscroll', { return_type: getSelectedReturnType(), cols_bucket: colsBucket(headers.length) });
+});
+window.addEventListener('pagehide', () => { if (currentStep === 2) tableExited('pagehide'); });
 
 function moveFocus(e, td) {
   const rows = [...edBody.querySelectorAll('tr[data-r]')];
@@ -1512,6 +1541,7 @@ function validateRows(rt = getSelectedReturnType(), rows = parsedData, map = col
 // After a generate*XML row loop: shows the row errors (or "no valid rows") and returns null, else the Step 4 warnings
 function finishRows(issues, slipCount, noun) {
   const errors = issues.filter(x => x.severity === 'error');
+  if (errors.length) track('table_error_state', { ...tableContext(), trigger: 'generate' });
   if (errors.length || !slipCount) {
     showGenerateErrors(errors.length ? errors.map(x => x.message) : [`No valid ${noun} rows found. Please check the columns in Step 2.`],
                        errors[0]?.field, errors.length > 0);
@@ -1545,6 +1575,7 @@ function checkRequiredColumns() {
 // Row errors don't block here; Generate blocks on them.
 function continueFromEditor() {
   if (checkRequiredColumns()) goToStep(3);
+  else track('table_error_state', { ...tableContext(), trigger: 'continue' });
 }
 
 function generateXML() {
@@ -1554,6 +1585,7 @@ function generateXML() {
     const unmapped = unmappedRequired();
     if (unmapped.length) {
       clearFieldErrors();
+      track('table_error_state', { ...tableContext(), trigger: 'generate' });
       showGenerateErrors(unmapped.map(f => `No column is set to "${f.label}". Move a column under it in Step 2, or check that ${getSelectedReturnType()} is the right return for this file.`));
       return;
     }
@@ -2207,6 +2239,53 @@ function isSampleFile() {
 
 function analyticsField(field) {
   return analyticsFieldAllowlist().has(field) ? field : 'other';
+}
+
+function rowsBucket(n) {
+  return n === 0 ? '0' : n === 1 ? '1' : n <= 5 ? '2-5' : n <= 20 ? '6-20' : n <= 100 ? '21-100' : '100+';
+}
+function colsBucket(n) {
+  return n <= 8 ? '1-8' : n <= 16 ? '9-16' : n <= 24 ? '17-24' : '25+';
+}
+
+// The Step 2 table for GA4 (table_shown, table_error_state, table_exited): sizes, and problem cells counted by our
+// own column key in CRA order. Never a cell, a header or a message (the messages hold names and SINs).
+function tableContext() {
+  const issues = [...rowIssues.values()].flat();
+  const cells = list => [...new Set(list.map(x => `${x.row}|${analyticsField(x.field)}`))].map(k => k.split('|')[1]);
+  const errors = cells(issues.filter(x => x.severity === 'error'));
+  const byField = {};
+  errors.forEach(f => { byField[f] = (byField[f] || 0) + 1; });
+  const fields = [...getReturnConfig().fields.map(f => f.key), 'other'].filter(f => byField[f]);
+  const n = errors.length;
+  return {
+    return_type: getSelectedReturnType(), is_sample: parsedData.length > 0 && isSampleFile(),
+    rows_bucket: rowsBucket(parsedData.length), cols_bucket: colsBucket(headers.length), required_unmapped: unmappedRequired().length,
+    error_cells: n, warning_cells: cells(issues.filter(x => x.severity === 'warning' && placed(x))).length,
+    error_cells_bucket: n === 0 ? '0' : n <= 2 ? '1-2' : n <= 10 ? '3-10' : '11+',
+    ...(n ? { first_error_field: errors[0] } : {}),
+    error_field_list: fields.join(','), error_by_field: fields.map(f => `${f}:${byField[f]}`).join(','),
+  };
+}
+
+// A visit starts when the table shows with a file loaded: timer and counters from zero
+function tableShown() {
+  if (!headers.length) return;
+  step2Visit = { start: Date.now(), remaps: 0, edits: 0, deletes: 0, tips: new Set(), hscroll: false };
+  track('table_shown', tableContext());
+}
+const tableCount = k => { if (step2Visit) step2Visit[k]++; };
+
+// ...and ends once: reason 'continue' | 'back' | 'reset' | 'pagehide'
+function tableExited(reason) {
+  if (!step2Visit) return;
+  const { start, remaps, edits, deletes } = step2Visit;
+  step2Visit = null;
+  const s = Math.max(0, Math.floor((Date.now() - start) / 1000));
+  track('table_exited', { ...tableContext(), exit_reason: reason, step2_seconds: s,
+    step2_seconds_bucket: s <= 10 ? '0-10' : s <= 30 ? '11-30' : s <= 60 ? '31-60' : s <= 180 ? '61-180' : '181+',
+    remaps_count: remaps, edits_count: edits, deletes_count: deletes,
+    ...(reason === 'pagehide' ? { transport_type: 'beacon' } : {}) }); // the page is going: GA's beacon transport still delivers it
 }
 
 function downloadXML() {
