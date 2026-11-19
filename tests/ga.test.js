@@ -144,7 +144,7 @@ for (const [pathname, page] of [['/', 'home'], ['/index.html', 'home'], ['/t4-xm
 // ---- Every page with the Google tag loads it through js/ga.js, and nowhere else ----
 const PAGES = ['index.html', 'privacy.html', 'terms.html', 't4-xml-generator.html', 'nr4-xml-generator.html', 't5018-xml-generator.html', 't1204-xml-generator.html',
                'cra-xml-samples.html'];
-const ALLOWED_CTA = /^(nav|hero|hero_pick|bottom|footer|sample_try|sample_xml|sample_xml_download|reminder)$/;
+const ALLOWED_CTA = /^(nav|hero|hero_pick|bottom|footer|sample_try|sample_xml|sample_xml_download)$/;
 for (const p of PAGES) {
   const html = fs.readFileSync(path.join(ROOT, p), 'utf8');
   assert(/<script src="\/?js\/ga\.js"><\/script>/.test(html), `${p} loads js/ga.js`);
@@ -160,9 +160,8 @@ for (const p of PAGES) {
                            [/<a [^>]*href="\/samples\/\w+_sample\.xml"[^>]*>/g, 'sample_xml_download']])
     for (const m of html.matchAll(re)) assert(m[0].includes(`data-cta="${cta}"`), `${p}: ${m[0]} needs data-cta="${cta}"`);
 }
-{ // C's buttons: Step 1 "Try it with sample data" and the reminder (rendered by app.js)
+{ // C's button: Step 1 "Try it with sample data"
   assert(/<button [^>]*id="try-sample"[^>]*data-cta="sample_try"/.test(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')), 'try-sample tagged');
-  assert(/onclick="addReminder\(\)" data-cta="reminder"/.test(fs.readFileSync(path.join(ROOT, 'js/app.js'), 'utf8')), 'reminder tagged');
   assert.strictEqual([...fs.readFileSync(path.join(ROOT, 'cra-xml-samples.html'), 'utf8').matchAll(/data-cta="sample_xml_download"/g)].length, 4);
 }
 { // the four hero return buttons on the home page
