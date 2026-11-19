@@ -55,9 +55,16 @@ function makeElement(id) {
   return el;
 }
 
+// Sets `var NAME = '...'` in a script's source to value; throws if the line isn't there, so an override can't silently no-op.
+function setConst(src, name, value) {
+  const re = new RegExp(`(var ${name} = )'[^']*'`);
+  if (!re.test(src)) throw new Error(`setConst: var ${name} = '...' not found`);
+  return src.replace(re, (_, lhs) => lhs + JSON.stringify(value));
+}
+
 // Returns a fresh app instance: { ctx, run(code), els, loadFile(name, bytes), setDetails(), generate() }.
 // now: pins the app's clock (e.g. '2027-01-15T10:00'); search: the page's ?query (e.g. '?return=NR4').
-// reportEndpoint: stands in for js/report.js's REPORT_ENDPOINT (empty in the committed file).
+// reportEndpoint: stands in for js/report.js's REPORT_ENDPOINT. Omitted = '' (off), so app tests never POST to the real Worker.
 function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, search = '', fetch, session, reportEndpoint } = {}) {
   const els = {};
   const getEl = id => (els[id] = els[id] || makeElement(id));
@@ -98,7 +105,7 @@ function createApp({ returnType = 'T4', gtag, URL: urlImpl, withStorage, now, se
   getEl('return-type').value = returnType;
   for (const f of ['js/report.js', 'js/validate.js', 'js/app.js']) {
     let src = fs.readFileSync(path.join(ROOT, f), 'utf8');
-    if (f === 'js/report.js' && reportEndpoint) src = src.replace("REPORT_ENDPOINT = ''", `REPORT_ENDPOINT = ${JSON.stringify(reportEndpoint)}`);
+    if (f === 'js/report.js') src = setConst(src, 'REPORT_ENDPOINT', reportEndpoint || '');
     vm.runInContext(src, ctx, { filename: f });
   }
   const run = code => vm.runInContext(code, ctx);
@@ -132,4 +139,4 @@ function fileToXML(returnType, fileName, bytes, detailOverrides, appOptions) {
 const PII_FIXTURES = ['John', 'Doe', 'Roe', 'Jane', '46454286', '046454286', '123456789', '130692544', '54321.99', '777.10',
                       'secret-payroll.csv', 'Test Transmitter', 'Test Payer', 'jane@example.com', '604-638-8328', '987654321', '100 Main'];
 
-module.exports = { createApp, fileToXML, FILING_DETAILS, PII_FIXTURES, ROOT, XLSX };
+module.exports = { createApp, setConst, fileToXML, FILING_DETAILS, PII_FIXTURES, ROOT, XLSX };

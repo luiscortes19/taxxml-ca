@@ -3,7 +3,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { createApp, FILING_DETAILS, PII_FIXTURES, ROOT } = require('./harness');
+const { createApp, setConst, FILING_DETAILS, PII_FIXTURES, ROOT } = require('./harness');
 
 const SRC = fs.readFileSync(path.join(ROOT, 'js/report.js'), 'utf8');
 const URL_ = 'https://taxxml-report.example.workers.dev';
@@ -15,19 +15,19 @@ const STEP3 = Object.values(FILING_DETAILS).filter(v => v.length >= 3);
 const SECRETS = [...PII_FIXTURES, ...STEP3, 'secret-payroll.xlsx', 'payroll-2025', 'Users', 'luis', 'Documents', 'NRA123456'];
 const noLeak = (out, what) => { for (const s of SECRETS) assert(!out.includes(s), `${what} leaks "${s}": ${out}`); };
 
-// Runs report.js on a fake page. endpoint / siteKey stand in for the (empty) committed config.
-function load({ hostname = 'taxxml.ca', protocol = 'https:', pathname = '/', endpoint, siteKey, gtag = true, fetch, ua = CHROME } = {}) {
+// Runs report.js on a fake page. endpoint / siteKey override the committed config ('' turns it off); omitted = production values.
+function load({ hostname = 'taxxml.ca', protocol = 'https:', pathname = '/', endpoint, siteKey, gtag = true, fetch, ua = CHROME, links = [] } = {}) {
   let src = SRC;
-  if (endpoint !== undefined) src = src.replace("REPORT_ENDPOINT = ''", `REPORT_ENDPOINT = ${JSON.stringify(endpoint)}`);
-  if (siteKey !== undefined) src = src.replace("TURNSTILE_SITE_KEY = ''", `TURNSTILE_SITE_KEY = ${JSON.stringify(siteKey)}`);
+  if (endpoint !== undefined) src = setConst(src, 'REPORT_ENDPOINT', endpoint);
+  if (siteKey !== undefined) src = setConst(src, 'TURNSTILE_SITE_KEY', siteKey);
   const win = {}, doc = {}, posts = [], events = [], created = [];
   const on = bag => (t, fn) => (bag[t] = bag[t] || []).push(fn);
   const ctx = {
     location: { hostname, protocol, pathname }, navigator: { userAgent: ua }, Promise, JSON,
     addEventListener: on(win),
     fetch: fetch || ((url, opts) => { posts.push({ url, opts, body: JSON.parse(opts.body) }); return Promise.resolve({ ok: true }); }),
-    document: { addEventListener: on(doc), querySelectorAll: () => [], getElementById: () => null,
-                createElement: t => { created.push(t); return {}; }, head: { appendChild: () => {} }, body: { insertAdjacentHTML: () => created.push('html') } },
+    document: { addEventListener: on(doc), querySelectorAll: sel => (sel === 'a[data-feedback]' ? links : []), getElementById: () => null,
+                createElement: t => { created.push(t); return { setAttribute(k, v) { this[k] = v; } }; }, head: { appendChild: () => {} }, body: { insertAdjacentHTML: () => created.push('html') } },
   };
   ctx.window = ctx;
   if (gtag) ctx.gtag = (cmd, name, params) => events.push([name, JSON.parse(JSON.stringify(params))]);
@@ -47,9 +47,12 @@ const fakeErr = (msg, name = 'TypeError') => ({ name, message: msg, stack: [
   'generateT4XML@https://www.taxxml.ca/js/app.js:1400:7',
 ].join('\n') });
 
-// ---- Ships unset: no endpoint, no Turnstile key ----
-assert(/REPORT_ENDPOINT = '';/.test(SRC), 'REPORT_ENDPOINT ships empty');
-assert(/TURNSTILE_SITE_KEY = '';/.test(SRC), 'TURNSTILE_SITE_KEY ships empty');
+// ---- Ships live: the production Worker URL and Turnstile site key (both public) ----
+const PROD_URL = 'https://taxxml-report.taxxml-report-worker.workers.dev';
+const PROD_KEY = '0x4AAAAAAGHli_z8IhdQWKyo';
+assert(SRC.includes(`var REPORT_ENDPOINT = '${PROD_URL}';`), 'REPORT_ENDPOINT ships the production Worker URL');
+assert(SRC.includes(`var TURNSTILE_SITE_KEY = '${PROD_KEY}';`), 'TURNSTILE_SITE_KEY ships the production site key');
+assert.throws(() => setConst('var X = 1;', 'REPORT_ENDPOINT', URL_), /not found/, 'an override that matches nothing fails loudly');
 
 // ---- Scrubber: the PII fixtures, Step 3 values and file names never survive ----
 {
@@ -150,7 +153,7 @@ assert(/TURNSTILE_SITE_KEY = '';/.test(SRC), 'TURNSTILE_SITE_KEY ships empty');
 
 // ---- No URL: no POST, no throw. app_error still goes to GA4 on the live host ----
 {
-  const r = load();
+  const r = load({ endpoint: '' });
   assert.doesNotThrow(() => r.win('error', { error: fakeErr('Jane alpha') }));
   assert.doesNotThrow(() => r.win('unhandledrejection', { reason: fakeErr('Doe beta') }));
   assert.deepStrictEqual(r.posts, []);
@@ -185,9 +188,32 @@ for (const fetch of [() => { throw new Error('blocked'); }, () => Promise.reject
 }
 { const r = load({ endpoint: URL_ }); r.ctx.gtag = () => { throw new Error('ga down'); }; assert.doesNotThrow(() => r.win('error', { error: fakeErr('z') })); }
 
+// ---- The committed config, on taxxml.ca: crash reports POST to the Worker, Contact us becomes Feedback ----
+for (const hostname of ['taxxml.ca', 'www.taxxml.ca']) {
+  const replaced = [];
+  const link = { replaceWith: b => replaced.push(b) };
+  const r = load({ hostname, links: [link] });
+  assert.strictEqual(r.api.feedbackLive, true, `Feedback is live on ${hostname}`);
+  r.win('error', { error: fakeErr('x') });
+  assert.strictEqual(r.posts.length, 1);
+  assert.strictEqual(r.posts[0].url, PROD_URL, 'crash POSTs go to the production Worker');
+  assert.strictEqual(r.posts[0].body.kind, 'crash');
+  r.doc('DOMContentLoaded');
+  assert.strictEqual(replaced.length, 1, 'the Contact us link is replaced');
+  assert.strictEqual(replaced[0].textContent, 'Feedback');
+  assert.strictEqual(replaced[0].type, 'button');
+  assert('data-feedback' in replaced[0]);
+}
+{ // and a local copy of the committed file still sends nothing
+  const r = load({ hostname: 'localhost' });
+  r.win('error', { error: fakeErr('x') });
+  assert.deepStrictEqual(r.posts, []);
+  assert.strictEqual(r.api.feedbackLive, false);
+}
+
 // ---- Feedback ----
 { // unset: the link is left alone (it goes to avanza-automation.com)
-  const r = load({ endpoint: URL_ }); // a URL but no Turnstile key: form stays off too
+  const r = load({ endpoint: URL_, siteKey: '' }); // a URL but no Turnstile key: form stays off too
   let prevented = false;
   r.doc('click', { target: { closest: () => ({ dataset: { feedback: '' } }) }, preventDefault: () => { prevented = true; } });
   assert(!prevented);
@@ -208,7 +234,7 @@ for (const fetch of [() => { throw new Error('blocked'); }, () => Promise.reject
   // failure is reported, not thrown
   const bad = load({ endpoint: URL_, siteKey: KEY, fetch: () => Promise.resolve({ ok: false }) });
   assert.strictEqual(await bad.api.sendFeedback({ type: 'feedback', message: 'hi' }), false);
-  const off = load();
+  const off = load({ endpoint: '' });
   assert.strictEqual(await off.api.sendFeedback({ type: 'feedback', message: 'hi' }), false);
   assert.deepStrictEqual(off.posts, []);
 })().catch(e => { console.error(e); process.exit(1); });

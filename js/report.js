@@ -1,12 +1,12 @@
 // Feedback form + automatic crash reports, shared by every page (loaded in <head> next to js/ga.js).
 // - REPORT_ENDPOINT is the one Worker URL (worker/README.md). Start with the workers.dev URL, later https://api.taxxml.ca.
-//   Empty (as committed): nothing is POSTed, and the Feedback links stay plain "Contact us" links to avanza-automation.com.
+//   Empty: nothing is POSTed, and the Feedback links stay plain "Contact us" links to avanza-automation.com.
 // - Local copies (localhost, 127.0.0.1, ::1, file://) never POST and never send app_error, even with a URL set.
 // - Crash reports leave the browser only after scrubText/scrubStack: no cells, SINs, names, amounts, file names, Step 3 values.
 // - GA4 gets app_error { error_kind, return_type } only, through the gtag js/ga.js set up.
 (function () {
-  var REPORT_ENDPOINT = '';      // e.g. 'https://taxxml-report.<account>.workers.dev', later 'https://api.taxxml.ca'
-  var TURNSTILE_SITE_KEY = '';   // Cloudflare Turnstile site key (public). Empty = Feedback form stays off
+  var REPORT_ENDPOINT = 'https://taxxml-report.taxxml-report-worker.workers.dev'; // later 'https://api.taxxml.ca'
+  var TURNSTILE_SITE_KEY = '0x4AAAAAAGHli_z8IhdQWKyo'; // Cloudflare Turnstile site key (public). Empty = Feedback form stays off
   var APP_VERSION = '2026.11.17';
   var MAX_REPORTS = 5;           // per page load, so a tight error loop can't flood the Worker
 
