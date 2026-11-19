@@ -2525,8 +2525,7 @@ function renderNeeds(rt) {
   document.getElementById('needs').innerHTML =
     `<h4>What you'll need</h4><ul>${items.map(i => `<li>${escapeXml(i)}</li>`).join('')}</ul>` +
     `<p class="needs-due">The ${rt} return for ${year} is due ${formatDue(due)}${DUE_NOTES[rt] || ''} ` +
-    `(<a href="${WHEN_TO_FILE_URL}" target="_blank" rel="noopener">CRA due dates</a>). ` +
-    `<button type="button" class="link-btn" onclick="addReminder()" data-cta="reminder">Remind me 2 weeks before</button></p>`;
+    `(<a href="${WHEN_TO_FILE_URL}" target="_blank" rel="noopener">CRA due dates</a>).</p>`;
 }
 
 function showReturnSelect() {
@@ -2535,7 +2534,7 @@ function showReturnSelect() {
 }
 
 // ============================================================
-// FILING DEADLINE REMINDER (.ics, built in the browser, no personal data)
+// FILING DUE DATE
 // canada.ca "When to file information returns": T4 last day of February, T1204 March 31, T5018 6 months after
 // the reporting period (calendar year assumed); NR4 March 31 (canada.ca "Get ready to file").
 // A due date on a Saturday, Sunday or CRA public holiday moves to the next business day.
@@ -2571,43 +2570,6 @@ function nextFilingDue(rt, today = new Date()) {
 
 function formatDue(iso) { // 'Monday, March 1, 2027'
   return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
-}
-
-// All-day event 2 weeks before the due date, with a 9:00 alarm that day. Generic text only.
-function reminderICS(rt, today = new Date()) {
-  const { year, due } = nextFilingDue(rt, today);
-  const ymd = t => new Date(t).toISOString().slice(0, 10).replace(/-/g, '');
-  const start = Date.parse(due) - 14 * DAY_MS;
-  const text = s => s.replace(/[\;,]/g, '\\$&');
-  const summary = `File your ${rt} information return: due ${formatDue(due)}`;
-  const lines = [
-    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//TaxXML.ca//Deadline reminder//EN', 'CALSCALE:GREGORIAN',
-    'BEGIN:VEVENT',
-    `UID:${rt.toLowerCase()}-${year}-${ymd(start)}@taxxml.ca`,
-    `DTSTAMP:${today.toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`,
-    `DTSTART;VALUE=DATE:${ymd(start)}`,
-    `DTEND;VALUE=DATE:${ymd(start + DAY_MS)}`,
-    `SUMMARY:${text(summary)}`,
-    `DESCRIPTION:${text(`Your ${rt} information return for ${year} is due to the CRA by ${formatDue(due)}${DUE_NOTES[rt] || ''}.`)}` +
-      `\\n\\nMake the XML file: https://taxxml.ca/?return=${rt}#converter\\n\\nCheck the due date on canada.ca: ${WHEN_TO_FILE_URL}`,
-    `URL:https://taxxml.ca/?return=${rt}#converter`,
-    'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${text(summary)}`, 'TRIGGER;RELATED=START:PT9H', 'END:VALARM',
-    'END:VEVENT', 'END:VCALENDAR',
-  ];
-  return lines.map(l => l.match(/.{1,74}/g).join('\r\n ')).join('\r\n') + '\r\n'; // fold to 75 octets (ASCII only)
-}
-
-function addReminder() {
-  const rt = getSelectedReturnType();
-  const url = URL.createObjectURL(new Blob([reminderICS(rt)], { type: 'text/calendar;charset=utf-8' }));
-  track('reminder_added', { return_type: rt });
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${rt}-filing-deadline.ics`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 // ============================================================

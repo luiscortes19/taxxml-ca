@@ -1,4 +1,4 @@
-// PR C: one-click sample data, Step 2 required-column check, "what you'll need", deadline reminder (.ics),
+// PR C: one-click sample data, Step 2 required-column check, "what you'll need" with the filing due date,
 // intent chip, Step 1 return summary with a Change link.
 const assert = require('assert');
 const fs = require('fs');
@@ -143,20 +143,32 @@ const shown = (a, id) => !a.el(id).classList.contains('hidden');
     assert.deepStrictEqual(next('T4', '2027-03-02T08:00:00'), { year: 2027, due: '2028-02-29' });
     assert.deepStrictEqual(next('T5018', '2026-10-26T12:00:00'), { year: 2026, due: '2027-06-30' });
 
-    const PII = ['Secret Co', '111111118RP0001', 'secret@example.com', 'Pat Secret'];
-    a.setDetails({ 'tx-name': 'Secret Co', 'py-bn': '111111118RP0001', 'tx-email': 'secret@example.com', 'tx-contact': 'Pat Secret' });
-    const ics = a.run(`reminderICS('T4', new Date('2026-10-26T12:00:00'))`);
-    assert(ics.startsWith('BEGIN:VCALENDAR\r\n') && ics.endsWith('END:VCALENDAR\r\n'), 'CRLF calendar');
-    for (const l of ['VERSION:2.0', 'BEGIN:VEVENT', 'DTSTART;VALUE=DATE:20270215', 'DTEND;VALUE=DATE:20270216', 'BEGIN:VALARM', 'END:VALARM'])
-      assert(ics.split('\r\n').includes(l), `ics has ${l}\n${ics}`);
-    const unfolded = ics.replace(/\r\n /g, '');
-    assert(/SUMMARY:.*T4.*March 1\\, 2027/.test(unfolded), unfolded);
-    assert(unfolded.includes('https://taxxml.ca/?return=T4#converter'), 'links back to the site');
-    assert(ics.split('\r\n').every(l => Buffer.byteLength(l) <= 75), 'lines folded to 75 octets');
-    for (const p of PII) assert(!unfolded.includes(p), `ics leaks ${p}`);
+  }
 
-    a.run(`addReminder()`);
-    assert.deepStrictEqual(a.named('reminder_added'), [{ return_type: 'T4' }]);
+  // ---- 5b. no deadline reminder: the due-date line stands alone, no .ics anywhere ----
+  {
+    const a = app('T4');
+    a.el('return-type').value = 'T4';
+    a.run('onReturnTypeChange()');
+    const due = a.el('needs').innerHTML.match(/<p class="needs-due">.*<\/p>/)[0];
+    assert(/^<p class="needs-due">The T4 return for \d{4} is due \w+day, \w+ \d{1,2}, \d{4} \(<a href="https:\/\/www\.canada\.ca\/[^"]+when-to-file\.html"[^>]*>CRA due dates<\/a>\)\.<\/p>$/.test(due), due);
+    assert(!/remind|addReminder|<button/i.test(due), due);
+    for (const f of ['reminderICS', 'addReminder']) assert.strictEqual(a.run(`typeof ${f}`), 'undefined', `${f} removed`);
+    const src = fs.readFileSync(path.join(ROOT, 'js/app.js'), 'utf8');
+    assert(!/remind|\.ics\b|text\/calendar/i.test(src), 'no reminder/.ics code left in app.js');
+  }
+
+  // ---- 5c. the result screen (Step 4) has no reminder either ----
+  {
+    const a = app('T4');
+    await a.run(`loadSample('T4', 'home')`);
+    a.setDetails();
+    a.generate();
+    const step4 = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').match(/<div class="wizard-step hidden" id="step-4">[\s\S]*?<\/section>/)[0];
+    for (const html of [step4, a.el('receipt').innerHTML, a.el('warnings-box').innerHTML, a.el('result-heading').innerHTML])
+      assert(!/remind|addReminder|data-cta="reminder"|\.ics\b/i.test(html), html);
+    assert(a.el('receipt').innerHTML, 'reached Step 4');
+    assert.deepStrictEqual(a.named('reminder_added'), []);
   }
 
   // ---- 6. intent chip ----
@@ -181,7 +193,7 @@ const shown = (a, id) => !a.el(id).classList.contains('hidden');
   {
     const a = app('T4', { session: {} });
     await a.run(`loadSample('T5018', 'home')`);
-    a.run(`chooseIntent('for_client'); addReminder()`);
+    a.run(`chooseIntent('for_client')`);
     const ALLOWED = { return_type: /^(T4|T1204|T5018|NR4)$/, page: /^(home|landing)$/, is_sample: /^(true|false)$/, source: /^default$/,
                       rows_bucket: /^2-5$/, required_unmapped: /^0$/, direction: /^(forward|back|reset)$/,
                       intent: /^(filing_now|exploring_format|for_client)$/, step: /^[1-4]$/,
