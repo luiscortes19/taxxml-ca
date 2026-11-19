@@ -4,6 +4,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const { mapProvince } = require('../js/validate.js');
 const { createApp, fileToXML, ROOT } = require('./harness');
 
@@ -131,9 +132,16 @@ const T4ROWS = [
   assert(/Mars/.test(a.errors()));
 }
 { // without Mars the file builds: empt_prov_cd in row order, the blank row takes the address province
-  const { xml } = fileToXML('T4', 't4.csv', csv([T4H, ...T4ROWS.slice(0, 7)]));
+  const { xml } = fileToXML('T4', 't4.csv', csv([T4H, ...T4ROWS.slice(0, 7)]), undefined, { now: '2026-11-15T10:00' });
   const provs = [...xml.matchAll(/<empt_prov_cd>(\w+)<\/empt_prov_cd>/g)].map(m => m[1]);
   assert.deepStrictEqual(provs, ['BC', 'BC', 'ON', 'QC', 'NS', 'PE', 'ON']);
+  // ...and it passes CRA's schemas (tests/xsd_validate.py; skipped without python3 + lxml, like xsd.test.js)
+  if (spawnSync('python3', ['-I', '-c', 'import lxml.etree']).status === 0) {
+    const cases = ['1-26-3', '1-27-1'].map(schema => ({ schema, rt: 'T4', xml }));
+    const run = spawnSync('python3', ['-I', path.join(__dirname, 'xsd_validate.py')], { input: JSON.stringify(cases), encoding: 'utf8' });
+    assert.strictEqual(run.status, 0, run.stderr);
+    JSON.parse(run.stdout).forEach((r, i) => assert(r.ok, `${cases[i].schema}: ${r.errors.join('; ')}`));
+  } else console.warn('province-map.test.js: XSD check SKIPPED (no python3 + lxml)');
 }
 { // blank with no address: the existing "province of employment is blank" error
   const a = app('T4');

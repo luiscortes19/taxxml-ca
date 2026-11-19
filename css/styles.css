@@ -401,6 +401,10 @@ select.form-control { cursor: pointer; }
 /* Live validation: red = error (blocks Generate), amber = warning; the message shows in a tooltip on hover / focus */
 .ed-table .cell-error { background: var(--correction-tint); color: var(--correction); font-weight: 500; box-shadow: inset 3px 0 0 var(--correction); }
 .ed-table .cell-warning { background: #FDF3E1; color: #6B4300; box-shadow: inset 3px 0 0 #B26A00; }
+/* A province name we turned into its CRA code: a dotted underline, "Was: ..." in the tooltip */
+.ed-table .cell-mapped { text-decoration: underline dotted var(--ink-3); text-underline-offset: 3px; }
+.ed-tip.is-mapped { border-left: 4px solid var(--rule-soft); }
+.ed-note { margin: 0 0 0.5rem; font-size: 0.85rem; color: var(--ink-2); }
 .ed-tip {
   position: fixed; z-index: 50; max-width: 20rem; padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); pointer-events: none;
   font-size: 0.8rem; line-height: 1.35; color: #fff; background: var(--ink); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
