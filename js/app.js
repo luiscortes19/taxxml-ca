@@ -44,7 +44,7 @@ const RETURN_TYPES = {
       { key: 'empe_snm',       label: 'Last Name (Box 12)',        autoMatch: ['last name', 'surname', 'family name', 'snm'], required: true },
       { key: 'empe_gvn_nm',    label: 'First Name',                autoMatch: ['first name', 'given name', 'gvn'] },
       { key: 'address',        label: 'Employee Address',          autoMatch: ['address', 'addr', 'employee address'] },
-      { key: 'empt_prov_cd',   label: 'Province of Employment (Box 10)', autoMatch: ['province of employment', 'box 10', 'prov emp', 'employment prov'], type: 'code', codes: T4_PROVINCE_CODES.map(provCode) },
+      { key: 'empt_prov_cd',   label: 'Province of Employment (Box 10)', autoMatch: ['province of employment', 'prov of employment', 'province territory', 'box 10', 'prov emp', 'employment prov', 'province', 'prov'], type: 'code', codes: T4_PROVINCE_CODES.map(provCode) },
       { key: 'sin',             label: 'SIN (Box 12)',              autoMatch: ['sin', 'social insurance'], required: true },
       { key: 'empt_incamt',    label: 'Employment Income (Box 14)', autoMatch: ['employment income', 'box 14', 'salary', 'wages', 'gross pay', 'income'], required: true, ...moneyField(8) },
       { key: 'cpp_cntrb_amt',  label: 'CPP Contributions (Box 16)', autoMatch: ['cpp', 'pension plan', 'box 16', 'cpp contrib'], ...moneyField(4) },
@@ -370,6 +370,7 @@ function autoMapColumns() {
 
 // A new file or return: first page, all rows, no stale Continue error
 function openEditor() {
+  mapProvinceColumn();
   editorPage = 0;
   expandedSlots.clear();
   deleted = null;
@@ -422,6 +423,7 @@ function remapColumn(c, field, method) {
   else if (field !== 'ignore') columnMap[field] = c;
   track('column_remapped', { return_type: getSelectedReturnType(), field, method });
   tableCount('remaps');
+  mapProvinceColumn();
   refreshEditor();
 }
 
@@ -434,6 +436,7 @@ function swapColumns(a, b, method) {
   kb.forEach(k => { columnMap[k] = a; });
   track('column_remapped', { return_type: getSelectedReturnType(), field: columnField(a), method });
   tableCount('remaps');
+  mapProvinceColumn();
   refreshEditor();
 }
 
@@ -491,12 +494,48 @@ function flashLanded(to) {
   });
 }
 
+// Province auto-mapping: in the T4 Box 10 / NR4 ste_cd column, names and loose abbreviations ("British Columbia",
+// "B.C.") become the CRA code (mapProvince). Runs when a file opens and when a column moves onto that field; a cell it
+// can't map for sure keeps its text and its error. The text that was there stays on the row (row.was[c]) for the
+// notice and the "Was:" tooltip, until the user edits that cell. GA4 gets the count only, never a value.
+const PROVINCE_FIELD = { T4: 'empt_prov_cd', NR4: 'ste_cd' };
+const provinceColumn = () => columnMap[PROVINCE_FIELD[getSelectedReturnType()]] ?? -1;
+function mapProvinceColumn() {
+  const rt = getSelectedReturnType(), c = provinceColumn();
+  if (c < 0) return;
+  let count = 0;
+  parsedData.forEach(row => {
+    const m = mapProvince(row[c], rt);
+    if (!m || !m.changed) return;
+    (row.was = row.was || {})[c] = row[c];
+    row[c] = m.code;
+    count++;
+  });
+  if (count) track('province_mapped', { return_type: rt, count });
+}
+// The text cell (row r, column c) had before it was converted, or undefined
+function mappedFrom(r, c) {
+  return c === provinceColumn() && c >= 0 ? parsedData[r]?.was?.[c] : undefined;
+}
+const forgetMapped = (row, c) => { if (row.was) delete row.was[c]; };
+
+// "We changed 5 province names to CRA codes (British Columbia → BC)." above the table, while any converted cell is left
+function renderProvinceNote() {
+  const c = provinceColumn();
+  const rows = c < 0 ? [] : parsedData.filter((_, r) => mappedFrom(r, c) !== undefined);
+  const note = document.getElementById('editor-province-note');
+  note.textContent = rows.length
+    ? `We changed ${rows.length} province name${rows.length === 1 ? '' : 's'} to CRA codes (${rows[0].was[c]} → ${rows[0][c]}).` : '';
+  note.classList.toggle('hidden', !rows.length);
+}
+
 // Inline edit of one cell. Returns false (and does nothing) when the value didn't change.
 function editCell(r, c, value) {
   const row = parsedData[r];
   value = String(value);
   if (!row || !isColumn(c) || String(row[c] ?? '') === value) return false;
   row[c] = value;
+  forgetMapped(row, c);
   track('cell_edited', { return_type: getSelectedReturnType(), field: columnField(c) });
   tableCount('edits');
   revalidate();
@@ -795,7 +834,9 @@ function renderEditorBody() {
 }
 
 // A cell under an empty CRA column has no source column (no data-c): it can't be edited, but shows that column's errors
-const cellClass = (td, s) => [td.c === undefined ? 'ed-noslot' : '', s.cls].filter(Boolean).join(' ');
+// A converted province cell with no problem is marked (cell-mapped) and its tooltip says what it was
+const cellClass = (td, s, was) => [td.c === undefined ? 'ed-noslot' : '', s.cls || (was !== undefined ? 'cell-mapped' : '')].filter(Boolean).join(' ');
+const cellTitle = (s, was) => s.msg || (was !== undefined ? `Was: ${was}` : '');
 
 function editorRowHtml(r, slots) {
   return `<tr data-r="${r}"><th scope="row" class="ed-rownum">${r + 2}` +
@@ -803,17 +844,19 @@ function editorRowHtml(r, slots) {
     slots.map(f => {
       const c = columnMap[f] >= 0 ? columnMap[f] : undefined;
       const s = cellState(r, f);
-      const cls = cellClass({ c }, s);
+      const was = mappedFrom(r, c);
+      const cls = cellClass({ c }, s, was);
+      const title = cellTitle(s, was);
       return `<td tabindex="-1" data-r="${r}"${c === undefined ? '' : ` data-c="${c}"`} data-f="${f}"${cls ? ` class="${cls}"` : ''}` +
-        `${s.msg ? ` title="${escapeXml(s.msg)}" aria-describedby="ed-msg-${r}-${f}"` : ''}>${c === undefined ? '' : escapeXml(cellText(r, f))}</td>`;
+        `${title ? ` title="${escapeXml(title)}" aria-describedby="ed-msg-${r}-${f}"` : ''}>${c === undefined ? '' : escapeXml(cellText(r, f))}</td>`;
     }).join('') + '</tr>';
 }
 
 // Hidden text the marked cells point to with aria-describedby (screen readers read the message with the cell)
 function renderEditorMsgs() {
   const slots = editorSlots();
-  document.getElementById('editor-msgs').innerHTML = editorVisibleRows.flatMap(r => slots.map(f => [f, cellState(r, f)])
-    .filter(([, s]) => s.msg).map(([f, s]) => `<span id="ed-msg-${r}-${f}">${escapeXml(s.msg)}</span>`)).join('');
+  document.getElementById('editor-msgs').innerHTML = editorVisibleRows.flatMap(r => slots.map(f => [f, cellTitle(cellState(r, f), mappedFrom(r, columnMap[f]))])
+    .filter(([, t]) => t).map(([f, t]) => `<span id="ed-msg-${r}-${f}">${escapeXml(t)}</span>`)).join('');
 }
 
 // After an edit: new marks and text on that row's cells without replacing them
@@ -823,8 +866,10 @@ function patchEditorRow(r) {
   tr.querySelectorAll('td[data-f]').forEach(td => {
     const f = td.dataset.f;
     const s = cellState(r, f);
-    td.className = cellClass(td.dataset, s);
-    if (s.msg) { td.title = s.msg; td.setAttribute('aria-describedby', `ed-msg-${r}-${f}`); }
+    const was = mappedFrom(r, td.dataset.c === undefined ? -1 : +td.dataset.c);
+    td.className = cellClass(td.dataset, s, was);
+    const title = cellTitle(s, was);
+    if (title) { td.title = title; td.setAttribute('aria-describedby', `ed-msg-${r}-${f}`); }
     else { td.removeAttribute('title'); td.removeAttribute('aria-describedby'); }
     if (td.dataset.c !== undefined) td.textContent = cellText(r, f);
   });
@@ -832,6 +877,7 @@ function patchEditorRow(r) {
 }
 
 function renderEditorStatus() {
+  renderProvinceNote();
   let errors = 0, warnings = 0, notes = 0;
   const noteFields = new Set();
   for (const list of rowIssues.values()) for (const x of list) {
@@ -1057,6 +1103,7 @@ function pasteCells(r, f, text) {
       const c = columnMap[slots[slots.indexOf(f) + j]];
       if (!(c >= 0) || String(row[c] ?? '') === v) return;
       row[c] = v;
+      forgetMapped(row, c);
       changed++;
       if (first === null) first = c;
     });
@@ -1105,13 +1152,14 @@ const edTip = document.getElementById('editor-tip');
 function hideTip() { edTip.hidden = true; }
 function showTip(td) {
   const s = td && !editing && cellState(+td.dataset.r, td.dataset.f);
-  if (!s || !s.msg) return hideTip();
-  if (step2Visit && !step2Visit.tips.has(td.dataset.f)) { // GA4: once per field per visit, never the message
+  const text = s && cellTitle(s, mappedFrom(+td.dataset.r, td.dataset.c === undefined ? -1 : +td.dataset.c));
+  if (!text) return hideTip();
+  if (s.msg && step2Visit && !step2Visit.tips.has(td.dataset.f)) { // GA4: once per field per visit, never the message
     step2Visit.tips.add(td.dataset.f);
     track('table_help_opened', { return_type: getSelectedReturnType(), help_kind: 'cell_tip', field: analyticsField(td.dataset.f) });
   }
-  edTip.textContent = s.msg;
-  edTip.className = `ed-tip ${s.cls === 'cell-error' ? 'is-error' : 'is-warning'}`;
+  edTip.textContent = text;
+  edTip.className = `ed-tip ${!s.msg ? 'is-mapped' : s.cls === 'cell-error' ? 'is-error' : 'is-warning'}`;
   const box = td.getBoundingClientRect();
   edTip.style.left = `${Math.max(4, Math.min(box.left, (window.innerWidth || 1e4) - 330))}px`;
   edTip.style.top = `${box.bottom + 4}px`;

@@ -81,6 +81,52 @@ function normCode(raw) {
   return String(raw ?? '').trim().toUpperCase();
 }
 
+// ---- Province auto-mapping (Step 2): names and loose abbreviations -> the CRA code. Never a guess. ----
+// The old aliases AL, MA, LB, NN, SA, QU are left out on purpose: AL and MA are also US states.
+const PROVINCE_NAMES = {
+  AB: ['Alberta', 'Alta'], BC: ['British Columbia', 'Colombie-Britannique'], MB: ['Manitoba', 'Man'],
+  NB: ['New Brunswick', 'Nouveau-Brunswick'], NL: ['Newfoundland and Labrador', 'Terre-Neuve-et-Labrador', 'Newfoundland', 'Terre-Neuve', 'NF', 'Nfld'],
+  NS: ['Nova Scotia', 'Nouvelle-Écosse'], NT: ['Northwest Territories', 'Territoires du Nord-Ouest', 'NWT'], NU: ['Nunavut'],
+  ON: ['Ontario', 'Ont'], PE: ['Prince Edward Island', 'Île-du-Prince-Édouard', 'PEI'], QC: ['Quebec', 'PQ', 'Que'],
+  SK: ['Saskatchewan', 'Sask'], YT: ['Yukon', 'Yukon Territory', 'Yuk'],
+};
+const COUNTRY_US_NAMES = { US: ['United States', 'United States of America', 'USA'] }; // T4 Box 10 only
+const US_STATE_NAMES = { // NR4 ste_cd only
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware',
+  DC: 'District of Columbia', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa',
+  KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota',
+  MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey',
+  NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon',
+  PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah',
+  VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+  PR: 'Puerto Rico', GU: 'Guam', AS: 'American Samoa', MP: 'Northern Mariana Islands', VI: 'US Virgin Islands',
+};
+
+// 'Île-du-Prince-Édouard ' -> 'ileduprinceedouard', 'B. C.' -> 'bc', '&' -> 'and'; null when anything but letters,
+// spaces, dots and hyphens is left (digits, slashes, commas)
+function provinceKey(raw) {
+  const s = String(raw ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/&/g, ' and ').replace(/[.\s-]+/g, '');
+  return /^[a-z]+$/.test(s) ? s : null;
+}
+const provinceKeyMap = obj => Object.fromEntries(Object.entries(obj).flatMap(([c, names]) => [].concat(names).map(n => [provinceKey(n), c])));
+const PROVINCE_KEYS = {
+  T4: { ...provinceKeyMap(PROVINCE_NAMES), ...provinceKeyMap(COUNTRY_US_NAMES) },
+  NR4: { ...provinceKeyMap(PROVINCE_NAMES), ...provinceKeyMap(US_STATE_NAMES) },
+};
+
+// Province cell -> { code, changed } or null when it can't be mapped for sure. rt: 'T4' (Box 10) or 'NR4' (ste_cd).
+// changed is false when the cell is already a code the file takes ('bc ' passes normCode): it is left as it is.
+function mapProvince(raw, rt) {
+  const allowed = rt === 'NR4' ? NR4_STATE_CODES : T4_PROVINCE_CODES;
+  if (typeof raw !== 'string') return null;
+  if (allowed.includes(normCode(raw))) return { code: normCode(raw), changed: false };
+  const key = provinceKey(raw);
+  if (!key) return null;
+  const code = (key.length === 2 && allowed.includes(key.toUpperCase()) ? key.toUpperCase() : null) || PROVINCE_KEYS[rt][key];
+  return code ? { code, changed: true } : null;
+}
+
 // Dollar amount cell -> { value: number | null (blank), error: null | 'not_amount' | 'negative' | 'decimals' | 'too_big' }.
 // digits: digits before the decimal point allowed by the box's decimalNType (decimal10Type -> 8). CRA amounts are
 // unsigned, with cents. Text may have a leading $ and comma thousands separators: 1234, 1,234.56, $1234.5.
@@ -178,6 +224,6 @@ function nr4CIN(raw) {
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { PROVINCES, T4_PROVINCE_CODES, LEGACY_PROVINCE_CODES, NR4_STATE_CODES, normCode, parseMoney, formatMoney,
+if (typeof module !== 'undefined') module.exports = { PROVINCES, T4_PROVINCE_CODES, LEGACY_PROVINCE_CODES, NR4_STATE_CODES, normCode, mapProvince, parseMoney, formatMoney,
   foreignPostal, CA_POSTAL_PATTERN, isTaxYear, isRealDate, BN_PATTERN, NR_ACCT_PATTERN, TRUST_PATTERN, SUBMISSION_REF_PATTERN, REPID_PATTERN, cleanBN, sanitizeBN, isValidSIN, keepDigitText, padIdNumber, sinDigits,
   defaultTaxYear, targetSchema, defaultSubmissionRef, nextSubmissionRef, transmitterAccountTag, nr4CIN };

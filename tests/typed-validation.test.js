@@ -56,7 +56,15 @@ for (const v of ['bc', ' bc ', 'Bc', 'BC ']) {
   ok('T4', 'empt_prov_cd', v);
   assert(open('T4', { empt_prov_cd: v }).xml().includes('<empt_prov_cd>BC</empt_prov_cd>'), v);
 }
-for (const v of ['CAN', 'XX', 'Ontario', 'B C', 'ON1', 'PQ', 'NF', 'O.N.', '1']) bad('T4', 'empt_prov_cd', v, /isn't a province or territory code.*AB, BC, MB/);
+for (const v of ['CAN', 'XX', 'ON1', 'AL', 'MA', '1']) bad('T4', 'empt_prov_cd', v, /isn't a province or territory code.*AB, BC, MB/);
+// names and loose codes in the file become the code when it opens (province-map.test.js); typed in later they're still errors
+for (const [v, code] of [['Ontario', 'ON'], ['B C', 'BC'], ['PQ', 'QC'], ['NF', 'NL'], ['O.N.', 'ON']]) {
+  const a = open('T4', { empt_prov_cd: v });
+  assert.deepStrictEqual(a.errs(), [], v);
+  assert(a.xml().includes(`<empt_prov_cd>${code}</empt_prov_cd>`), v);
+  a.run(`editCell(0, ${a.col('empt_prov_cd')}, ${JSON.stringify(v)})`);
+  assert.strictEqual(a.errs('empt_prov_cd').length, 1, `${v} typed in`);
+}
 assert(/"CAN"/.test(bad('T4', 'empt_prov_cd', 'CAN')), 'the bad value is quoted');
 // blank in a column that's there: taken from the row's address if it has one (warning), else an error -- never a silent ON
 bad('T4', 'empt_prov_cd', '', /province of employment is blank/);
